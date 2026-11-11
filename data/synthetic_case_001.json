@@ -1,0 +1,21 @@
+{
+  "case_id": "SYN-001",
+  "is_synthetic": true,
+  "patient": {"age": 58, "sex": "female"},
+  "timeline": [
+    {
+      "event_id": "E001",
+      "date": "2026-01-05",
+      "type": "initial_assessment",
+      "description": "模拟病例：发现需要进一步评估的异常影像表现。"
+    },
+    {
+      "event_id": "E002",
+      "date": "2026-01-12",
+      "type": "imaging",
+      "description": "模拟病例：部分关键影像信息尚未完成核验。"
+    }
+  ],
+  "current_question": "当前模拟病例是否具备进入下一步决策讨论的充分信息？",
+  "available_options": ["READY_FOR_REVIEW", "NEED_MORE_INFORMATION", "DEFER_DECISION"]
+}

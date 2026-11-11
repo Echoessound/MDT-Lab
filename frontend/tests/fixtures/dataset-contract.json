@@ -1,0 +1,1327 @@
+{
+  "catalog": {
+    "sources": [
+      {
+        "source": "synthea_csv",
+        "name": "Synthea 合成病程",
+        "format": "CSV ZIP",
+        "filename": "synthea_sample_csv.zip",
+        "synthetic": true,
+        "source_name": "synthea",
+        "dataset_version": "synthea-csv-content-addressed",
+        "source_url": "https://synthetichealth.github.io/downloads.html",
+        "download_url": "https://synthetichealth.github.io/synthea-sample-data/downloads/latest/synthea_sample_data_csv_latest.zip",
+        "license": "Synthea 官方下载页允许不受限制的研究等再利用；须引用数据来源。",
+        "citation": "Walonoski et al. JAMIA 2018. DOI: 10.1093/jamia/ocx079",
+        "description": "导入通用合成病程；通用样本不保证包含肺癌。姓名、地址、证件和费用字段不导入。"
+      },
+      {
+        "source": "tcia_nsclc_csv",
+        "name": "TCIA NSCLC-Radiogenomics",
+        "format": "临床 CSV",
+        "filename": "tcia_nsclc_clinical.csv",
+        "synthetic": false,
+        "source_name": "tcia_nsclc_radiogenomics",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "source_url": "https://www.cancerimagingarchive.net/collection/nsclc-radiogenomics/",
+        "download_url": "https://wiki.cancerimagingarchive.net/download/attachments/28672347/NSCLCR01Radiogenomic_DATA_LABELS_2018-05-22_1500-shifted.csv?api=v2&modificationDate=1531967714295&version=1",
+        "license": "CC BY 3.0；遵守 TCIA 数据使用条款并保留数据与论文引用。",
+        "citation": "Bakr et al. Data for NSCLC Radiogenomics v4. DOI: 10.7937/K9/TCIA.2017.7hs46erv; Scientific Data 2018, 5:180202",
+        "description": "仅导入临床表。有日期的检查和随访进入时间线；无可用时间的病理、分子与治疗字段单独展示。"
+      },
+      {
+        "source": "research_json",
+        "name": "研究病例与相关资料",
+        "format": "JSON",
+        "filename": "research_cases.json",
+        "synthetic": null,
+        "source_url": null,
+        "download_url": null,
+        "license": "由导入文件逐项声明来源、许可与数据版本。",
+        "citation": "由导入文件提供引用。",
+        "description": "按模板导入结构化病例、带日期的相关事实与无日期资料；所有病例须声明来源。"
+      }
+    ],
+    "max_upload_bytes": 20971520,
+    "batches": [
+      {
+        "batch_id": "imp_304414db5e38f66d75cea3f7",
+        "source": "tcia_nsclc_csv",
+        "source_name": "TCIA NSCLC-Radiogenomics",
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "artifact_name": "tcia_nsclc_clinical.csv",
+        "byte_count": 168,
+        "mapping_version": "dataset-mapping-v1",
+        "requested_limit": 1,
+        "case_count": 1,
+        "event_count": 2,
+        "unplaced_count": 2,
+        "table_counts": {
+          "clinical.csv": 1
+        },
+        "warnings": [
+          {
+            "message": "来源占位值已保留为未知，不转换为阴性或无事件。",
+            "count": 1
+          }
+        ],
+        "rejected": [],
+        "rejected_count": 0,
+        "cases": [
+          {
+            "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+            "title": "NSCLC 公开研究病例 FIXTURE001",
+            "case_kind": "public_research",
+            "event_count": 2,
+            "unplaced_count": 2
+          }
+        ],
+        "created_at": "2026-11-11T16:55:21.813701+00:00",
+        "imported_case_ids": [
+          "TCIA-NSCLC-RG-FIXTURE001"
+        ],
+        "skipped_case_ids": [],
+        "already_imported": false
+      }
+    ]
+  },
+  "preview": {
+    "batch_id": "imp_304414db5e38f66d75cea3f7",
+    "source": "tcia_nsclc_csv",
+    "source_name": "TCIA NSCLC-Radiogenomics",
+    "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+    "artifact_name": "tcia_nsclc_clinical.csv",
+    "byte_count": 168,
+    "mapping_version": "dataset-mapping-v1",
+    "requested_limit": 1,
+    "case_count": 1,
+    "event_count": 2,
+    "unplaced_count": 2,
+    "table_counts": {
+      "clinical.csv": 1
+    },
+    "warnings": [
+      {
+        "message": "来源占位值已保留为未知，不转换为阴性或无事件。",
+        "count": 1
+      }
+    ],
+    "rejected": [],
+    "rejected_count": 0,
+    "cases": [
+      {
+        "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+        "title": "NSCLC 公开研究病例 FIXTURE001",
+        "case_kind": "public_research",
+        "event_count": 2,
+        "unplaced_count": 2
+      }
+    ],
+    "preview_id": "preview_e8581e8b9d5245bfa87f23436a51958d",
+    "expires_at": "2026-11-11T17:10:21.812074+00:00"
+  },
+  "batch": {
+    "batch_id": "imp_304414db5e38f66d75cea3f7",
+    "source": "tcia_nsclc_csv",
+    "source_name": "TCIA NSCLC-Radiogenomics",
+    "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+    "artifact_name": "tcia_nsclc_clinical.csv",
+    "byte_count": 168,
+    "mapping_version": "dataset-mapping-v1",
+    "requested_limit": 1,
+    "case_count": 1,
+    "event_count": 2,
+    "unplaced_count": 2,
+    "table_counts": {
+      "clinical.csv": 1
+    },
+    "warnings": [
+      {
+        "message": "来源占位值已保留为未知，不转换为阴性或无事件。",
+        "count": 1
+      }
+    ],
+    "rejected": [],
+    "rejected_count": 0,
+    "cases": [
+      {
+        "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+        "title": "NSCLC 公开研究病例 FIXTURE001",
+        "case_kind": "public_research",
+        "event_count": 2,
+        "unplaced_count": 2
+      }
+    ],
+    "created_at": "2026-11-11T16:55:21.813701+00:00",
+    "imported_case_ids": [
+      "TCIA-NSCLC-RG-FIXTURE001"
+    ],
+    "skipped_case_ids": [],
+    "already_imported": false
+  },
+  "case": {
+    "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+    "title": "NSCLC 公开研究病例 FIXTURE001",
+    "disease": "非小细胞肺癌公开研究队列",
+    "case_kind": "public_research",
+    "version": 1,
+    "patient": {
+      "age": 60,
+      "sex": "female"
+    },
+    "current_question": "截至所选来源事件，已提供记录是否充分且一致，仍需补充哪些资料？",
+    "timeline": [
+      {
+        "event_id": "E00001_7a5cebe696",
+        "occurred_at": "2000-01-02",
+        "event_type": "imaging",
+        "title": "CT 来源检查记录",
+        "facts": {
+          "modality": "CT",
+          "recorded_date": "01/02/2000",
+          "source_subject_id": "FIXTURE001"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "synthetic_extension": false,
+        "confidence": "source_record",
+        "introduced_in_version": 1,
+        "original_timestamp": "01/02/2000",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "recorded_date": "CT Date",
+          "source_subject_id": "Case ID",
+          "modality": "CT Date"
+        },
+        "time_note": "仅保留来源记录日期；检查记录存在不代表报告齐备，未推断诊疗结论。"
+      },
+      {
+        "event_id": "E00002_aabb5207c8",
+        "occurred_at": "2000-01-03",
+        "event_type": "imaging",
+        "title": "PET 来源检查记录",
+        "facts": {
+          "modality": "PET",
+          "recorded_date": "01/03/2000",
+          "source_subject_id": "FIXTURE001"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "synthetic_extension": false,
+        "confidence": "source_record",
+        "introduced_in_version": 1,
+        "original_timestamp": "01/03/2000",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "recorded_date": "PET Date",
+          "source_subject_id": "Case ID",
+          "modality": "PET Date"
+        },
+        "time_note": "仅保留来源记录日期；检查记录存在不代表报告齐备，未推断诊疗结论。"
+      }
+    ],
+    "provenance": [
+      {
+        "source_name": "tcia_nsclc_radiogenomics",
+        "source_url": "https://www.cancerimagingarchive.net/collection/nsclc-radiogenomics/",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "license": "CC BY 3.0；遵守 TCIA 数据使用条款并保留数据与论文引用。",
+        "synthetic": false,
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "artifact_name": "tcia_nsclc_clinical.csv",
+        "mapping_version": "dataset-mapping-v1",
+        "citation": "Bakr et al. Data for NSCLC Radiogenomics v4. DOI: 10.7937/K9/TCIA.2017.7hs46erv; Scientific Data 2018, 5:180202"
+      }
+    ],
+    "unplaced_records": [
+      {
+        "record_id": "baseline_FIXTURE001",
+        "title": "基线和病理字段 时间未定位",
+        "facts": {
+          "histology": "Fixture histology"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "FIXTURE001",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "histology": "Histology"
+        },
+        "exclusion_reason": "来源未提供可验证的记录可用时间；不进入历史评议上下文。"
+      },
+      {
+        "record_id": "molecular_FIXTURE001",
+        "title": "分子字段 时间未定位",
+        "facts": {
+          "egfr_status": null,
+          "egfr_status_missing_reason": "Not collected"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "FIXTURE001",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "egfr_status": "EGFR mutation status",
+          "egfr_status_missing_reason": "EGFR mutation status"
+        },
+        "exclusion_reason": "来源未提供可验证的记录可用时间；不进入历史评议上下文。"
+      }
+    ],
+    "data_notes": [
+      "来源为公开去标识研究临床表；日期按来源 MM/DD/YYYY 转换，保留日期移位语义，不还原身份或真实日历。",
+      "年龄为来源的组织学诊断年龄。无时间的病理、分子、治疗与结局汇总不进入历史评议。",
+      "只导入日期及表内事实；未下载 DICOM，未推断影像或病理报告齐备，未推导手术日期。"
+    ]
+  },
+  "mixed": {
+    "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+    "title": "NSCLC 公开研究病例 FIXTURE001",
+    "disease": "非小细胞肺癌公开研究队列",
+    "case_kind": "mixed",
+    "version": 2,
+    "patient": {
+      "age": 60,
+      "sex": "female"
+    },
+    "current_question": "截至所选来源事件，已提供记录是否充分且一致，仍需补充哪些资料？",
+    "timeline": [
+      {
+        "event_id": "E00001_7a5cebe696",
+        "occurred_at": "2000-01-02",
+        "event_type": "imaging",
+        "title": "CT 来源检查记录",
+        "facts": {
+          "modality": "CT",
+          "recorded_date": "01/02/2000",
+          "source_subject_id": "FIXTURE001"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "synthetic_extension": false,
+        "confidence": "source_record",
+        "introduced_in_version": 1,
+        "original_timestamp": "01/02/2000",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "recorded_date": "CT Date",
+          "source_subject_id": "Case ID",
+          "modality": "CT Date"
+        },
+        "time_note": "仅保留来源记录日期；检查记录存在不代表报告齐备，未推断诊疗结论。"
+      },
+      {
+        "event_id": "E00002_aabb5207c8",
+        "occurred_at": "2000-01-03",
+        "event_type": "imaging",
+        "title": "PET 来源检查记录",
+        "facts": {
+          "modality": "PET",
+          "recorded_date": "01/03/2000",
+          "source_subject_id": "FIXTURE001"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "synthetic_extension": false,
+        "confidence": "source_record",
+        "introduced_in_version": 1,
+        "original_timestamp": "01/03/2000",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "recorded_date": "PET Date",
+          "source_subject_id": "Case ID",
+          "modality": "PET Date"
+        },
+        "time_note": "仅保留来源记录日期；检查记录存在不代表报告齐备，未推断诊疗结论。"
+      },
+      {
+        "event_id": "EVT_632923f1a74a41fc",
+        "occurred_at": "2001-01-01",
+        "event_type": "pathology",
+        "title": "Fixture synthetic extension",
+        "facts": {
+          "pathology_confirmed": true
+        },
+        "source": "research_scenario_generator",
+        "source_record_id": null,
+        "synthetic_extension": true,
+        "confidence": "synthetic",
+        "introduced_in_version": 2,
+        "original_timestamp": null,
+        "source_record_locator": null,
+        "source_fields": {},
+        "time_note": null
+      }
+    ],
+    "provenance": [
+      {
+        "source_name": "tcia_nsclc_radiogenomics",
+        "source_url": "https://www.cancerimagingarchive.net/collection/nsclc-radiogenomics/",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "license": "CC BY 3.0；遵守 TCIA 数据使用条款并保留数据与论文引用。",
+        "synthetic": false,
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "artifact_name": "tcia_nsclc_clinical.csv",
+        "mapping_version": "dataset-mapping-v1",
+        "citation": "Bakr et al. Data for NSCLC Radiogenomics v4. DOI: 10.7937/K9/TCIA.2017.7hs46erv; Scientific Data 2018, 5:180202"
+      },
+      {
+        "source_name": "research_scenario_generator",
+        "source_url": null,
+        "dataset_version": "research-extensions-v1",
+        "license": "项目自建合成扩展",
+        "synthetic": true,
+        "artifact_sha256": null,
+        "artifact_name": null,
+        "mapping_version": null,
+        "citation": null
+      }
+    ],
+    "unplaced_records": [
+      {
+        "record_id": "baseline_FIXTURE001",
+        "title": "基线和病理字段 时间未定位",
+        "facts": {
+          "histology": "Fixture histology"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "FIXTURE001",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "histology": "Histology"
+        },
+        "exclusion_reason": "来源未提供可验证的记录可用时间；不进入历史评议上下文。"
+      },
+      {
+        "record_id": "molecular_FIXTURE001",
+        "title": "分子字段 时间未定位",
+        "facts": {
+          "egfr_status": null,
+          "egfr_status_missing_reason": "Not collected"
+        },
+        "source": "tcia_nsclc_radiogenomics",
+        "source_record_id": "FIXTURE001",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_fields": {
+          "egfr_status": "EGFR mutation status",
+          "egfr_status_missing_reason": "EGFR mutation status"
+        },
+        "exclusion_reason": "来源未提供可验证的记录可用时间；不进入历史评议上下文。"
+      }
+    ],
+    "data_notes": [
+      "来源为公开去标识研究临床表；日期按来源 MM/DD/YYYY 转换，保留日期移位语义，不还原身份或真实日历。",
+      "年龄为来源的组织学诊断年龄。无时间的病理、分子、治疗与结局汇总不进入历史评议。",
+      "只导入日期及表内事实；未下载 DICOM，未推断影像或病理报告齐备，未推导手术日期。"
+    ]
+  },
+  "run": {
+    "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+    "case_version": 1,
+    "trigger_event_id": "E00001_7a5cebe696",
+    "mode": "mock",
+    "mock_scenario": "standard",
+    "routing_mode": "event",
+    "run_id": "run_4af2fcfc2e584bd6bba049520c637e1b",
+    "source_run_id": null,
+    "status": "completed",
+    "stage": "COMPLETED",
+    "created_at": "2026-11-11T16:55:21.816610+00:00",
+    "updated_at": "2026-11-11T16:55:21.824249+00:00",
+    "last_seq": 44,
+    "routing": {
+      "strategy_version": "event-router-v1",
+      "trigger_event_id": "E00001_7a5cebe696",
+      "selected_agents": [
+        "oncology",
+        "radiology"
+      ],
+      "skipped_agents": [
+        "surgery",
+        "pathology"
+      ],
+      "reasons": [
+        {
+          "agent_id": "oncology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "radiology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "surgery",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        },
+        {
+          "agent_id": "pathology",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        }
+      ]
+    },
+    "agents": [
+      {
+        "agent_id": "oncology",
+        "status": "completed",
+        "opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "previous_opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "error": null
+      },
+      {
+        "agent_id": "radiology",
+        "status": "completed",
+        "opinion": {
+          "agent_id": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "previous_opinion": {
+          "agent_id": "radiology",
+          "decision": "READY_FOR_REVIEW",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "error": null
+      },
+      {
+        "agent_id": "surgery",
+        "status": "skipped",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      {
+        "agent_id": "pathology",
+        "status": "skipped",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      }
+    ],
+    "conflicts": [
+      {
+        "conflict_id": "decision_difference",
+        "dimension": "information_sufficiency",
+        "agent_ids": [
+          "oncology",
+          "radiology"
+        ],
+        "description": "相关角色对资料是否充分的流程标签不一致。",
+        "evidence_ids": []
+      }
+    ],
+    "safety": {
+      "decision": "NEED_MORE_INFORMATION",
+      "status": "needs_information",
+      "checks": [
+        {
+          "code": "selected_agent_coverage",
+          "status": "passed",
+          "message": "有效最终意见 2 / 本次调度 2；跳过专科不计作失败。",
+          "evidence_ids": []
+        },
+        {
+          "code": "evidence_integrity",
+          "status": "passed",
+          "message": "引用必须属于冻结上下文，事实键与值必须逐项匹配；只检验输入一致性。",
+          "evidence_ids": []
+        },
+        {
+          "code": "unresolved_conflicts",
+          "status": "passed",
+          "message": "保留 0 项未解决分歧；不采用多数票。",
+          "evidence_ids": []
+        },
+        {
+          "code": "required_information",
+          "status": "warning",
+          "message": "待补字段：imaging_complete、pathology_confirmed",
+          "evidence_ids": []
+        },
+        {
+          "code": "temporal_boundary",
+          "status": "passed",
+          "message": "仅使用 v1 中截至 E00001_7a5cebe696 的 1 条事件。",
+          "evidence_ids": []
+        }
+      ],
+      "missing_information": [
+        "imaging_complete",
+        "pathology_confirmed"
+      ],
+      "warnings": [
+        "Mock 为确定的科研流程脚本，不代表医学推理。"
+      ]
+    },
+    "report_ready": true,
+    "cancel_requested": false,
+    "completed_nodes": [
+      "case_validation",
+      "routing",
+      "oncology_review",
+      "radiology_review",
+      "conflict_detection",
+      "targeted_discussion",
+      "safety_gate",
+      "report"
+    ],
+    "running_nodes": [],
+    "pending_nodes": [],
+    "metrics": {
+      "agent_calls": 4,
+      "llm_calls": 0,
+      "tool_calls": 3,
+      "retry_count": 0,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "elapsed_ms": 7
+    },
+    "error": null
+  },
+  "report": {
+    "run_id": "run_4af2fcfc2e584bd6bba049520c637e1b",
+    "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+    "case_version": 1,
+    "trigger_event_id": "E00001_7a5cebe696",
+    "mode": "mock",
+    "mock_scenario": "standard",
+    "routing_mode": "event",
+    "case_snapshot": {
+      "case_id": "TCIA-NSCLC-RG-FIXTURE001",
+      "title": "NSCLC 公开研究病例 FIXTURE001",
+      "disease": "非小细胞肺癌公开研究队列",
+      "case_kind": "public_research",
+      "version": 1,
+      "patient": {
+        "age": 60,
+        "sex": "female"
+      },
+      "current_question": "截至所选来源事件，已提供记录是否充分且一致，仍需补充哪些资料？",
+      "timeline": [
+        {
+          "event_id": "E00001_7a5cebe696",
+          "occurred_at": "2000-01-02",
+          "event_type": "imaging",
+          "title": "CT 来源检查记录",
+          "facts": {
+            "modality": "CT",
+            "recorded_date": "01/02/2000",
+            "source_subject_id": "FIXTURE001"
+          },
+          "source": "tcia_nsclc_radiogenomics",
+          "source_record_id": "clinical_0000002",
+          "synthetic_extension": false,
+          "confidence": "source_record",
+          "introduced_in_version": 1,
+          "original_timestamp": "01/02/2000",
+          "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+          "source_fields": {
+            "recorded_date": "CT Date",
+            "source_subject_id": "Case ID",
+            "modality": "CT Date"
+          },
+          "time_note": "仅保留来源记录日期；检查记录存在不代表报告齐备，未推断诊疗结论。"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_nsclc_radiogenomics",
+          "source_url": "https://www.cancerimagingarchive.net/collection/nsclc-radiogenomics/",
+          "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+          "license": "CC BY 3.0；遵守 TCIA 数据使用条款并保留数据与论文引用。",
+          "synthetic": false,
+          "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+          "artifact_name": "tcia_nsclc_clinical.csv",
+          "mapping_version": "dataset-mapping-v1",
+          "citation": "Bakr et al. Data for NSCLC Radiogenomics v4. DOI: 10.7937/K9/TCIA.2017.7hs46erv; Scientific Data 2018, 5:180202"
+        }
+      ],
+      "unplaced_records": [],
+      "data_notes": [
+        "来源为公开去标识研究临床表；日期按来源 MM/DD/YYYY 转换，保留日期移位语义，不还原身份或真实日历。",
+        "年龄为来源的组织学诊断年龄。无时间的病理、分子、治疗与结局汇总不进入历史评议。",
+        "只导入日期及表内事实；未下载 DICOM，未推断影像或病理报告齐备，未推导手术日期。"
+      ]
+    },
+    "routing": {
+      "strategy_version": "event-router-v1",
+      "trigger_event_id": "E00001_7a5cebe696",
+      "selected_agents": [
+        "oncology",
+        "radiology"
+      ],
+      "skipped_agents": [
+        "surgery",
+        "pathology"
+      ],
+      "reasons": [
+        {
+          "agent_id": "oncology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "radiology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "surgery",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        },
+        {
+          "agent_id": "pathology",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        }
+      ]
+    },
+    "evidence_registry": [
+      {
+        "evidence_id": "E00001_7a5cebe696:modality",
+        "event_id": "E00001_7a5cebe696",
+        "fact_key": "modality",
+        "value": "CT",
+        "source_name": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "synthetic": false,
+        "quote_or_fact": "modality = \"CT\"",
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_field": "CT Date"
+      },
+      {
+        "evidence_id": "E00001_7a5cebe696:recorded_date",
+        "event_id": "E00001_7a5cebe696",
+        "fact_key": "recorded_date",
+        "value": "01/02/2000",
+        "source_name": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "synthetic": false,
+        "quote_or_fact": "recorded_date = \"01/02/2000\"",
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_field": "CT Date"
+      },
+      {
+        "evidence_id": "E00001_7a5cebe696:source_subject_id",
+        "event_id": "E00001_7a5cebe696",
+        "fact_key": "source_subject_id",
+        "value": "FIXTURE001",
+        "source_name": "tcia_nsclc_radiogenomics",
+        "source_record_id": "clinical_0000002",
+        "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+        "synthetic": false,
+        "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+        "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+        "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+        "source_field": "Case ID"
+      }
+    ],
+    "initial_opinions": [
+      {
+        "agent_id": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E00001_7a5cebe696:source_subject_id"
+        ],
+        "claims": [
+          {
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "evidence_id": "E00001_7a5cebe696:source_subject_id"
+          }
+        ],
+        "missing_information": [
+          "imaging_complete",
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_oncology_initial",
+        "evidence_refs": [
+          {
+            "evidence_id": "E00001_7a5cebe696:source_subject_id",
+            "event_id": "E00001_7a5cebe696",
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "source_name": "tcia_nsclc_radiogenomics",
+            "source_record_id": "clinical_0000002",
+            "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+            "synthetic": false,
+            "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+            "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+            "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+            "source_field": "Case ID"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      },
+      {
+        "agent_id": "radiology",
+        "decision": "READY_FOR_REVIEW",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E00001_7a5cebe696:source_subject_id"
+        ],
+        "claims": [
+          {
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "evidence_id": "E00001_7a5cebe696:source_subject_id"
+          }
+        ],
+        "missing_information": [],
+        "confidence": "medium",
+        "opinion_id": "op_radiology_initial",
+        "evidence_refs": [
+          {
+            "evidence_id": "E00001_7a5cebe696:source_subject_id",
+            "event_id": "E00001_7a5cebe696",
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "source_name": "tcia_nsclc_radiogenomics",
+            "source_record_id": "clinical_0000002",
+            "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+            "synthetic": false,
+            "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+            "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+            "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+            "source_field": "Case ID"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      }
+    ],
+    "final_opinions": [
+      {
+        "agent_id": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E00001_7a5cebe696:source_subject_id"
+        ],
+        "claims": [
+          {
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "evidence_id": "E00001_7a5cebe696:source_subject_id"
+          }
+        ],
+        "missing_information": [
+          "imaging_complete",
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_oncology_discussion",
+        "evidence_refs": [
+          {
+            "evidence_id": "E00001_7a5cebe696:source_subject_id",
+            "event_id": "E00001_7a5cebe696",
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "source_name": "tcia_nsclc_radiogenomics",
+            "source_record_id": "clinical_0000002",
+            "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+            "synthetic": false,
+            "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+            "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+            "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+            "source_field": "Case ID"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      },
+      {
+        "agent_id": "radiology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E00001_7a5cebe696:source_subject_id"
+        ],
+        "claims": [
+          {
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "evidence_id": "E00001_7a5cebe696:source_subject_id"
+          }
+        ],
+        "missing_information": [
+          "imaging_complete",
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_radiology_discussion",
+        "evidence_refs": [
+          {
+            "evidence_id": "E00001_7a5cebe696:source_subject_id",
+            "event_id": "E00001_7a5cebe696",
+            "fact_key": "source_subject_id",
+            "value": "FIXTURE001",
+            "source_name": "tcia_nsclc_radiogenomics",
+            "source_record_id": "clinical_0000002",
+            "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+            "synthetic": false,
+            "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+            "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+            "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+            "source_field": "Case ID"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      }
+    ],
+    "conflicts": [
+      {
+        "conflict_id": "decision_difference",
+        "dimension": "information_sufficiency",
+        "agent_ids": [
+          "oncology",
+          "radiology"
+        ],
+        "description": "相关角色对资料是否充分的流程标签不一致。",
+        "evidence_ids": []
+      }
+    ],
+    "unresolved_conflicts": [],
+    "discussion_records": [
+      {
+        "agent_id": "oncology",
+        "before": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "after": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "changed": false
+      },
+      {
+        "agent_id": "radiology",
+        "before": {
+          "agent_id": "radiology",
+          "decision": "READY_FOR_REVIEW",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "after": {
+          "agent_id": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 1 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E00001_7a5cebe696:source_subject_id"
+          ],
+          "claims": [
+            {
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "evidence_id": "E00001_7a5cebe696:source_subject_id"
+            }
+          ],
+          "missing_information": [
+            "imaging_complete",
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E00001_7a5cebe696:source_subject_id",
+              "event_id": "E00001_7a5cebe696",
+              "fact_key": "source_subject_id",
+              "value": "FIXTURE001",
+              "source_name": "tcia_nsclc_radiogenomics",
+              "source_record_id": "clinical_0000002",
+              "dataset_version": "NSCLC-Radiogenomics-v4-clinical-2018-05-22",
+              "synthetic": false,
+              "quote_or_fact": "source_subject_id = \"FIXTURE001\"",
+              "artifact_sha256": "c0fb7050c435e670ca6021d1c83fa96deaddb0c6ad7c83ef267d478b18060e0b",
+              "source_record_locator": "tcia_nsclc_clinical.csv!clinical.csv:line=2",
+              "source_field": "Case ID"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "changed": true
+      }
+    ],
+    "discussion_rounds": 1,
+    "safety": {
+      "decision": "NEED_MORE_INFORMATION",
+      "status": "needs_information",
+      "checks": [
+        {
+          "code": "selected_agent_coverage",
+          "status": "passed",
+          "message": "有效最终意见 2 / 本次调度 2；跳过专科不计作失败。",
+          "evidence_ids": []
+        },
+        {
+          "code": "evidence_integrity",
+          "status": "passed",
+          "message": "引用必须属于冻结上下文，事实键与值必须逐项匹配；只检验输入一致性。",
+          "evidence_ids": []
+        },
+        {
+          "code": "unresolved_conflicts",
+          "status": "passed",
+          "message": "保留 0 项未解决分歧；不采用多数票。",
+          "evidence_ids": []
+        },
+        {
+          "code": "required_information",
+          "status": "warning",
+          "message": "待补字段：imaging_complete、pathology_confirmed",
+          "evidence_ids": []
+        },
+        {
+          "code": "temporal_boundary",
+          "status": "passed",
+          "message": "仅使用 v1 中截至 E00001_7a5cebe696 的 1 条事件。",
+          "evidence_ids": []
+        }
+      ],
+      "missing_information": [
+        "imaging_complete",
+        "pathology_confirmed"
+      ],
+      "warnings": [
+        "Mock 为确定的科研流程脚本，不代表医学推理。"
+      ]
+    },
+    "final_decision": "NEED_MORE_INFORMATION",
+    "status": "completed",
+    "metrics": {
+      "agent_calls": 4,
+      "llm_calls": 0,
+      "tool_calls": 3,
+      "retry_count": 0,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "elapsed_ms": 7
+    },
+    "disclaimer": "科研模拟系统，仅用于合成或合法公开研究数据上的算法实验，不构成医疗建议，不用于真实患者诊断、治疗、处方或临床处置。证据校验仅验证输入引用和事实一致性，不证明医学有效性。"
+  }
+}

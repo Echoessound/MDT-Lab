@@ -1,0 +1,2470 @@
+{
+  "cases": [
+    {
+      "case_id": "LUNG-SYN-001",
+      "title": "资料逐步补齐：影像、病理与分子记录",
+      "disease": "肺癌（完全虚构的研究场景）",
+      "case_kind": "synthetic",
+      "version": 1,
+      "patient": {
+        "age": 58,
+        "sex": "female"
+      },
+      "current_question": "截至所选病程事件，相关资料是否充分且一致，是否可以进入人工资料复核？",
+      "timeline": [
+        {
+          "event_id": "E001",
+          "occurred_at": "2026-01-05",
+          "event_type": "diagnosis",
+          "title": "初始资料登记（合成）",
+          "facts": {
+            "disease_label": "肺部异常待核验",
+            "imaging_complete": false,
+            "pathology_confirmed": false
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E002",
+          "occurred_at": "2026-01-12",
+          "event_type": "imaging",
+          "title": "影像报告与附件归档（合成）",
+          "facts": {
+            "imaging_complete": true,
+            "imaging_record": "合成影像资料已归档，未进行影像模型推理"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E003",
+          "occurred_at": "2026-01-15",
+          "event_type": "pathology",
+          "title": "病理记录归档（合成）",
+          "facts": {
+            "pathology_confirmed": true,
+            "histology": "非小细胞肺癌标签，仅供资料流转模拟"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E004",
+          "occurred_at": "2026-01-20",
+          "event_type": "molecular_test",
+          "title": "分子记录待补齐（合成）",
+          "facts": {
+            "molecular_complete": false,
+            "molecular_record": "报告尚未归档"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E005",
+          "occurred_at": "2026-01-25",
+          "event_type": "molecular_test",
+          "title": "补充分子记录（合成）",
+          "facts": {
+            "molecular_complete": true,
+            "molecular_record": "合成分子资料已归档，无用药或治疗建议"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E006",
+          "occurred_at": "2026-02-10",
+          "event_type": "follow_up",
+          "title": "随访资料归档（合成）",
+          "facts": {
+            "follow_up_complete": true,
+            "follow_up_record": "仅核对资料完整性，不判断疗效"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "research_scenario_generator",
+          "source_url": null,
+          "dataset_version": "lung-scenarios-v1",
+          "license": "项目自建合成研究场景",
+          "synthetic": true
+        }
+      ]
+    },
+    {
+      "case_id": "LUNG-SYN-002",
+      "title": "资料缺失：等待病理与分子记录",
+      "disease": "肺癌（完全虚构的研究场景）",
+      "case_kind": "synthetic",
+      "version": 1,
+      "patient": {
+        "age": 63,
+        "sex": "male"
+      },
+      "current_question": "截至所选病程事件，相关资料是否充分且一致，是否可以进入人工资料复核？",
+      "timeline": [
+        {
+          "event_id": "E001",
+          "occurred_at": "2026-03-02",
+          "event_type": "diagnosis",
+          "title": "初始资料尚不完整（合成）",
+          "facts": {
+            "disease_label": "肺癌研究任务待复核",
+            "pathology_confirmed": false
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E002",
+          "occurred_at": "2026-03-06",
+          "event_type": "imaging",
+          "title": "影像附件缺失（合成）",
+          "facts": {
+            "imaging_complete": false,
+            "imaging_record": "合成场景预设：附件尚未提供"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E003",
+          "occurred_at": "2026-03-09",
+          "event_type": "molecular_test",
+          "title": "关键记录仍待提供（合成）",
+          "facts": {
+            "molecular_complete": false,
+            "molecular_record": "合成场景预设：分子报告尚未提供"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "research_scenario_generator",
+          "source_url": null,
+          "dataset_version": "lung-scenarios-v1",
+          "license": "项目自建合成研究场景",
+          "synthetic": true
+        }
+      ]
+    },
+    {
+      "case_id": "LUNG-SYN-003",
+      "title": "证据冲突：同日记录存在相反标记",
+      "disease": "肺癌（完全虚构的研究场景）",
+      "case_kind": "synthetic",
+      "version": 1,
+      "patient": {
+        "age": 67,
+        "sex": "female"
+      },
+      "current_question": "截至所选病程事件，相关资料是否充分且一致，是否可以进入人工资料复核？",
+      "timeline": [
+        {
+          "event_id": "E001",
+          "occurred_at": "2026-04-01",
+          "event_type": "diagnosis",
+          "title": "基础资料已登记（合成）",
+          "facts": {
+            "pathology_confirmed": true,
+            "disease_label": "肺癌研究资料复核任务"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E002",
+          "occurred_at": "2026-04-03",
+          "event_type": "imaging",
+          "title": "同日核对记录 A（合成）",
+          "facts": {
+            "imaging_complete": true,
+            "progression_confirmed": false,
+            "record_note": "预设冲突记录 A，不能作为真实病情判断"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E003",
+          "occurred_at": "2026-04-03",
+          "event_type": "imaging",
+          "title": "同日核对记录 B（合成）",
+          "facts": {
+            "imaging_complete": true,
+            "progression_confirmed": true,
+            "record_note": "预设冲突记录 B，与记录 A 同日且无替代关系"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E004",
+          "occurred_at": "2026-04-04",
+          "event_type": "progression",
+          "title": "触发矛盾资料复核（合成）",
+          "facts": {
+            "progression_event_received": true,
+            "review_note": "需保留同日相反记录，等待人工核验，不能强制形成共识"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "research_scenario_generator",
+          "source_url": null,
+          "dataset_version": "lung-scenarios-v1",
+          "license": "项目自建合成研究场景",
+          "synthetic": true
+        }
+      ]
+    }
+  ],
+  "initial": {
+    "case_id": "LUNG-SYN-001",
+    "case_version": 1,
+    "trigger_event_id": "E002",
+    "mode": "mock",
+    "mock_scenario": "standard",
+    "routing_mode": "event",
+    "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+    "source_run_id": null,
+    "status": "queued",
+    "stage": "QUEUED",
+    "created_at": "2026-11-07T05:42:47.264835+00:00",
+    "updated_at": "2026-11-07T05:42:47.265037+00:00",
+    "last_seq": 1,
+    "routing": null,
+    "agents": [
+      {
+        "agent_id": "oncology",
+        "status": "idle",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      {
+        "agent_id": "radiology",
+        "status": "idle",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      {
+        "agent_id": "surgery",
+        "status": "idle",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      {
+        "agent_id": "pathology",
+        "status": "idle",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      }
+    ],
+    "conflicts": [],
+    "safety": null,
+    "report_ready": false,
+    "cancel_requested": false,
+    "completed_nodes": [],
+    "running_nodes": [],
+    "pending_nodes": [],
+    "metrics": {
+      "agent_calls": 0,
+      "llm_calls": 0,
+      "tool_calls": 0,
+      "retry_count": 0,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "elapsed_ms": 0
+    },
+    "error": null
+  },
+  "run": {
+    "case_id": "LUNG-SYN-001",
+    "case_version": 1,
+    "trigger_event_id": "E002",
+    "mode": "mock",
+    "mock_scenario": "standard",
+    "routing_mode": "event",
+    "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+    "source_run_id": null,
+    "status": "completed",
+    "stage": "COMPLETED",
+    "created_at": "2026-11-07T05:42:47.264835+00:00",
+    "updated_at": "2026-11-07T05:42:47.273284+00:00",
+    "last_seq": 44,
+    "routing": {
+      "strategy_version": "event-router-v1",
+      "trigger_event_id": "E002",
+      "selected_agents": [
+        "oncology",
+        "radiology"
+      ],
+      "skipped_agents": [
+        "surgery",
+        "pathology"
+      ],
+      "reasons": [
+        {
+          "agent_id": "oncology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "radiology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "surgery",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        },
+        {
+          "agent_id": "pathology",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        }
+      ]
+    },
+    "agents": [
+      {
+        "agent_id": "oncology",
+        "status": "completed",
+        "opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "previous_opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "error": null
+      },
+      {
+        "agent_id": "radiology",
+        "status": "completed",
+        "opinion": {
+          "agent_id": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "previous_opinion": {
+          "agent_id": "radiology",
+          "decision": "READY_FOR_REVIEW",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "error": null
+      },
+      {
+        "agent_id": "surgery",
+        "status": "skipped",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      {
+        "agent_id": "pathology",
+        "status": "skipped",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      }
+    ],
+    "conflicts": [
+      {
+        "conflict_id": "decision_difference",
+        "dimension": "information_sufficiency",
+        "agent_ids": [
+          "oncology",
+          "radiology"
+        ],
+        "description": "相关角色对资料是否充分的流程标签不一致。",
+        "evidence_ids": []
+      }
+    ],
+    "safety": {
+      "decision": "NEED_MORE_INFORMATION",
+      "status": "needs_information",
+      "checks": [
+        {
+          "code": "selected_agent_coverage",
+          "status": "passed",
+          "message": "有效最终意见 2 / 本次调度 2；跳过专科不计作失败。",
+          "evidence_ids": []
+        },
+        {
+          "code": "evidence_integrity",
+          "status": "passed",
+          "message": "引用必须属于冻结上下文，事实键与值必须逐项匹配；只检验输入一致性。",
+          "evidence_ids": []
+        },
+        {
+          "code": "unresolved_conflicts",
+          "status": "passed",
+          "message": "保留 0 项未解决分歧；不采用多数票。",
+          "evidence_ids": []
+        },
+        {
+          "code": "required_information",
+          "status": "warning",
+          "message": "待补字段：pathology_confirmed",
+          "evidence_ids": []
+        },
+        {
+          "code": "temporal_boundary",
+          "status": "passed",
+          "message": "仅使用 v1 中截至 E002 的 2 条事件。",
+          "evidence_ids": []
+        }
+      ],
+      "missing_information": [
+        "pathology_confirmed"
+      ],
+      "warnings": [
+        "Mock 为确定的科研流程脚本，不代表医学推理。"
+      ]
+    },
+    "report_ready": true,
+    "cancel_requested": false,
+    "completed_nodes": [
+      "case_validation",
+      "routing",
+      "oncology_review",
+      "radiology_review",
+      "conflict_detection",
+      "targeted_discussion",
+      "safety_gate",
+      "report"
+    ],
+    "running_nodes": [],
+    "pending_nodes": [],
+    "metrics": {
+      "agent_calls": 4,
+      "llm_calls": 0,
+      "tool_calls": 3,
+      "retry_count": 0,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "elapsed_ms": 8
+    },
+    "error": null
+  },
+  "report": {
+    "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+    "case_id": "LUNG-SYN-001",
+    "case_version": 1,
+    "trigger_event_id": "E002",
+    "mode": "mock",
+    "mock_scenario": "standard",
+    "routing_mode": "event",
+    "case_snapshot": {
+      "case_id": "LUNG-SYN-001",
+      "title": "资料逐步补齐：影像、病理与分子记录",
+      "disease": "肺癌（完全虚构的研究场景）",
+      "case_kind": "synthetic",
+      "version": 1,
+      "patient": {
+        "age": 58,
+        "sex": "female"
+      },
+      "current_question": "截至所选病程事件，相关资料是否充分且一致，是否可以进入人工资料复核？",
+      "timeline": [
+        {
+          "event_id": "E001",
+          "occurred_at": "2026-01-05",
+          "event_type": "diagnosis",
+          "title": "初始资料登记（合成）",
+          "facts": {
+            "disease_label": "肺部异常待核验",
+            "imaging_complete": false,
+            "pathology_confirmed": false
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        },
+        {
+          "event_id": "E002",
+          "occurred_at": "2026-01-12",
+          "event_type": "imaging",
+          "title": "影像报告与附件归档（合成）",
+          "facts": {
+            "imaging_complete": true,
+            "imaging_record": "合成影像资料已归档，未进行影像模型推理"
+          },
+          "source": "research_scenario_generator",
+          "source_record_id": null,
+          "synthetic_extension": true,
+          "confidence": "synthetic",
+          "introduced_in_version": 1
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "research_scenario_generator",
+          "source_url": null,
+          "dataset_version": "lung-scenarios-v1",
+          "license": "项目自建合成研究场景",
+          "synthetic": true
+        }
+      ]
+    },
+    "routing": {
+      "strategy_version": "event-router-v1",
+      "trigger_event_id": "E002",
+      "selected_agents": [
+        "oncology",
+        "radiology"
+      ],
+      "skipped_agents": [
+        "surgery",
+        "pathology"
+      ],
+      "reasons": [
+        {
+          "agent_id": "oncology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "radiology",
+          "rule_id": "event_imaging",
+          "description": "触发事件为 imaging，命中科研路由规则。"
+        },
+        {
+          "agent_id": "surgery",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        },
+        {
+          "agent_id": "pathology",
+          "rule_id": "event_imaging",
+          "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+        }
+      ]
+    },
+    "evidence_registry": [
+      {
+        "evidence_id": "E001:disease_label",
+        "event_id": "E001",
+        "fact_key": "disease_label",
+        "value": "肺部异常待核验",
+        "source_name": "research_scenario_generator",
+        "source_record_id": null,
+        "dataset_version": "lung-scenarios-v1",
+        "synthetic": true,
+        "quote_or_fact": "disease_label = \"肺部异常待核验\""
+      },
+      {
+        "evidence_id": "E001:imaging_complete",
+        "event_id": "E001",
+        "fact_key": "imaging_complete",
+        "value": false,
+        "source_name": "research_scenario_generator",
+        "source_record_id": null,
+        "dataset_version": "lung-scenarios-v1",
+        "synthetic": true,
+        "quote_or_fact": "imaging_complete = false"
+      },
+      {
+        "evidence_id": "E001:pathology_confirmed",
+        "event_id": "E001",
+        "fact_key": "pathology_confirmed",
+        "value": false,
+        "source_name": "research_scenario_generator",
+        "source_record_id": null,
+        "dataset_version": "lung-scenarios-v1",
+        "synthetic": true,
+        "quote_or_fact": "pathology_confirmed = false"
+      },
+      {
+        "evidence_id": "E002:imaging_complete",
+        "event_id": "E002",
+        "fact_key": "imaging_complete",
+        "value": true,
+        "source_name": "research_scenario_generator",
+        "source_record_id": null,
+        "dataset_version": "lung-scenarios-v1",
+        "synthetic": true,
+        "quote_or_fact": "imaging_complete = true"
+      },
+      {
+        "evidence_id": "E002:imaging_record",
+        "event_id": "E002",
+        "fact_key": "imaging_record",
+        "value": "合成影像资料已归档，未进行影像模型推理",
+        "source_name": "research_scenario_generator",
+        "source_record_id": null,
+        "dataset_version": "lung-scenarios-v1",
+        "synthetic": true,
+        "quote_or_fact": "imaging_record = \"合成影像资料已归档，未进行影像模型推理\""
+      }
+    ],
+    "initial_opinions": [
+      {
+        "agent_id": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E002:imaging_complete",
+          "E001:pathology_confirmed"
+        ],
+        "claims": [
+          {
+            "fact_key": "imaging_complete",
+            "value": true,
+            "evidence_id": "E002:imaging_complete"
+          },
+          {
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "evidence_id": "E001:pathology_confirmed"
+          }
+        ],
+        "missing_information": [
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_oncology_initial",
+        "evidence_refs": [
+          {
+            "evidence_id": "E002:imaging_complete",
+            "event_id": "E002",
+            "fact_key": "imaging_complete",
+            "value": true,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "imaging_complete = true"
+          },
+          {
+            "evidence_id": "E001:pathology_confirmed",
+            "event_id": "E001",
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "pathology_confirmed = false"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      },
+      {
+        "agent_id": "radiology",
+        "decision": "READY_FOR_REVIEW",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E002:imaging_complete",
+          "E001:pathology_confirmed"
+        ],
+        "claims": [
+          {
+            "fact_key": "imaging_complete",
+            "value": true,
+            "evidence_id": "E002:imaging_complete"
+          },
+          {
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "evidence_id": "E001:pathology_confirmed"
+          }
+        ],
+        "missing_information": [],
+        "confidence": "medium",
+        "opinion_id": "op_radiology_initial",
+        "evidence_refs": [
+          {
+            "evidence_id": "E002:imaging_complete",
+            "event_id": "E002",
+            "fact_key": "imaging_complete",
+            "value": true,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "imaging_complete = true"
+          },
+          {
+            "evidence_id": "E001:pathology_confirmed",
+            "event_id": "E001",
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "pathology_confirmed = false"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      }
+    ],
+    "final_opinions": [
+      {
+        "agent_id": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E002:imaging_complete",
+          "E001:pathology_confirmed"
+        ],
+        "claims": [
+          {
+            "fact_key": "imaging_complete",
+            "value": true,
+            "evidence_id": "E002:imaging_complete"
+          },
+          {
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "evidence_id": "E001:pathology_confirmed"
+          }
+        ],
+        "missing_information": [
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_oncology_discussion",
+        "evidence_refs": [
+          {
+            "evidence_id": "E002:imaging_complete",
+            "event_id": "E002",
+            "fact_key": "imaging_complete",
+            "value": true,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "imaging_complete = true"
+          },
+          {
+            "evidence_id": "E001:pathology_confirmed",
+            "event_id": "E001",
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "pathology_confirmed = false"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      },
+      {
+        "agent_id": "radiology",
+        "decision": "NEED_MORE_INFORMATION",
+        "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+        "evidence_ids": [
+          "E002:imaging_complete",
+          "E001:pathology_confirmed"
+        ],
+        "claims": [
+          {
+            "fact_key": "imaging_complete",
+            "value": true,
+            "evidence_id": "E002:imaging_complete"
+          },
+          {
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "evidence_id": "E001:pathology_confirmed"
+          }
+        ],
+        "missing_information": [
+          "pathology_confirmed"
+        ],
+        "confidence": "medium",
+        "opinion_id": "op_radiology_discussion",
+        "evidence_refs": [
+          {
+            "evidence_id": "E002:imaging_complete",
+            "event_id": "E002",
+            "fact_key": "imaging_complete",
+            "value": true,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "imaging_complete = true"
+          },
+          {
+            "evidence_id": "E001:pathology_confirmed",
+            "event_id": "E001",
+            "fact_key": "pathology_confirmed",
+            "value": false,
+            "source_name": "research_scenario_generator",
+            "source_record_id": null,
+            "dataset_version": "lung-scenarios-v1",
+            "synthetic": true,
+            "quote_or_fact": "pathology_confirmed = false"
+          }
+        ],
+        "model_info": {
+          "provider": "mock",
+          "model": "deterministic-research-v1",
+          "prompt_version": "mock-rules-v1",
+          "attempts": 1,
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      }
+    ],
+    "conflicts": [
+      {
+        "conflict_id": "decision_difference",
+        "dimension": "information_sufficiency",
+        "agent_ids": [
+          "oncology",
+          "radiology"
+        ],
+        "description": "相关角色对资料是否充分的流程标签不一致。",
+        "evidence_ids": []
+      }
+    ],
+    "unresolved_conflicts": [],
+    "discussion_records": [
+      {
+        "agent_id": "oncology",
+        "before": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "after": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "changed": false
+      },
+      {
+        "agent_id": "radiology",
+        "before": {
+          "agent_id": "radiology",
+          "decision": "READY_FOR_REVIEW",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "after": {
+          "agent_id": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        },
+        "changed": true
+      }
+    ],
+    "discussion_rounds": 1,
+    "safety": {
+      "decision": "NEED_MORE_INFORMATION",
+      "status": "needs_information",
+      "checks": [
+        {
+          "code": "selected_agent_coverage",
+          "status": "passed",
+          "message": "有效最终意见 2 / 本次调度 2；跳过专科不计作失败。",
+          "evidence_ids": []
+        },
+        {
+          "code": "evidence_integrity",
+          "status": "passed",
+          "message": "引用必须属于冻结上下文，事实键与值必须逐项匹配；只检验输入一致性。",
+          "evidence_ids": []
+        },
+        {
+          "code": "unresolved_conflicts",
+          "status": "passed",
+          "message": "保留 0 项未解决分歧；不采用多数票。",
+          "evidence_ids": []
+        },
+        {
+          "code": "required_information",
+          "status": "warning",
+          "message": "待补字段：pathology_confirmed",
+          "evidence_ids": []
+        },
+        {
+          "code": "temporal_boundary",
+          "status": "passed",
+          "message": "仅使用 v1 中截至 E002 的 2 条事件。",
+          "evidence_ids": []
+        }
+      ],
+      "missing_information": [
+        "pathology_confirmed"
+      ],
+      "warnings": [
+        "Mock 为确定的科研流程脚本，不代表医学推理。"
+      ]
+    },
+    "final_decision": "NEED_MORE_INFORMATION",
+    "status": "completed",
+    "metrics": {
+      "agent_calls": 4,
+      "llm_calls": 0,
+      "tool_calls": 3,
+      "retry_count": 0,
+      "prompt_tokens": null,
+      "completion_tokens": null,
+      "elapsed_ms": 8
+    },
+    "disclaimer": "科研模拟系统，仅用于合成或合法公开研究数据上的算法实验，不构成医疗建议，不用于真实患者诊断、治疗、处方或临床处置。证据校验仅验证输入引用和事实一致性，不证明医学有效性。"
+  },
+  "events": [
+    {
+      "event_id": "evt_000001",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 1,
+      "timestamp": "2026-11-07T05:42:47.265037+00:00",
+      "type": "run.created",
+      "stage": "QUEUED",
+      "agent_id": null,
+      "payload": {
+        "case_version": 1
+      }
+    },
+    {
+      "event_id": "evt_000002",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 2,
+      "timestamp": "2026-11-07T05:42:47.265218+00:00",
+      "type": "run.started",
+      "stage": "INITIALIZING",
+      "agent_id": null,
+      "payload": {}
+    },
+    {
+      "event_id": "evt_000003",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 3,
+      "timestamp": "2026-11-07T05:42:47.265664+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "INITIALIZING",
+      "agent_id": null,
+      "payload": {
+        "stage": "INITIALIZING"
+      }
+    },
+    {
+      "event_id": "evt_000004",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 4,
+      "timestamp": "2026-11-07T05:42:47.266073+00:00",
+      "type": "workflow.progress",
+      "stage": "INITIALIZING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [],
+        "running_nodes": [
+          "case_validation"
+        ],
+        "pending_nodes": [
+          "routing",
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000005",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 5,
+      "timestamp": "2026-11-07T05:42:47.266364+00:00",
+      "type": "workflow.progress",
+      "stage": "INITIALIZING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "routing",
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000006",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 6,
+      "timestamp": "2026-11-07T05:42:47.266532+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "stage": "ROUTING"
+      }
+    },
+    {
+      "event_id": "evt_000007",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 7,
+      "timestamp": "2026-11-07T05:42:47.266795+00:00",
+      "type": "workflow.progress",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation"
+        ],
+        "running_nodes": [
+          "routing"
+        ],
+        "pending_nodes": [
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000008",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 8,
+      "timestamp": "2026-11-07T05:42:47.267182+00:00",
+      "type": "routing.completed",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "strategy_version": "event-router-v1",
+        "trigger_event_id": "E002",
+        "selected_agents": [
+          "oncology",
+          "radiology"
+        ],
+        "skipped_agents": [
+          "surgery",
+          "pathology"
+        ],
+        "reasons": [
+          {
+            "agent_id": "oncology",
+            "rule_id": "event_imaging",
+            "description": "触发事件为 imaging，命中科研路由规则。"
+          },
+          {
+            "agent_id": "radiology",
+            "rule_id": "event_imaging",
+            "description": "触发事件为 imaging，命中科研路由规则。"
+          },
+          {
+            "agent_id": "surgery",
+            "rule_id": "event_imaging",
+            "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+          },
+          {
+            "agent_id": "pathology",
+            "rule_id": "event_imaging",
+            "description": "本次 imaging 事件未命中该专科规则，跳过调用。"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000009",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 9,
+      "timestamp": "2026-11-07T05:42:47.267438+00:00",
+      "type": "workflow.progress",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000010",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 10,
+      "timestamp": "2026-11-07T05:42:47.267640+00:00",
+      "type": "tool.completed",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "tool": "case_timeline",
+        "evidence_ids": []
+      }
+    },
+    {
+      "event_id": "evt_000011",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 11,
+      "timestamp": "2026-11-07T05:42:47.267776+00:00",
+      "type": "tool.completed",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "tool": "evidence_lookup",
+        "evidence_ids": [
+          "E001:disease_label",
+          "E001:imaging_complete",
+          "E001:pathology_confirmed",
+          "E002:imaging_complete",
+          "E002:imaging_record"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000012",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 12,
+      "timestamp": "2026-11-07T05:42:47.267912+00:00",
+      "type": "tool.completed",
+      "stage": "ROUTING",
+      "agent_id": null,
+      "payload": {
+        "tool": "missing_fields",
+        "evidence_ids": []
+      }
+    },
+    {
+      "event_id": "evt_000013",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 13,
+      "timestamp": "2026-11-07T05:42:47.268078+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "stage": "AGENTS_RUNNING"
+      }
+    },
+    {
+      "event_id": "evt_000014",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 14,
+      "timestamp": "2026-11-07T05:42:47.268176+00:00",
+      "type": "workflow.progress",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing"
+        ],
+        "running_nodes": [
+          "oncology_review"
+        ],
+        "pending_nodes": [
+          "radiology_review",
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000015",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 15,
+      "timestamp": "2026-11-07T05:42:47.268274+00:00",
+      "type": "agent.started",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": "oncology",
+      "payload": {
+        "phase": "initial"
+      }
+    },
+    {
+      "event_id": "evt_000016",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 16,
+      "timestamp": "2026-11-07T05:42:47.268467+00:00",
+      "type": "agent.completed",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": "oncology",
+      "payload": {
+        "phase": "initial",
+        "opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        }
+      }
+    },
+    {
+      "event_id": "evt_000017",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 17,
+      "timestamp": "2026-11-07T05:42:47.268610+00:00",
+      "type": "workflow.progress",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "radiology_review",
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000018",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 18,
+      "timestamp": "2026-11-07T05:42:47.268710+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "stage": "AGENTS_RUNNING"
+      }
+    },
+    {
+      "event_id": "evt_000019",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 19,
+      "timestamp": "2026-11-07T05:42:47.268798+00:00",
+      "type": "workflow.progress",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review"
+        ],
+        "running_nodes": [
+          "radiology_review"
+        ],
+        "pending_nodes": [
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000020",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 20,
+      "timestamp": "2026-11-07T05:42:47.268900+00:00",
+      "type": "agent.started",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": "radiology",
+      "payload": {
+        "phase": "initial"
+      }
+    },
+    {
+      "event_id": "evt_000021",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 21,
+      "timestamp": "2026-11-07T05:42:47.269059+00:00",
+      "type": "agent.completed",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": "radiology",
+      "payload": {
+        "phase": "initial",
+        "opinion": {
+          "agent_id": "radiology",
+          "decision": "READY_FOR_REVIEW",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_initial",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        }
+      }
+    },
+    {
+      "event_id": "evt_000022",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 22,
+      "timestamp": "2026-11-07T05:42:47.269242+00:00",
+      "type": "workflow.progress",
+      "stage": "AGENTS_RUNNING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "conflict_detection",
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000023",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 23,
+      "timestamp": "2026-11-07T05:42:47.269352+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "CONFLICT_CHECK",
+      "agent_id": null,
+      "payload": {
+        "stage": "CONFLICT_CHECK"
+      }
+    },
+    {
+      "event_id": "evt_000024",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 24,
+      "timestamp": "2026-11-07T05:42:47.269449+00:00",
+      "type": "workflow.progress",
+      "stage": "CONFLICT_CHECK",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review"
+        ],
+        "running_nodes": [
+          "conflict_detection"
+        ],
+        "pending_nodes": [
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000025",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 25,
+      "timestamp": "2026-11-07T05:42:47.269568+00:00",
+      "type": "conflict.detected",
+      "stage": "CONFLICT_CHECK",
+      "agent_id": null,
+      "payload": {
+        "conflicts": [
+          {
+            "conflict_id": "decision_difference",
+            "dimension": "information_sufficiency",
+            "agent_ids": [
+              "oncology",
+              "radiology"
+            ],
+            "description": "相关角色对资料是否充分的流程标签不一致。",
+            "evidence_ids": []
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000026",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 26,
+      "timestamp": "2026-11-07T05:42:47.269718+00:00",
+      "type": "workflow.progress",
+      "stage": "CONFLICT_CHECK",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000027",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 27,
+      "timestamp": "2026-11-07T05:42:47.269839+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "DISCUSSION",
+      "agent_id": null,
+      "payload": {
+        "stage": "DISCUSSION"
+      }
+    },
+    {
+      "event_id": "evt_000028",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 28,
+      "timestamp": "2026-11-07T05:42:47.269948+00:00",
+      "type": "workflow.progress",
+      "stage": "DISCUSSION",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection"
+        ],
+        "running_nodes": [
+          "targeted_discussion"
+        ],
+        "pending_nodes": [
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000029",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 29,
+      "timestamp": "2026-11-07T05:42:47.270089+00:00",
+      "type": "discussion.started",
+      "stage": "DISCUSSION",
+      "agent_id": null,
+      "payload": {
+        "round": 1,
+        "participants": [
+          "oncology",
+          "radiology"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000030",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 30,
+      "timestamp": "2026-11-07T05:42:47.270208+00:00",
+      "type": "agent.started",
+      "stage": "DISCUSSION",
+      "agent_id": "oncology",
+      "payload": {
+        "phase": "discussion"
+      }
+    },
+    {
+      "event_id": "evt_000031",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 31,
+      "timestamp": "2026-11-07T05:42:47.270420+00:00",
+      "type": "agent.completed",
+      "stage": "DISCUSSION",
+      "agent_id": "oncology",
+      "payload": {
+        "phase": "discussion",
+        "opinion": {
+          "agent_id": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_oncology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        }
+      }
+    },
+    {
+      "event_id": "evt_000032",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 32,
+      "timestamp": "2026-11-07T05:42:47.270584+00:00",
+      "type": "agent.started",
+      "stage": "DISCUSSION",
+      "agent_id": "radiology",
+      "payload": {
+        "phase": "discussion"
+      }
+    },
+    {
+      "event_id": "evt_000033",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 33,
+      "timestamp": "2026-11-07T05:42:47.270802+00:00",
+      "type": "agent.completed",
+      "stage": "DISCUSSION",
+      "agent_id": "radiology",
+      "payload": {
+        "phase": "discussion",
+        "opinion": {
+          "agent_id": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "summary": "预设 Mock 资料审阅脚本：依据冻结病例中的 2 项结构化事实核对记录。仍存在关键资料缺口。",
+          "evidence_ids": [
+            "E002:imaging_complete",
+            "E001:pathology_confirmed"
+          ],
+          "claims": [
+            {
+              "fact_key": "imaging_complete",
+              "value": true,
+              "evidence_id": "E002:imaging_complete"
+            },
+            {
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "evidence_id": "E001:pathology_confirmed"
+            }
+          ],
+          "missing_information": [
+            "pathology_confirmed"
+          ],
+          "confidence": "medium",
+          "opinion_id": "op_radiology_discussion",
+          "evidence_refs": [
+            {
+              "evidence_id": "E002:imaging_complete",
+              "event_id": "E002",
+              "fact_key": "imaging_complete",
+              "value": true,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "imaging_complete = true"
+            },
+            {
+              "evidence_id": "E001:pathology_confirmed",
+              "event_id": "E001",
+              "fact_key": "pathology_confirmed",
+              "value": false,
+              "source_name": "research_scenario_generator",
+              "source_record_id": null,
+              "dataset_version": "lung-scenarios-v1",
+              "synthetic": true,
+              "quote_or_fact": "pathology_confirmed = false"
+            }
+          ],
+          "model_info": {
+            "provider": "mock",
+            "model": "deterministic-research-v1",
+            "prompt_version": "mock-rules-v1",
+            "attempts": 1,
+            "prompt_tokens": null,
+            "completion_tokens": null
+          }
+        }
+      }
+    },
+    {
+      "event_id": "evt_000034",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 34,
+      "timestamp": "2026-11-07T05:42:47.270994+00:00",
+      "type": "discussion.completed",
+      "stage": "DISCUSSION",
+      "agent_id": null,
+      "payload": {
+        "round": 1,
+        "participants": [
+          "oncology",
+          "radiology"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000035",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 35,
+      "timestamp": "2026-11-07T05:42:47.271129+00:00",
+      "type": "workflow.progress",
+      "stage": "DISCUSSION",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "targeted_discussion"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "safety_gate",
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000036",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 36,
+      "timestamp": "2026-11-07T05:42:47.271424+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "SAFETY_CHECK",
+      "agent_id": null,
+      "payload": {
+        "stage": "SAFETY_CHECK"
+      }
+    },
+    {
+      "event_id": "evt_000037",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 37,
+      "timestamp": "2026-11-07T05:42:47.271581+00:00",
+      "type": "workflow.progress",
+      "stage": "SAFETY_CHECK",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "targeted_discussion"
+        ],
+        "running_nodes": [
+          "safety_gate"
+        ],
+        "pending_nodes": [
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000038",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 38,
+      "timestamp": "2026-11-07T05:42:47.271747+00:00",
+      "type": "safety.completed",
+      "stage": "SAFETY_CHECK",
+      "agent_id": null,
+      "payload": {
+        "decision": "NEED_MORE_INFORMATION",
+        "status": "needs_information",
+        "checks": [
+          {
+            "code": "selected_agent_coverage",
+            "status": "passed",
+            "message": "有效最终意见 2 / 本次调度 2；跳过专科不计作失败。",
+            "evidence_ids": []
+          },
+          {
+            "code": "evidence_integrity",
+            "status": "passed",
+            "message": "引用必须属于冻结上下文，事实键与值必须逐项匹配；只检验输入一致性。",
+            "evidence_ids": []
+          },
+          {
+            "code": "unresolved_conflicts",
+            "status": "passed",
+            "message": "保留 0 项未解决分歧；不采用多数票。",
+            "evidence_ids": []
+          },
+          {
+            "code": "required_information",
+            "status": "warning",
+            "message": "待补字段：pathology_confirmed",
+            "evidence_ids": []
+          },
+          {
+            "code": "temporal_boundary",
+            "status": "passed",
+            "message": "仅使用 v1 中截至 E002 的 2 条事件。",
+            "evidence_ids": []
+          }
+        ],
+        "missing_information": [
+          "pathology_confirmed"
+        ],
+        "warnings": [
+          "Mock 为确定的科研流程脚本，不代表医学推理。"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000039",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 39,
+      "timestamp": "2026-11-07T05:42:47.271914+00:00",
+      "type": "workflow.progress",
+      "stage": "SAFETY_CHECK",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "targeted_discussion",
+          "safety_gate"
+        ],
+        "running_nodes": [],
+        "pending_nodes": [
+          "report"
+        ]
+      }
+    },
+    {
+      "event_id": "evt_000040",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 40,
+      "timestamp": "2026-11-07T05:42:47.272047+00:00",
+      "type": "workflow.stage_changed",
+      "stage": "REPORTING",
+      "agent_id": null,
+      "payload": {
+        "stage": "REPORTING"
+      }
+    },
+    {
+      "event_id": "evt_000041",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 41,
+      "timestamp": "2026-11-07T05:42:47.272175+00:00",
+      "type": "workflow.progress",
+      "stage": "REPORTING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "targeted_discussion",
+          "safety_gate"
+        ],
+        "running_nodes": [
+          "report"
+        ],
+        "pending_nodes": []
+      }
+    },
+    {
+      "event_id": "evt_000042",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 42,
+      "timestamp": "2026-11-07T05:42:47.272524+00:00",
+      "type": "workflow.progress",
+      "stage": "REPORTING",
+      "agent_id": null,
+      "payload": {
+        "completed_nodes": [
+          "case_validation",
+          "routing",
+          "oncology_review",
+          "radiology_review",
+          "conflict_detection",
+          "targeted_discussion",
+          "safety_gate",
+          "report"
+        ],
+        "running_nodes": [],
+        "pending_nodes": []
+      }
+    },
+    {
+      "event_id": "evt_000043",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 43,
+      "timestamp": "2026-11-07T05:42:47.272903+00:00",
+      "type": "report.generated",
+      "stage": "REPORTING",
+      "agent_id": null,
+      "payload": {
+        "status": "completed",
+        "final_decision": "NEED_MORE_INFORMATION",
+        "metrics": {
+          "agent_calls": 4,
+          "llm_calls": 0,
+          "tool_calls": 3,
+          "retry_count": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "elapsed_ms": 8
+        }
+      }
+    },
+    {
+      "event_id": "evt_000044",
+      "run_id": "run_7d5edcc442824616ae1e903faf4fd6d5",
+      "seq": 44,
+      "timestamp": "2026-11-07T05:42:47.273284+00:00",
+      "type": "run.completed",
+      "stage": "COMPLETED",
+      "agent_id": null,
+      "payload": {
+        "status": "completed"
+      }
+    }
+  ],
+  "model": {
+    "provider": "openai-compatible",
+    "base_url": "https://api.openai.com/v1",
+    "model": "",
+    "has_api_key": false,
+    "configured": false,
+    "timeout_seconds": 20,
+    "temperature": 0,
+    "max_output_tokens": 1200
+  }
+}

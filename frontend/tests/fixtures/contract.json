@@ -1,0 +1,962 @@
+{
+  "case": {
+    "case_id": "SYN-001",
+    "is_synthetic": true,
+    "patient": {
+      "age": 58,
+      "sex": "female"
+    },
+    "timeline": [
+      {
+        "event_id": "E001",
+        "date": "2026-01-05",
+        "type": "initial_assessment",
+        "description": "模拟病例：发现需要进一步评估的异常影像表现。"
+      },
+      {
+        "event_id": "E002",
+        "date": "2026-01-12",
+        "type": "imaging",
+        "description": "模拟病例：部分关键影像信息尚未完成核验。"
+      }
+    ],
+    "current_question": "当前模拟病例是否具备进入下一步决策讨论的充分信息？",
+    "available_options": [
+      "READY_FOR_REVIEW",
+      "NEED_MORE_INFORMATION",
+      "DEFER_DECISION"
+    ]
+  },
+  "initial": {
+    "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+    "case_id": "SYN-001",
+    "mode": "mock",
+    "scenario": "standard",
+    "source_run_id": null,
+    "status": "queued",
+    "stage": "LOAD_CASE",
+    "created_at": "2026-11-06T10:10:39.596225Z",
+    "updated_at": "2026-11-06T10:10:39.596277Z",
+    "agents": {
+      "oncology": {
+        "status": "waiting",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      "surgery": {
+        "status": "waiting",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      },
+      "radiology": {
+        "status": "waiting",
+        "opinion": null,
+        "previous_opinion": null,
+        "error": null
+      }
+    },
+    "discussion_triggered": false,
+    "cancel_requested": false,
+    "report_ready": false,
+    "last_seq": 0
+  },
+  "run": {
+    "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+    "case_id": "SYN-001",
+    "mode": "mock",
+    "scenario": "standard",
+    "source_run_id": null,
+    "status": "completed",
+    "stage": "SAVE_OUTPUT",
+    "created_at": "2026-11-06T10:10:39.596225Z",
+    "updated_at": "2026-11-06T10:10:39.602537Z",
+    "agents": {
+      "oncology": {
+        "status": "completed",
+        "opinion": {
+          "agent_name": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "previous_opinion": {
+          "agent_name": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "error": null
+      },
+      "surgery": {
+        "status": "completed",
+        "opinion": {
+          "agent_name": "surgery",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 讨论更新：根据 E002 的未核验信息，先补齐资料再讨论。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "previous_opinion": {
+          "agent_name": "surgery",
+          "decision": "READY_FOR_REVIEW",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：外科角色暂认为可进入资料复核，供分歧流程演示。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [],
+          "confidence": "low"
+        },
+        "error": null
+      },
+      "radiology": {
+        "status": "completed",
+        "opinion": {
+          "agent_name": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "previous_opinion": {
+          "agent_name": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "error": null
+      }
+    },
+    "discussion_triggered": true,
+    "cancel_requested": false,
+    "report_ready": true,
+    "last_seq": 25
+  },
+  "report": {
+    "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+    "case_id": "SYN-001",
+    "mode": "mock",
+    "status": "completed",
+    "initial_opinions": [
+      {
+        "agent_name": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [
+          "需要确认影像记录的完整性"
+        ],
+        "confidence": "low"
+      },
+      {
+        "agent_name": "surgery",
+        "decision": "READY_FOR_REVIEW",
+        "reasoning_summary": "预设 Mock 流程标签（非医学推理）：外科角色暂认为可进入资料复核，供分歧流程演示。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [],
+        "confidence": "low"
+      },
+      {
+        "agent_name": "radiology",
+        "decision": "NEED_MORE_INFORMATION",
+        "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [
+          "需要确认影像记录的完整性"
+        ],
+        "confidence": "low"
+      }
+    ],
+    "discussion_triggered": true,
+    "discussion_rounds": 1,
+    "discussion_records": [
+      {
+        "round": 1,
+        "agent_name": "oncology",
+        "topic": "是否已经具备进入下一步讨论的充分信息？",
+        "before": {
+          "agent_name": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "after": {
+          "agent_name": "oncology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "changed": false,
+        "status": "completed",
+        "audit_event_id": "A0015"
+      },
+      {
+        "round": 1,
+        "agent_name": "surgery",
+        "topic": "是否已经具备进入下一步讨论的充分信息？",
+        "before": {
+          "agent_name": "surgery",
+          "decision": "READY_FOR_REVIEW",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：外科角色暂认为可进入资料复核，供分歧流程演示。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [],
+          "confidence": "low"
+        },
+        "after": {
+          "agent_name": "surgery",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 讨论更新：根据 E002 的未核验信息，先补齐资料再讨论。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "changed": true,
+        "status": "completed",
+        "audit_event_id": "A0017"
+      },
+      {
+        "round": 1,
+        "agent_name": "radiology",
+        "topic": "是否已经具备进入下一步讨论的充分信息？",
+        "before": {
+          "agent_name": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "after": {
+          "agent_name": "radiology",
+          "decision": "NEED_MORE_INFORMATION",
+          "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "missing_information": [
+            "需要确认影像记录的完整性"
+          ],
+          "confidence": "low"
+        },
+        "changed": false,
+        "status": "completed",
+        "audit_event_id": "A0019"
+      }
+    ],
+    "final_opinions": [
+      {
+        "agent_name": "oncology",
+        "decision": "NEED_MORE_INFORMATION",
+        "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [
+          "需要确认影像记录的完整性"
+        ],
+        "confidence": "low"
+      },
+      {
+        "agent_name": "surgery",
+        "decision": "NEED_MORE_INFORMATION",
+        "reasoning_summary": "预设 Mock 讨论更新：根据 E002 的未核验信息，先补齐资料再讨论。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [
+          "需要确认影像记录的完整性"
+        ],
+        "confidence": "low"
+      },
+      {
+        "agent_name": "radiology",
+        "decision": "NEED_MORE_INFORMATION",
+        "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+        "supporting_event_ids": [
+          "E002"
+        ],
+        "missing_information": [
+          "需要确认影像记录的完整性"
+        ],
+        "confidence": "low"
+      }
+    ],
+    "final_decision": "NEED_MORE_INFORMATION",
+    "unresolved_disagreements": [],
+    "missing_information": [
+      "需要确认影像记录的完整性"
+    ],
+    "warnings": [
+      "Mock 意见为预设流程演示，不代表真实医学推理。"
+    ],
+    "disclaimer": "本报告仅用于合成病例的科研模拟，不构成真实医疗建议。",
+    "case_sha256": "04ab17c8a97778134ab770689477373888ab9a20b12a1bd51d90a33efb33e0f0",
+    "audit_file": "audit.jsonl",
+    "audit_event_ids": [
+      "A0001",
+      "A0002",
+      "A0003",
+      "A0004",
+      "A0005",
+      "A0006",
+      "A0007",
+      "A0008",
+      "A0009",
+      "A0010",
+      "A0011",
+      "A0012",
+      "A0013",
+      "A0014",
+      "A0015",
+      "A0016",
+      "A0017",
+      "A0018",
+      "A0019",
+      "A0020",
+      "A0021",
+      "A0022",
+      "A0023"
+    ]
+  },
+  "events": [
+    {
+      "schema_version": "1",
+      "seq": 1,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.596574Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0001",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.596574Z",
+        "stage": "LOAD_CASE",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": null,
+          "current": "LOAD_CASE"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 2,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.597249Z",
+      "type": "run.started",
+      "payload": {
+        "event_id": "A0002",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.597249Z",
+        "stage": "LOAD_CASE",
+        "event_type": "case_loaded",
+        "agent_name": null,
+        "details": {
+          "case_id": "SYN-001",
+          "case_sha256": "04ab17c8a97778134ab770689477373888ab9a20b12a1bd51d90a33efb33e0f0"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 3,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.597806Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0003",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.597806Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": "LOAD_CASE",
+          "current": "INITIAL_REVIEW"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 4,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.598184Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0004",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.598184Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_started",
+        "agent_name": "oncology",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 5,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.598646Z",
+      "type": "agent.completed",
+      "payload": {
+        "event_id": "A0005",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.598646Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_completed",
+        "agent_name": "oncology",
+        "details": {
+          "decision": "NEED_MORE_INFORMATION",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "oncology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 6,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.598934Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0006",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.598934Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_started",
+        "agent_name": "surgery",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 7,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.599204Z",
+      "type": "agent.completed",
+      "payload": {
+        "event_id": "A0007",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.599204Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_completed",
+        "agent_name": "surgery",
+        "details": {
+          "decision": "READY_FOR_REVIEW",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "surgery",
+            "decision": "READY_FOR_REVIEW",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：外科角色暂认为可进入资料复核，供分歧流程演示。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 8,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.599396Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0008",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.599396Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_started",
+        "agent_name": "radiology",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 9,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.599576Z",
+      "type": "agent.completed",
+      "payload": {
+        "event_id": "A0009",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.599576Z",
+        "stage": "INITIAL_REVIEW",
+        "event_type": "agent_completed",
+        "agent_name": "radiology",
+        "details": {
+          "decision": "NEED_MORE_INFORMATION",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "radiology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 10,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.599743Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0010",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.599743Z",
+        "stage": "DETECT_DISAGREEMENT",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": "INITIAL_REVIEW",
+          "current": "DETECT_DISAGREEMENT"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 11,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.599935Z",
+      "type": "disagreement.detected",
+      "payload": {
+        "event_id": "A0011",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.599935Z",
+        "stage": "DETECT_DISAGREEMENT",
+        "event_type": "disagreement_detected",
+        "agent_name": null,
+        "details": {
+          "has_disagreement": true,
+          "sufficient_opinions": true,
+          "conflicting_agents": [
+            "oncology",
+            "surgery",
+            "radiology"
+          ],
+          "conflicting_decisions": [
+            "NEED_MORE_INFORMATION",
+            "READY_FOR_REVIEW"
+          ],
+          "missing_agents": [],
+          "discussion_topic": "是否已经具备进入下一步讨论的充分信息？"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 12,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.600113Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0012",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.600113Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": "DETECT_DISAGREEMENT",
+          "current": "TARGETED_DISCUSSION"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 13,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.600275Z",
+      "type": "discussion.started",
+      "payload": {
+        "event_id": "A0013",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.600275Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "discussion_started",
+        "agent_name": null,
+        "details": {
+          "round": 1,
+          "topic": "是否已经具备进入下一步讨论的充分信息？"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 14,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.600440Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0014",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.600440Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_started",
+        "agent_name": "oncology",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 15,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.600658Z",
+      "type": "discussion.agent_updated",
+      "payload": {
+        "event_id": "A0015",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.600658Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_completed",
+        "agent_name": "oncology",
+        "details": {
+          "decision": "NEED_MORE_INFORMATION",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "oncology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          },
+          "before": {
+            "agent_name": "oncology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 16,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.600860Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0016",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.600860Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_started",
+        "agent_name": "surgery",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 17,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601076Z",
+      "type": "discussion.agent_updated",
+      "payload": {
+        "event_id": "A0017",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601076Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_completed",
+        "agent_name": "surgery",
+        "details": {
+          "decision": "NEED_MORE_INFORMATION",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "surgery",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 讨论更新：根据 E002 的未核验信息，先补齐资料再讨论。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          },
+          "before": {
+            "agent_name": "surgery",
+            "decision": "READY_FOR_REVIEW",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：外科角色暂认为可进入资料复核，供分歧流程演示。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 18,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601257Z",
+      "type": "agent.started",
+      "payload": {
+        "event_id": "A0018",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601257Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_started",
+        "agent_name": "radiology",
+        "details": {}
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 19,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601452Z",
+      "type": "discussion.agent_updated",
+      "payload": {
+        "event_id": "A0019",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601452Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "agent_completed",
+        "agent_name": "radiology",
+        "details": {
+          "decision": "NEED_MORE_INFORMATION",
+          "supporting_event_ids": [
+            "E002"
+          ],
+          "opinion": {
+            "agent_name": "radiology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          },
+          "before": {
+            "agent_name": "radiology",
+            "decision": "NEED_MORE_INFORMATION",
+            "reasoning_summary": "预设 Mock 流程标签（非医学推理）：E002 明示部分影像信息尚未核验。",
+            "supporting_event_ids": [
+              "E002"
+            ],
+            "missing_information": [
+              "需要确认影像记录的完整性"
+            ],
+            "confidence": "low"
+          }
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 20,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601613Z",
+      "type": "discussion.completed",
+      "payload": {
+        "event_id": "A0020",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601613Z",
+        "stage": "TARGETED_DISCUSSION",
+        "event_type": "discussion_finished",
+        "agent_name": null,
+        "details": {
+          "round": 1
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 21,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601769Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0021",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601769Z",
+        "stage": "BUILD_REPORT",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": "TARGETED_DISCUSSION",
+          "current": "BUILD_REPORT"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 22,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.601958Z",
+      "type": "report.generated",
+      "payload": {
+        "event_id": "A0022",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.601958Z",
+        "stage": "BUILD_REPORT",
+        "event_type": "report_generated",
+        "agent_name": null,
+        "details": {
+          "final_decision": "NEED_MORE_INFORMATION",
+          "status": "completed"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 23,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.602112Z",
+      "type": "run.stage_changed",
+      "payload": {
+        "event_id": "A0023",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.602112Z",
+        "stage": "SAVE_OUTPUT",
+        "event_type": "state_transition",
+        "agent_name": null,
+        "details": {
+          "previous": "BUILD_REPORT",
+          "current": "SAVE_OUTPUT"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 24,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.602387Z",
+      "type": "report.ready",
+      "payload": {
+        "event_id": "A0024",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.602387Z",
+        "stage": "SAVE_OUTPUT",
+        "event_type": "report_saved",
+        "agent_name": null,
+        "details": {
+          "report_file": "report.json"
+        }
+      }
+    },
+    {
+      "schema_version": "1",
+      "seq": 25,
+      "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+      "timestamp": "2026-11-06T10:10:39.602537Z",
+      "type": "run.completed",
+      "payload": {
+        "event_id": "A0025",
+        "run_id": "run_da7309157ea542f79f1354e0a9b63c94",
+        "timestamp": "2026-11-06T10:10:39.602537Z",
+        "stage": "SAVE_OUTPUT",
+        "event_type": "run_finished",
+        "agent_name": null,
+        "details": {
+          "status": "completed",
+          "report_file": "report.json"
+        }
+      }
+    }
+  ]
+}
