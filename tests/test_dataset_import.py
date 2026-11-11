@@ -168,3 +168,19 @@ def test_downloader_bounds_and_rejects_external_redirects(monkeypatch):
 
 def test_cross_origin_cannot_import(client):
     assert client.post('/api/v2/datasets/connect?source=synthea_csv', headers={'Origin': 'https://other.example'}).status_code == 403
+
+
+def test_transient_upstream_failure_retries_once():
+    calls = []
+    def upstream(request):
+        calls.append(request)
+        return httpx.Response(503) if len(calls) == 1 else httpx.Response(200, content=tcia_bytes())
+    assert download_dataset('tcia_nsclc_csv', transport=httpx.MockTransport(upstream)) == tcia_bytes()
+    assert len(calls) == 2
+    calls.clear()
+    def unavailable(request):
+        calls.append(request)
+        raise httpx.ConnectError('temporary failure')
+    with pytest.raises(APIError):
+        download_dataset('tcia_nsclc_csv', transport=httpx.MockTransport(unavailable))
+    assert len(calls) == 2

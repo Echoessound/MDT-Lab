@@ -14,12 +14,22 @@ ALLOWED_HOSTS = {
 
 
 def download_dataset(source: str, *, transport=None) -> bytes:
+    started = time.monotonic()
+    for attempt in range(2):
+        try:
+            return _download_once(source, transport=transport, started=started)
+        except APIError as exc:
+            if exc.code != "DATASET_DOWNLOAD_FAILED" or attempt or time.monotonic() - started >= 30:
+                raise
+    raise AssertionError("unreachable")
+
+
+def _download_once(source: str, *, transport, started: float) -> bytes:
     url = CATALOG.get(source, {}).get("download_url")
     if not url:
         raise APIError(422, "DATASET_DOWNLOAD_UNAVAILABLE", "此格式请通过本地文件导入。")
-    started = time.monotonic()
     try:
-        with httpx.Client(timeout=30, follow_redirects=False, trust_env=True, transport=transport) as client:
+        with httpx.Client(timeout=15, follow_redirects=False, trust_env=True, transport=transport) as client:
             for _ in range(4):
                 parsed = urlsplit(url)
                 if (parsed.scheme != "https" or parsed.hostname not in ALLOWED_HOSTS
