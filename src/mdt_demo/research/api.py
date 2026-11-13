@@ -42,8 +42,13 @@ class AppendEvent(BaseModel):
 
 @router.get("/health")
 def health(request: Request):
-    return {"data": {"status": "ok", "version": "0.3.0", "storage": "sqlite", "stream": "sse",
+    return {"data": {"status": "ok", "version": "0.3.0", "storage": request.app.state.research.store.health()["backend"], "stream": "sse",
                      "event_delay": request.app.state.research.event_delay}}
+
+
+@router.get("/storage")
+def storage(request: Request):
+    return {"data": {**request.app.state.research.store.health(), "status": "connected"}}
 
 
 @router.get("/cases")

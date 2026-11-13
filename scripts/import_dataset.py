@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 
 from mdt_demo.research.datasets import CATALOG, prepare_import
-from mdt_demo.research.store import ResearchStore
+from dotenv import load_dotenv
+from mdt_demo.research.persistence.config import StorageConfig, create_repository
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("source", choices=CATALOG)
@@ -18,7 +19,8 @@ result = prepared.summary
 if args.commit:
     if not prepared.cases:
         raise SystemExit("没有可导入病例；未写入数据库。")
-    store = ResearchStore(args.output_dir / "research.sqlite3")
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+    store = create_repository(StorageConfig.from_env(), args.output_dir)
     try:
         result = store.import_cases(prepared.cases, prepared.summary)
     finally:

@@ -29,6 +29,8 @@ def dumps(value: Any) -> str:
 
 
 class ResearchStore:
+    backend = "sqlite"
+
     def __init__(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
@@ -60,6 +62,9 @@ class ResearchStore:
             CREATE INDEX IF NOT EXISTS runs_created ON runs(created_at DESC);
             CREATE TABLE IF NOT EXISTS import_batches (
                 batch_id TEXT PRIMARY KEY, created_at TEXT NOT NULL, document TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS model_settings (
+                key TEXT PRIMARY KEY, document TEXT NOT NULL
             );
         """)
         for table in ("cases", "clinical_events", "audit_events", "import_batches"):
@@ -238,6 +243,25 @@ class ResearchStore:
             if not row[0]:
                 raise APIError(500, "REPORT_UNREADABLE", "已保存报告无法读取。")
             return json.loads(row[0])
+
+    def health(self) -> dict:
+        with self._lock:
+            self._db.execute("SELECT 1")
+        return {"backend": self.backend, "database": self.path.name, "connected": True,
+                "transactions": True, "schema_version": 1}
+
+    def load_model_settings(self) -> dict:
+        with self._lock:
+            return {row["key"]: json.loads(row["document"]) for row in self._db.execute("SELECT * FROM model_settings")}
+
+    def save_model_setting(self, key: str, value: dict) -> None:
+        with self._lock, self._db:
+            self._db.execute("INSERT INTO model_settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET document=excluded.document",
+                             (key, dumps(value)))
+
+    def delete_model_setting(self, key: str) -> None:
+        with self._lock, self._db:
+            self._db.execute("DELETE FROM model_settings WHERE key=?", (key,))
 
     def close(self) -> None:
         with self._lock:

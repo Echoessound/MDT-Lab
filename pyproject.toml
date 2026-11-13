@@ -8,7 +8,7 @@ version = "0.3.0"
 description = "Synthetic-case MDT workflow demo with bounded discussion and audit logs"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["pydantic>=2.8,<3", "python-dotenv>=1,<2"]
+dependencies = ["pydantic>=2.8,<3", "python-dotenv>=1,<2", "pymongo>=4.10,<5", "cryptography>=44,<47"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]

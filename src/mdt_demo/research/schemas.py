@@ -263,6 +263,17 @@ class DiscussionRecord(Model):
     changed: StrictBool
 
 
+class ModelConfigurationSnapshot(Model):
+    agent_id: Role
+    configuration_source: Literal["agent", "default"]
+    provider: str
+    base_url: str
+    model: str
+    timeout_seconds: float
+    temperature: float
+    max_output_tokens: int
+
+
 class Report(Model):
     run_id: Identifier
     case_id: Identifier
@@ -284,6 +295,7 @@ class Report(Model):
     final_decision: Decision
     status: Literal["completed", "incomplete", "failed"]
     metrics: Metrics
+    model_configuration: list[ModelConfigurationSnapshot] = Field(default_factory=list)
     disclaimer: Literal[DISCLAIMER] = DISCLAIMER
 
     @model_validator(mode="after")

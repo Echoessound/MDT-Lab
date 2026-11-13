@@ -12,7 +12,13 @@
 
 ## 快速启动
 
-当前工作区已安装依赖：
+当前默认使用 MongoDB。先启动独立副本集（端口 27018，不改变本机 27017 实例），保持该终端运行：
+
+```bash
+.venv/bin/python scripts/start_mongodb.py
+```
+
+也可选择 Docker：`docker compose up -d --wait mongodb`（两种方式选一种）。另一个终端启动网页：
 
 ```bash
 cd "/Users/echo/真正的代码库/毕业论文/mdt-demo"
@@ -30,6 +36,7 @@ cd frontend
 npm ci
 npm run build
 cd ..
+# 先在另一个终端启动 MongoDB，或执行 docker compose up -d --wait mongodb
 ./start.sh
 ```
 
@@ -41,7 +48,7 @@ cd ..
 | --- | --- |
 | `/` | 自建与导入的版本化病例及最近运行 |
 | `/research/datasets` | 官方数据连接、文件预检、确认导入、批次记录与 JSON 模板 |
-| `/research/agents` | Agent 群：病例入口、实际角色状态、冻结输入数据通路、SSE 审计与报告 |
+| `/research/agents` | Agent 群：独立连接设置、可点击协作图、证据与讨论变化、MongoDB 状态、SSE 审计 |
 | `/research/cases/{case_id}` | 选择病例版本、触发事件和调度方式；追加合成事件 |
 | `/research/runs/{run_id}` | 实际节点进度、四专科状态、讨论、证据检查与 SSE 审计 |
 | `/research/runs/{run_id}/report` | 冻结输入、初始/最终意见、未解决分歧、报告与审计下载 |
@@ -69,7 +76,7 @@ cd ..
 - **TCIA NSCLC 临床 CSV**：导入可定位日期的检查与随访；无可用日期的病理、分子、治疗和结局字段保留为相关资料，不进入历史 Agent 输入。占位值保留为未知，不转换成阴性。
 - **研究 JSON**：页面可下载模板，顶层为 `{"cases": [...]}`。病例遵循 `ResearchCase` 契约，须声明来源、许可、数据版本、病例类型、日期及事实；新导入版本须为1。无日期资料放入 `unplaced_records`。这不是任意 PDF/Word 的自动提取器。
 
-每次最多20MB、1–50个病例；预检保存在内存15分钟，最多保留最近3份，确认后病例和批次在同一事务写入 SQLite。相同批次重复提交返回已有结果；已有病例内容不同则整批回滚，保护历史版本。公开病例追加人工合成事件后标为混合来源，旧版本与旧报告保持不变。单纯存在检查记录不会被推断成影像或病理资料齐备。
+每次最多20MB、1–50个病例；预检保存在内存15分钟，最多保留最近3份，确认后病例和批次在同一事务写入 MongoDB。相同批次重复提交返回已有结果；已有病例内容不同则整批回滚，保护历史版本。公开病例追加人工合成事件后标为混合来源，旧版本与旧报告保持不变。单纯存在检查记录不会被推断成影像或病理资料齐备。
 
 官方地址可能短暂不可用或变更，瞬时下载失败最多自动重试一次，仍失败会返回可重试信息；也可从页面列出的官方地址下载后上传。在线连接只允许内置数据源及受限官方跳转。原始下载文件、数据库、运行输出和模型密钥不提交到 GitHub。仓库内契约测试的公开数据格式行是人工测试数据。
 
@@ -106,7 +113,7 @@ V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只�
 
 在“模型设置”填写服务地址、模型标识与密钥后，可测试已保存配置，再选择 LLM 运行。服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数；不能据此假定所有兼容服务或所有模型都可直接使用。测试按钮发送不含病例的短请求，实际使用时可能产生费用。
 
-密钥只保存在后端进程内存中，不回传、不写入数据库或审计；浏览器提交成功后清空密码框。服务重启后需要重新配置。每次运行冻结其模型配置，后续更改或清除设置不会改写已启动运行。改变服务地址时必须重新输入密钥。
+每个 Agent 可独立设置 URL、API Key、模型、超时、温度与输出上限；未覆盖时继承共享默认配置。只要求本次参与的角色配置齐全。密钥经 Fernet 加密后写入 `model_settings` 集合，不回传页面、报告或审计；浏览器保存成功后清空密码框。加密主密钥在 `outputs/.model-settings.key`（0600 权限），也可由 `MDT_SECRET_KEY` 环境变量提供。重启后恢复配置；丢失主密钥会明确报错并保留原密文，不能自动恢复密钥。每次运行冻结角色配置，并保存不含密钥的参数快照。更换 URL 必须重新输入密钥。
 
 模型连接只接受公开 HTTPS 目标，拒绝本机/内网地址和重定向。单次请求最多重试一次，验证失败按失败处理；未配置 LLM 时拒绝启动，不自动替换为 Mock。上游未提供 Token 用量时记录为 `null`。
 
@@ -130,7 +137,7 @@ npm run dev
 访问 <http://127.0.0.1:5173>，Vite 代理 `/api`（包括 SSE 和旧版 WebSocket）到后端。正式本地演示用 `./start.sh`。`MDT_DEMO_EVENT_DELAY` 控制网页演示节奏，默认 0.22 秒，范围 0–2 秒；不会给旧 CLI 添加延迟。
 
 ```bash
-.venv/bin/python -m pytest -q
+MDT_TEST_MONGODB_URI='mongodb://127.0.0.1:27018/?replicaSet=mdt-rs&directConnection=true' .venv/bin/python -m pytest -q
 .venv/bin/python -m mdt_demo --case data/synthetic_case_001.json --mode mock
 cd frontend
 npm run test
@@ -157,24 +164,47 @@ mdt-demo/
 │   │   ├── schemas.py          # 版本病例、证据、意见、报告契约
 │   │   ├── seeds.py            # 三个明确标注来源的手工合成场景
 │   │   ├── engine.py           # 时序冻结、路由、讨论与证据门控
-│   │   ├── store.py            # SQLite 病例版本、运行、审计、报告
+│   │   ├── persistence/        # Repository 契约、MongoDB、配置工厂、迁移
+│   │   ├── store.py            # 显式 SQLite 兼容适配器
+│   │   ├── import_service.py   # 数据预检、过期与批次提交
 │   │   ├── service.py          # 有界任务线程、取消、超时、恢复
 │   │   ├── api.py              # /api/v2 REST + SSE
-│   │   ├── provider.py         # 服务端模型适配器与内存配置
+│   │   ├── provider.py         # 冻结模型的 HTTP 执行与输出校验
+│   │   ├── agent_settings.py   # 共享默认、角色覆盖、运行时分派
+│   │   ├── secret_vault.py     # 独立密钥与凭据加密
 │   │   └── provider_api.py     # 模型设置 API
 │   └── ...                    # 原 CLI / V0.2 实现保留
 ├── frontend/src/research/     # React 页面、Zod 契约、SSE 恢复与样式
 ├── docs/                      # 技术方案、接口和验收
-├── scripts/                   # 契约导出
+├── compose.yaml               # 本机 MongoDB 单节点副本集
+├── scripts/                   # 契约导出、MongoDB 启动、迁移
 ├── tests/                     # Python 测试
 └── outputs/
-    ├── research.sqlite3       # V0.3 数据库（运行时可能有 -wal / -shm）
+    ├── mongodb/               # 本机 MongoDB 数据目录（Docker 使用命名卷）
+    ├── .model-settings.key    # 本机加密主密钥，不提交 Git
+    ├── research.sqlite3       # 迁移保留的旧库 / 显式兼容模式
+    ├── backups/               # 迁移前备份
     └── <legacy_run_id>/       # 旧版报告、审计、快照文件
 ```
 
-每个服务使用 2 个工作线程，最多接受 4 个未完成任务。必须使用 **单 Uvicorn worker**：任务、取消标志和模型设置属于当前进程。运行历史与病例版本写入 SQLite；正常报告、报告事件与终态事件在同一事务中提交。病例版本、病程事件与审计表禁止通过普通 SQL 更新/删除，但这不构成加密防篡改证明。
+每个服务使用 2 个工作线程，最多接受 4 个未完成任务。必须使用 **单 Uvicorn worker**：任务、取消标志和配置缓存属于当前进程。MongoDB 使用副本集事务、唯一版本/审计序号索引；正常报告、报告事件与终态事件在同一事务中提交。仓储接口保留追加语义，但数据库管理员仍可修改数据，这不是加密防篡改证明。单文档限制为 15MiB，超过时明确拒绝，不截断。
 
-服务重启可读取历史；上次进程未完成的运行标记为 `process_interrupted`，不会自动续跑。历史列表返回最近 100 条，浏览器保留最新 500 条审计，完整日志仍可下载。备份时先停止服务，再复制整个 `outputs/`，保留可能存在的 SQLite 附属文件。
+服务重启可读取历史；上次进程未完成的运行标记为 `process_interrupted`，不会自动续跑。历史列表返回最近 100 条，浏览器保留最新 500 条审计，完整日志仍可下载。备份 MongoDB 可使用 `mongodump`，或停止应用与 MongoDB 后备份本地数据目录/命名卷；加密主密钥必须单独安全备份。不要复制正在写入的 MongoDB 原始文件作为一致性备份。
+
+## MongoDB 配置与迁移
+
+复制 `.env.example` 为 `.env` 后按需调整 `MDT_MONGODB_URI` 和 `MDT_MONGODB_DATABASE`。默认数据库 `mdt_lab`，连接单节点 `mdt-rs`。也支持具备事务能力的 MongoDB Atlas/副本集；连接凭据仅放环境配置，不进入页面。选择 MongoDB 后连接失败会停止启动，不会偷偷回退到其他库。
+
+迁移前先停止应用（保留 MongoDB 运行），以免源库或目标库继续变化：
+
+```bash
+.venv/bin/python scripts/migrate_mongodb.py                    # 只预检
+.venv/bin/python scripts/migrate_mongodb.py --commit           # 原子写入并核对 SHA-256
+```
+
+迁移读取旧库，不删除或改写源文件；保留所有病例版本、事件、运行、审计、报告、批次和已有加密模型设置。重复迁移相同记录不重复插入；目标内容不同则整批拒绝。若迁移了模型设置，必须保留原加密主密钥。可用 `--database` 指定新的目标库。
+
+`MDT_STORAGE_BACKEND=sqlite` 是显式兼容选项。自动化测试中的 `create_app(tmp_path)` 默认使用隔离 SQLite；需要 MongoDB 时显式传入 `StorageConfig`。MongoDB 集成测试使用随机独立数据库并清理自己创建的数据，不操作 `mdt_lab`。不提供 `MDT_TEST_MONGODB_URI` 时这些集成测试会跳过；CI 会启动真实副本集执行。
 
 ## 当前边界与下一阶段
 

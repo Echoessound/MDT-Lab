@@ -17,9 +17,12 @@ from .api_schemas import APIError, CreateRun, RunOptions
 from .runtime import RunManager, TERMINAL
 from .research.service import ResearchService
 from .research.api import router as research_router
-from .research.provider_api import router as provider_router, provider_error
+from .research.provider_api import router as provider_router, agents_router, provider_error
 from .research.provider import ProviderError
 from .research.import_api import router as import_router
+from .research.agent_settings import SettingsService
+from .research.secret_vault import SecretVault
+from .research.persistence.config import StorageConfig, create_repository
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ALLOWED_ORIGINS = {
@@ -28,16 +31,31 @@ ALLOWED_ORIGINS = {
 }
 
 
-def create_app(output_dir: Path | None = None, *, event_delay: float | None = None) -> FastAPI:
+def create_app(output_dir: Path | None = None, *, event_delay: float | None = None,
+               storage_config: StorageConfig | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        from dotenv import load_dotenv
+        directory = output_dir or PROJECT_ROOT / "outputs"
+        # Explicit output directories retain isolated SQLite compatibility for tests/tools.
+        if output_dir is None:
+            load_dotenv(PROJECT_ROOT / ".env", override=False)
         delay = float(os.getenv("MDT_DEMO_EVENT_DELAY", "0.22")) if event_delay is None else event_delay
-        app.state.manager = RunManager(output_dir or PROJECT_ROOT / "outputs", event_delay=delay)
-        app.state.research = ResearchService(output_dir or PROJECT_ROOT / "outputs", event_delay=delay)
+        config = storage_config or (StorageConfig(backend="sqlite") if output_dir is not None else StorageConfig.from_env())
+        repository = create_repository(config, directory)
         try:
-            yield
+            settings = SettingsService(repository=repository, vault=SecretVault(directory / ".model-settings.key"))
+            app.state.research = ResearchService(directory, event_delay=delay, store=repository, settings=settings)
+        except BaseException:
+            repository.close()
+            raise
+        try:
+            app.state.manager = RunManager(directory, event_delay=delay)
+            try:
+                yield
+            finally:
+                await asyncio.to_thread(app.state.manager.close)
         finally:
-            await asyncio.to_thread(app.state.manager.close)
             await asyncio.to_thread(app.state.research.close)
 
     app = FastAPI(title="MDT Lab · 事件驱动科研 API", version="0.3.0", lifespan=lifespan)
@@ -46,6 +64,7 @@ def create_app(output_dir: Path | None = None, *, event_delay: float | None = No
                        allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Last-Event-ID"])
     app.include_router(research_router)
     app.include_router(provider_router)
+    app.include_router(agents_router)
     app.include_router(import_router)
 
     @app.middleware("http")

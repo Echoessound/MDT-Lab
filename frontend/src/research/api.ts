@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { APIError } from '../api';
-import { auditPageSchema, caseSchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, type ClinicalEvent, type RunRequest } from './schemas';
+import { agentModelSchema, storageSchema, auditPageSchema, caseSchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
 
 async function request<S extends z.ZodType>(path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
   let response: Response;
@@ -20,6 +20,11 @@ async function request<S extends z.ZodType>(path: string, schema: S, init?: Requ
 const body = (value: unknown, method = 'POST'): RequestInit => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value) });
 const id = encodeURIComponent;
 export const researchApi = {
+  storage: () => request('/storage', storageSchema),
+  agentModels: () => request('/settings/agents', z.array(agentModelSchema)),
+  configureAgent: (role: Role, value: ModelConfiguration) => request(`/settings/agents/${role}`, agentModelSchema, body(value, 'PUT')),
+  clearAgent: (role: Role) => request(`/settings/agents/${role}`, agentModelSchema, { method: 'DELETE' }),
+  testAgent: (role: Role) => request(`/settings/agents/${role}/test`, modelTestSchema, body({})),
   datasets: () => request('/datasets', datasetCatalogSchema),
   connectDataset: (source: string, limit: number) => request(`/datasets/connect?source=${id(source)}&max_cases=${limit}`, importPreviewSchema, body({})),
   previewDataset: (source: string, file: File, limit: number) => request(`/datasets/preview?source=${id(source)}&max_cases=${limit}`, importPreviewSchema, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file }),

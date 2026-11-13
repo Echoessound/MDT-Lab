@@ -1,4 +1,4 @@
-"""Bounded local workers over the research engine and durable SQLite records."""
+"""Bounded workers over a database-independent engine and repository contract."""
 
 from __future__ import annotations
 
@@ -13,11 +13,12 @@ from pydantic import ValidationError
 
 from ..api_schemas import APIError
 from .engine import execute, route_case, WorkflowCancelled, WorkflowError
-from .provider import SettingsService
-from .import_api import ImportPreviews
+from .agent_settings import SettingsService
+from .import_service import ImportPreviews
 from .schemas import ResearchCase, RunRequest
 from .seeds import seed_cases
 from .store import ResearchStore, TERMINAL, utcnow
+from .persistence.contracts import ResearchRepository
 
 ROLES = ("oncology", "radiology", "surgery", "pathology")
 
@@ -33,8 +34,9 @@ def empty_metrics() -> dict:
 
 class ResearchService:
     def __init__(self, output_dir: Path, *, event_delay: float = 0.22,
-                 run_timeout_seconds: float = 120, settings=None) -> None:
-        self.store = ResearchStore(output_dir / "research.sqlite3")
+                 run_timeout_seconds: float = 120, settings=None,
+                 store: ResearchRepository | None = None) -> None:
+        self.store = store if store is not None else ResearchStore(output_dir / "research.sqlite3")
         self.imports = ImportPreviews(self.store)
         self.settings = settings if settings is not None else SettingsService()
         self.event_delay = max(0, min(event_delay, 2))
@@ -83,7 +85,8 @@ class ResearchService:
             raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
         # Freeze provider configuration before accepting a run; later settings edits
         # must not change the model midway through one experiment.
-        generator = self.settings.make_generator() if payload["mode"] == "llm" else None
+        selected = route_case(case, request.trigger_event_id, request.routing_mode)["selected_agents"]
+        generator = self.settings.make_generator(selected_agents=selected) if payload["mode"] == "llm" else None
         with self._lock:
             if self._closed:
                 raise APIError(503, "SERVICE_STOPPING", "服务正在停止，请稍后重试。")
@@ -98,7 +101,8 @@ class ResearchService:
                                     "previous_opinion": None, "error": None} for role in ROLES],
                         "conflicts": [], "safety": None, "report_ready": False,
                         "cancel_requested": False, "completed_nodes": [], "running_nodes": [],
-                        "pending_nodes": [], "metrics": empty_metrics(), "error": None}
+                        "pending_nodes": [], "metrics": empty_metrics(), "error": None,
+                        "model_configuration": generator.configuration_snapshot if generator is not None else []}
             self.store.create_run(snapshot, payload, json_model(case))
             self._cancels[run_id] = Event()
             self._emit(run_id, "run.created", "QUEUED", {"case_version": payload["case_version"]})
@@ -187,6 +191,7 @@ class ResearchService:
                 raise WorkflowCancelled()
             self._emit(run_id, "run.started", "INITIALIZING", {})
             report = json_model(execute(case, request, run_id, emit, cancelled, llm=generator))
+            report["model_configuration"] = generator.configuration_snapshot if generator is not None else []
             if cancelled():
                 raise WorkflowCancelled()
             report["metrics"]["elapsed_ms"] = round((time.monotonic() - started) * 1000)
@@ -239,6 +244,6 @@ class ResearchService:
             for cancellation in self._cancels.values():
                 cancellation.set()
         self._pool.shutdown(wait=True, cancel_futures=False)
-        self.settings.clear()
+        self.settings.close()
         self.imports.clear()
         self.store.close()

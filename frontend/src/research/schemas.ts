@@ -53,6 +53,7 @@ export const modeSchema = z.enum(['mock', 'llm']);
 export const scenarioSchema = z.enum(['standard', 'partial_failure', 'persistent_disagreement', 'invalid_evidence']);
 export const routingModeSchema = z.enum(['event', 'fixed']);
 export const runRequestSchema = z.object({ case_id: z.string(), case_version: z.number().int(), trigger_event_id: z.string(), mode: modeSchema, mock_scenario: scenarioSchema, routing_mode: routingModeSchema });
+export const modelSnapshotSchema = z.object({ agent_id: roleSchema, configuration_source: z.enum(['agent', 'default']), provider: z.string(), base_url: z.string(), model: z.string(), timeout_seconds: z.number(), temperature: z.number(), max_output_tokens: z.number() });
 export const runSchema = z.object({
   run_id: z.string(), case_id: z.string(), case_version: z.number().int(), trigger_event_id: z.string(), mode: modeSchema,
   mock_scenario: scenarioSchema, routing_mode: routingModeSchema, status: z.string(), stage: z.string(),
@@ -60,6 +61,7 @@ export const runSchema = z.object({
   agents: z.array(z.object({ agent_id: roleSchema, status: z.enum(['idle', 'queued', 'running', 'completed', 'failed', 'skipped']), opinion: opinionSchema.nullable(), previous_opinion: opinionSchema.nullable(), error: z.string().nullable() })),
   conflicts: z.array(conflictSchema), safety: safetySchema.nullable(), report_ready: z.boolean(), cancel_requested: z.boolean(),
   completed_nodes: z.array(z.string()), running_nodes: z.array(z.string()), pending_nodes: z.array(z.string()), metrics: metricsSchema, error: z.string().nullable(),
+  model_configuration: z.array(modelSnapshotSchema).default([]),
 });
 export const auditEventSchema = z.object({ event_id: z.string(), run_id: z.string(), seq: z.number().int().positive(), timestamp: z.string(), type: z.string(), stage: z.string(), agent_id: z.string().nullable(), payload: z.record(z.string(), z.unknown()) });
 export const auditPageSchema = z.object({ events: z.array(auditEventSchema), next_seq: z.number().int().nonnegative() });
@@ -69,12 +71,16 @@ export const reportSchema = z.object({
   conflicts: z.array(conflictSchema), unresolved_conflicts: z.array(conflictSchema),
   discussion_records: z.array(z.object({ agent_id: roleSchema, before: opinionSchema, after: opinionSchema.nullable(), changed: z.boolean() })), discussion_rounds: z.number().int(),
   safety: safetySchema, final_decision: decisionSchema, status: z.string(), metrics: metricsSchema, disclaimer: z.string(),
+  model_configuration: z.array(modelSnapshotSchema).default([]),
 });
 export const modelStatusSchema = z.object({
   provider: z.string(), base_url: z.string(), model: z.string(), has_api_key: z.boolean(),
   configured: z.boolean().optional(), timeout_seconds: z.number(), temperature: z.number(), max_output_tokens: z.number(),
 });
 export const modelTestSchema = z.object({ ok: z.boolean(), message: z.string(), model: z.string().optional() });
+export const agentModelSchema = modelStatusSchema.extend({ agent_id: roleSchema, configuration_source: z.enum(['agent', 'default', 'unconfigured']), overridden: z.boolean(), configured: z.boolean() });
+export const storageSchema = z.object({ backend: z.enum(['mongodb', 'sqlite']), database: z.string(), status: z.literal('connected'), connected: z.literal(true), transactions: z.boolean(), schema_version: z.number() });
+export type AgentModelStatus = z.infer<typeof agentModelSchema>;
 
 export type ResearchCase = z.infer<typeof caseSchema>;
 export type ClinicalEvent = z.infer<typeof clinicalEventSchema>;

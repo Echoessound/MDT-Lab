@@ -1,4 +1,21 @@
 .research-page h1{font-size:29px;line-height:1.5}
+.storage-status{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.storage-status h2{margin-top:5px}.storage-status p{font-size:12px;line-height:1.8;margin-top:8px}
+.agent-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+.agent-model-card{min-width:0}.agent-model-card h3{font-size:19px;margin-top:5px}
+.model-name{font-size:14px;font-weight:600}.model-endpoint{font-size:12px;color:var(--muted);overflow-wrap:anywhere;margin:9px 0 20px}
+.collaboration-panel>.muted{font-size:12px}.collaboration-map{position:relative;display:grid;grid-template-columns:1fr 1.35fr 1fr 1fr 1fr;gap:4%;align-items:center;min-height:320px;margin:20px 0}
+.collaboration-lines{position:absolute;inset:0;width:100%;height:100%;color:var(--line);pointer-events:none}
+.collaboration-map>div{position:relative;min-width:0}.graph-agents{display:grid;gap:13px}
+.collaboration-node{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:15px 10px;width:100%;min-height:64px;cursor:pointer;text-align:center;color:var(--text);font:inherit;transition:border-color .15s,background .15s}
+.collaboration-node strong{font-size:12px;display:block}.collaboration-node small{font-size:10px;color:var(--muted);display:block;margin-top:6px;line-height:1.5}
+.collaboration-node:hover,.collaboration-node:focus-visible{border-color:var(--green)}
+.collaboration-node.node-done{background:var(--soft)}.collaboration-node.node-selected{border-color:var(--green);box-shadow:0 0 0 2px var(--soft)}
+.graph-agent{display:flex;align-items:center;justify-content:space-between;gap:5px;text-align:left;padding:12px 10px}.graph-agent .pill{font-size:9px;padding:3px 6px;white-space:nowrap}
+.graph-inspector{border-top:1px solid var(--line);padding-top:24px;min-height:180px}.graph-inspector>p{font-size:13px;line-height:1.8;margin:12px 0}.graph-inspector h3{font-size:16px}
+.graph-inspector .panel{padding:0;border:0;box-shadow:none}.model-provenance{margin-top:20px;padding:16px;background:var(--bg);border-radius:8px;font-size:11px;line-height:1.8;overflow-wrap:anywhere}
+@media(max-width:1100px){.collaboration-map{gap:2%}.graph-agent{display:block}.graph-agent .pill{margin-top:7px}}
+@media(max-width:760px){.agent-settings-grid{grid-template-columns:1fr}.collaboration-map{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;min-height:0}.collaboration-lines{display:none}.graph-input{grid-column:1/-1}.graph-agents{grid-column:1/-1;grid-template-columns:1fr 1fr}.graph-agent{display:block}.collaboration-map .graph-agents:before{content:'↓ 按事件调度专科 ↓';grid-column:1/-1;text-align:center;font-size:11px;color:var(--muted)}.graph-discussion,.graph-gate,.graph-report{padding-top:18px}.graph-discussion:before,.graph-gate:before,.graph-report:before{content:'→';position:absolute;top:0;left:45%;color:var(--muted)}.storage-status{gap:16px}}
 .research-page .page-heading h1 .pill{vertical-align:middle;margin-left:8px}
 .research-page .research-stack{display:flex;flex-direction:column;gap:23px;min-width:0}
 .research-page .research-stack>.section-heading{margin-bottom:-8px}
@@ -124,3 +141,6 @@
 .data-path strong{display:block;font-size:13px;margin:9px 0;overflow-wrap:anywhere}
 @media(max-width:960px){.data-path{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.data-path{grid-template-columns:1fr}.import-case-list>div{flex-direction:column;gap:4px}}
+
+.graph-gate[data-status="blocked"] .collaboration-node{background:var(--danger-bg);color:var(--danger)}
+.graph-gate[data-status="needs_information"] .collaboration-node{background:var(--warning-bg);color:var(--warning)}

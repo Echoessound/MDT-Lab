@@ -13,6 +13,7 @@ export const dateTime = (value: string) => new Intl.DateTimeFormat('zh-CN', { mo
 export const shortId = (value: string) => value.replace('run_', '').slice(0, 8).toUpperCase();
 
 const iconPaths: Record<string, ReactNode> = {
+  settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="var(--panel)" /><circle cx="15" cy="17" r="3" fill="var(--panel)" /></>,
   pulse: <path d="M2 12h5l3-8 5 16 3-8h4" />,
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
   history: <><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7" /><path d="M12 7v5l3 2" /></>,
@@ -38,7 +39,7 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
 }
 
 export function Status({ status }: { status: string }) {
-  const text: Record<string, string> = { queued: '排队中', running: '运行中', waiting: '等待分析', completed: '已完成', incomplete: '部分失败', failed: '失败', cancelled: '已停止', cancel_requested: '正在停止', skipped: '已跳过' };
+  const text: Record<string, string> = { idle: '未调度', queued: '排队中', running: '运行中', waiting: '等待分析', completed: '已完成', incomplete: '部分失败', failed: '失败', cancelled: '已停止', cancel_requested: '正在停止', skipped: '已跳过' };
   const active = ['running', 'cancel_requested', 'queued'].includes(status);
   return <span className={`pill status-${status}`}>{active ? <span className="spinner" /> : <span className="status-dot" />}{text[status] ?? status}</span>;
 }

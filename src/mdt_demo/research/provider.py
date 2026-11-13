@@ -1,18 +1,17 @@
-"""Server-side OpenAI-compatible adapter with in-memory credentials and bounded retries."""
+"""OpenAI-compatible HTTP execution with frozen credentials and bounded retries."""
 
 from copy import deepcopy
 import ipaddress
 import json
-import socket
-from threading import RLock
 import time
 from typing import Callable
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, field_validator
+from pydantic import ValidationError
 
 from .schemas import AgentOutput
+from .provider_config import LLMConfigInput, ProviderError, canonical_url, resolve_addresses
 
 PROMPT_VERSION = "research-process-review-v1"
 SYSTEM_PROMPT = """You are a specialist process-review agent in a synthetic lung-cancer research demo.
@@ -25,71 +24,6 @@ Use your assigned agent_id. If required information is missing, choose NEED_MORE
 if evidence is contradictory or cannot be verified, choose DEFER_DECISION. READY_FOR_REVIEW
 means only that records may proceed to human research review, never clinical validity.
 During discussion, reconsider only the stated conflicts using the same frozen input context."""
-
-
-class ProviderError(Exception):
-    def __init__(self, code: str, message: str, status_code: int = 502, *, attempts: int = 0):
-        super().__init__(code)
-        self.code, self.message, self.status_code, self.attempts = code, message, status_code, attempts
-
-
-def canonical_url(value: str) -> str:
-    try:
-        parsed = urlsplit(value.strip())
-        host = parsed.hostname
-        _ = parsed.port
-    except ValueError:
-        raise ValueError("模型服务地址格式无效") from None
-    if (parsed.scheme != "https" or not host or parsed.username or parsed.password
-            or parsed.query or parsed.fragment):
-        raise ValueError("模型服务必须使用不含账号、查询参数或片段的 HTTPS 地址")
-    host = host.lower().rstrip(".")
-    if host == "localhost" or "." not in host or host.endswith((".localhost", ".local", ".internal")):
-        raise ValueError("模型服务不允许使用本机或内网地址")
-    try:
-        address = ipaddress.ip_address(host)
-    except ValueError:
-        pass
-    else:
-        if not address.is_global or address.is_multicast:
-            raise ValueError("模型服务不允许使用本机或内网地址")
-    return urlunsplit(("https", parsed.netloc.lower(), parsed.path.rstrip("/"), "", ""))
-
-
-class LLMConfigInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, allow_inf_nan=False)
-    provider: str = "openai-compatible"
-    base_url: str = "https://api.openai.com/v1"
-    model: str = Field(min_length=1, max_length=160)
-    api_key: SecretStr | None = None
-    timeout_seconds: float = Field(default=20, ge=1, le=60)
-    temperature: float = Field(default=0, ge=0, le=2)
-    max_output_tokens: int = Field(default=1200, ge=128, le=8192)
-
-    @field_validator("provider")
-    @classmethod
-    def supported_provider(cls, value):
-        if value != "openai-compatible":
-            raise ValueError("当前支持 openai-compatible 接口")
-        return value
-
-    @field_validator("base_url")
-    @classmethod
-    def secure_url(cls, value):
-        return canonical_url(value)
-
-    @field_validator("api_key")
-    @classmethod
-    def bounded_key(cls, value):
-        if value is not None:
-            secret = value.get_secret_value()
-            if len(secret) > 1024 or any(char in secret for char in "\r\n\x00"):
-                raise ValueError("密钥格式无效")
-        return value
-
-
-def resolve_addresses(host: str) -> list[str]:
-    return list({item[4][0] for item in socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)})
 
 
 def validate_destination(base_url: str, resolver: Callable[[str], list[str]]) -> None:
@@ -251,45 +185,6 @@ class RunLLM:
         return {"ok": True, "message": "连接与结构化 JSON 输出测试通过。", "model": self._config.model}
 
 
-class SettingsService:
-    def __init__(self, *, transport=None, resolver=resolve_addresses):
-        self._config: LLMConfigInput | None = None
-        self._lock = RLock()
-        self._transport, self._resolver = transport, resolver
 
-    def status(self) -> dict:
-        with self._lock:
-            if self._config is None:
-                return {"provider": "openai-compatible", "base_url": "https://api.openai.com/v1", "model": "",
-                        "has_api_key": False, "configured": False, "timeout_seconds": 20,
-                        "temperature": 0, "max_output_tokens": 1200}
-            result = self._config.model_dump(exclude={"api_key"})
-            result.update(has_api_key=True, configured=True)
-            return result
-
-    def configure(self, body: LLMConfigInput | dict) -> dict:
-        config = body if isinstance(body, LLMConfigInput) else LLMConfigInput.model_validate(body)
-        with self._lock:
-            key = config.api_key.get_secret_value().strip() if config.api_key else ""
-            if not key:
-                if self._config is None or config.base_url != self._config.base_url:
-                    raise ProviderError("LLM_KEY_REQUIRED", "首次配置或更换服务地址时必须重新填写密钥。", 422)
-                config = config.model_copy(update={"api_key": self._config.api_key})
-            else:
-                config = config.model_copy(update={"api_key": SecretStr(key)})
-            self._config = config.model_copy(deep=True)
-            return self.status()
-
-    def clear(self) -> dict:
-        with self._lock:
-            self._config = None
-            return self.status()
-
-    def make_generator(self) -> RunLLM:
-        with self._lock:
-            if self._config is None:
-                raise ProviderError("LLM_NOT_CONFIGURED", "尚未配置真实模型，请先配置模型或选择 Mock。", 409)
-            return RunLLM(self._config, transport=self._transport, resolver=self._resolver)
-
-    def test(self) -> dict:
-        return self.make_generator().test()
+# Retain the original public import path while keeping settings persistence separate.
+from .agent_settings import SettingsService  # noqa: E402,F401
