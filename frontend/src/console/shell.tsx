@@ -25,8 +25,9 @@ function WorkspaceNav({ active, onNavigate }: { active: string; onNavigate?: () 
 }
 
 function Brand() {
-  return <Link className="console-brand" to="/" aria-label="MDT Lab 首页">
-    <span className="console-brand-symbol"><Icon name="pulse" size={21} /></span><span>MDT Lab</span>
+  return <Link className="console-brand" to="/" aria-label="MDT 医疗协同工作台首页">
+    <span className="console-brand-symbol"><Icon name="pulse" size={21} /></span>
+    <span className="console-brand-text"><strong>MDT 协同台</strong><small>多学科智能决策</small></span>
   </Link>;
 }
 
@@ -44,7 +45,7 @@ function NavigationDrawer({ active, close }: { active: string; close: () => void
     onCancel={event => { event.preventDefault(); close(); }}
     onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <div className="console-drawer-body">
-      <div className="console-drawer-title"><strong>MDT Lab</strong><button type="button" onClick={close} className="console-icon" aria-label="关闭导航"><Icon name="close" /></button></div>
+      <div className="console-drawer-title"><strong>MDT 协同台</strong><button type="button" onClick={close} className="console-icon" aria-label="关闭导航"><Icon name="close" /></button></div>
       <WorkspaceNav active={active} onNavigate={close} />
     </div>
   </dialog>;
@@ -52,8 +53,8 @@ function NavigationDrawer({ active, close }: { active: string; close: () => void
 
 function ConnectionState() {
   const query = useQuery({ queryKey: ['research-storage'], queryFn: researchApi.storage, refetchInterval: 30000, staleTime: 10000 });
-  const database = query.data?.backend === 'mongodb' ? 'MongoDB' : query.data?.backend === 'sqlite' ? 'SQLite' : '数据库';
-  const label = query.isError ? '存储未连接' : query.data ? database + ' 已连接' : '正在连接';
+  const database = query.data?.backend === 'mongodb' ? '主存储 (MongoDB)' : query.data?.backend === 'sqlite' ? '本地库 (SQLite)' : '存储服务';
+  const label = query.isError ? '存储未连接' : query.data ? database + ' 已就绪' : '正在连接';
   return <div className="console-connection" data-status={query.isError ? 'offline' : query.data ? 'online' : 'waiting'}>
     <span aria-hidden="true" className="connection-led" /><span role="status">{label}</span>
     {query.isError && <button type="button" aria-label="重新检查连接" title="重新检查连接" onClick={() => void query.refetch()}><Icon name="refresh" size={13} /></button>}
@@ -75,7 +76,7 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
   }, [dark]);
   useLayoutEffect(() => {
-    document.title = [detail, section.label, 'MDT Lab'].filter(Boolean).join(' · ');
+    document.title = [detail, section.label, 'MDT 协同台'].filter(Boolean).join(' · ');
     if (previousPath.current !== pathname) {
       main.current?.scrollTo(0, 0);
       main.current?.focus({ preventScroll: true });

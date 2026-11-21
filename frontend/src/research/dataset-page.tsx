@@ -19,10 +19,10 @@ function FileDetails({ record }: { record: ImportBatch | ImportPreview }) {
   return <details className="dataset-disclosure">
     <summary>文件与映射信息</summary>
     <dl className="dataset-properties">
-      <div><dt>批次 ID</dt><dd><code>{record.batch_id}</code></dd></div>
+      <div><dt>导入批次编号</dt><dd><code>{record.batch_id}</code></dd></div>
       <div><dt>标准文件名</dt><dd>{record.artifact_name} · {formatBytes(record.byte_count)}</dd></div>
       <div><dt>映射版本</dt><dd>{record.mapping_version}</dd></div>
-      <div><dt>SHA-256</dt><dd><code>{record.artifact_sha256}</code></dd></div>
+      <div><dt>数据校验指纹 (SHA-256)</dt><dd><code>{record.artifact_sha256}</code></dd></div>
     </dl>
   </details>;
 }
@@ -35,7 +35,10 @@ function BatchCases({ record, linked = false }: { record: ImportBatch | ImportPr
         : <strong>{item.title}</strong>}
         <small><code>{item.case_id}</code> · {caseKindName[item.case_kind]}</small>
       </div>
-      <span>{item.event_count} 条事件</span>
+      <div className="table-quick-links">
+        <span>{item.event_count} 条事件</span>
+        {linked && <Link className="text-link" to={`/research/cases/${encodeURIComponent(item.case_id)}?view=workflow`}>智能流程与影像 <Icon name="arrow" size={13} /></Link>}
+      </div>
     </div>)}
   </div>;
 }
@@ -162,8 +165,8 @@ export function DatasetPage() {
     returnToSource();
   };
   return <div className="research-page page-enter dataset-console">
-    <header className="page-heading"><div><h1>数据导入</h1><p>接入公开数据源或本地文件，核对后写入病例库。</p></div>
-      <a className="button secondary" href="/api/v2/datasets/template" download><Icon name="download" size={15} />研究 JSON 模板</a>
+    <header className="page-heading"><div><h1>外部医学数据集导入</h1><p>接入公开研究队列或本地病例文件，完成结构化映射与指纹校验后原子写入病例库。</p></div>
+      <a className="button secondary" href="/api/v2/datasets/template" download><Icon name="download" size={15} />下载标准病例模板 (JSON)</a>
     </header>
     <div className="dataset-source-grid" hidden={!!preview || !!imported}>
       <section className="panel"><h2>新建导入</h2>

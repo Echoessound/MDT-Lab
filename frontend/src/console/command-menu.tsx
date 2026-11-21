@@ -68,7 +68,7 @@ export function CommandMenu({ close }: { close: () => void }) {
         </button>)}
       </div>
       <div role="status" className="jump-status">{!items.length ? (busy ? '正在检索…' : '没有匹配结果') : searching ? `找到 ${items.length} 项` : '常用页面'}{searching && (cases.isError || runs.isError) && ' · 部分记录暂时无法读取'}</div>
-      <div className="jump-hint"><span><kbd>↑</kbd> <kbd>↓</kbd> 选择</span><span><kbd>Enter</kbd> 打开</span><span><kbd>Esc</kbd> 关闭</span></div>
+      <div className="jump-hint"><span><kbd>↑</kbd> <kbd>↓</kbd> 上下选择</span><span><kbd>回车</kbd> 立即打开</span><span><kbd>Esc</kbd> 关闭窗口</span></div>
     </div>
   </dialog>;
 }

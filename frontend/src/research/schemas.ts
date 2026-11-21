@@ -114,3 +114,160 @@ export const importBatchSchema = importSummarySchema.extend({ created_at: z.stri
 export const datasetCatalogSchema = z.object({ sources: z.array(datasetSourceSchema), max_upload_bytes: z.number(), batches: z.array(importBatchSchema) });
 export type ImportPreview = z.infer<typeof importPreviewSchema>;
 export type ImportBatch = z.infer<typeof importBatchSchema>;
+
+export const semanticCompletenessSchema = z.object({
+  trigger_event_id: z.string(),
+  trigger_event_type: eventTypeSchema,
+  required_fields: z.array(z.object({
+    fact_key: z.string(),
+    fact_label: z.string(),
+    strict_satisfied: z.boolean(),
+    semantic_satisfied: z.boolean(),
+  })),
+  strict_missing: z.array(z.string()),
+  strict_missing_labels: z.array(z.string()),
+  semantic_inferred: z.array(z.object({
+    fact_key: z.string(),
+    fact_label: z.string(),
+    inferred_value: scalarSchema,
+    source_event_id: z.string(),
+    confidence: z.string(),
+    reason: z.string(),
+  })),
+  post_inference_missing: z.array(z.string()),
+  post_inference_missing_labels: z.array(z.string()),
+  strict_completeness_score: z.number(),
+  semantic_completeness_score: z.number(),
+  can_auto_enrich: z.boolean(),
+  recommended_facts: factsSchema,
+});
+
+export const workflowPlanSchema = z.object({
+  workflow_id: z.string(),
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  trigger_event_title: z.string(),
+  trigger_event_type: eventTypeSchema,
+  strategy_version: z.string(),
+  clinical_phase: z.string(),
+  complexity_level: z.enum(['standard', 'elevated', 'high_risk']),
+  complexity_label: z.string(),
+  visible_event_count: z.number().int(),
+  excluded_future_event_count: z.number().int(),
+  unplaced_record_count: z.number().int(),
+  source_conflict_count: z.number().int(),
+  selected_agents: z.array(roleSchema),
+  specialist_plan: z.array(z.object({
+    agent_id: roleSchema,
+    agent_label: z.string(),
+    selected: z.boolean(),
+    routing_type: z.string(),
+    focus: z.string(),
+    clinical_tasks: z.array(z.string()),
+  })),
+  workflow_stages: z.array(z.object({
+    stage_id: z.string(),
+    step_number: z.number().int(),
+    title: z.string(),
+    category: z.string(),
+    status: z.enum(['active', 'recommended', 'skipped']),
+    automated_operator: z.string(),
+    description: z.string(),
+  })),
+  completeness: semanticCompletenessSchema,
+  imaging_summary: z.object({
+    study_count: z.number().int(),
+    overall_qc_status: z.string(),
+  }),
+  predicted_decisions: z.object({
+    strict_rule_decision: decisionSchema,
+    semantic_enriched_decision: decisionSchema,
+  }),
+});
+
+export const imagingStudySchema = z.object({
+  study_id: z.string(),
+  event_id: z.string(),
+  occurred_at: z.string(),
+  title: z.string(),
+  modality: z.string(),
+  modality_label: z.string(),
+  anatomical_site: z.string(),
+  qc_status: z.enum(['passed', 'incomplete', 'conflict']),
+  qc_score: z.number(),
+  qc_message: z.string(),
+  dicom_metadata: z.object({
+    series_uid: z.string(),
+    slice_thickness_mm: z.number(),
+    matrix_size: z.string(),
+    window_presets: z.record(z.string(), z.object({
+      label: z.string(),
+      width: z.number(),
+      level: z.number(),
+    })),
+  }),
+  radiomics: z.object({
+    lesion_diameter_mm: z.number(),
+    hu_mean: z.number(),
+    suvmax: z.number(),
+    glcm_entropy: z.number(),
+    sphericity: z.number(),
+    lymph_node_mm: z.number(),
+    morphology_tags: z.array(z.string()),
+  }),
+  svg_slice: z.object({
+    lesion_cx: z.number(),
+    lesion_cy: z.number(),
+    lesion_radius: z.number(),
+    contour_polygon: z.string(),
+    is_left_lung: z.boolean(),
+    has_artifact_or_missing: z.boolean(),
+    has_conflict_marker: z.boolean(),
+  }),
+  pipeline_steps: z.array(z.object({
+    step_id: z.string(),
+    title: z.string(),
+    status: z.enum(['passed', 'warning', 'blocked', 'skipped']),
+    detail: z.string(),
+  })),
+});
+
+export const imagingPipelineSchema = z.object({
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  pipeline_version: z.string(),
+  study_count: z.number().int(),
+  overall_qc_status: z.string(),
+  studies: z.array(imagingStudySchema),
+});
+
+export const ablationMatrixSchema = z.object({
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  visible_events: z.number().int(),
+  call_saving_pct: z.number(),
+  fixed_total_calls: z.number().int(),
+  routed_total_calls: z.number().int(),
+  methods: z.array(z.object({
+    method_id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    routing_strategy: z.string(),
+    selected_agents: z.array(roleSchema),
+    agent_calls: z.number().int(),
+    discussion_rounds: z.number().int(),
+    pre_gate_decision: decisionSchema,
+    final_decision: decisionSchema,
+    missing_count: z.number().int(),
+    unresolved_conflicts: z.number().int(),
+    key_finding: z.string(),
+  })),
+});
+
+export type WorkflowPlan = z.infer<typeof workflowPlanSchema>;
+export type ImagingStudy = z.infer<typeof imagingStudySchema>;
+export type ImagingPipeline = z.infer<typeof imagingPipelineSchema>;
+export type AblationMatrix = z.infer<typeof ablationMatrixSchema>;

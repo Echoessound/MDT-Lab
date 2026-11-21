@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { APIError } from '../api';
-import { agentModelSchema, storageSchema, auditPageSchema, caseSchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
+import { agentModelSchema, storageSchema, auditPageSchema, caseSchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
 
 async function request<S extends z.ZodType>(path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
   let response: Response;
@@ -33,6 +33,10 @@ export const researchApi = {
   case: (caseId: string, version?: number) => request(`/cases/${id(caseId)}${version ? `?version=${version}` : ''}`, caseSchema),
   append: (caseId: string, version: number, event: Pick<ClinicalEvent, 'occurred_at' | 'event_type' | 'title' | 'facts'>) => request(`/cases/${id(caseId)}/events`, caseSchema, body({ expected_version: version, event })),
   routing: (caseId: string, version: number, trigger: string, mode: string) => request(`/cases/${id(caseId)}/routing?version=${version}&trigger_event_id=${id(trigger)}&routing_mode=${id(mode)}`, routingSchema),
+  workflowPlan: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/workflow-plan?version=${version}&trigger_event_id=${id(trigger)}`, workflowPlanSchema),
+  imagingPipeline: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/imaging?version=${version}&trigger_event_id=${id(trigger)}`, imagingPipelineSchema),
+  ablationMatrix: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/ablation?version=${version}&trigger_event_id=${id(trigger)}`, ablationMatrixSchema),
+  autoEnrich: (caseId: string, expectedVersion: number, triggerEventId?: string) => request(`/cases/${id(caseId)}/auto-enrich`, caseSchema, body({ expected_version: expectedVersion, trigger_event_id: triggerEventId })),
   runs: () => request('/runs', z.array(runSchema)),
   run: (runId: string) => request(`/runs/${id(runId)}`, runSchema),
   start: (value: RunRequest) => request('/runs', runSchema, body(value)),

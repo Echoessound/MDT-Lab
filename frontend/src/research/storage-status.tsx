@@ -11,7 +11,7 @@ export function StorageStatus() {
   </div>;
   const { backend, database, transactions } = query.data;
   return <div className="storage-indicator" aria-label="数据库状态">
-    <span className="status-dot" /><strong>{backend === 'mongodb' ? 'MongoDB' : 'SQLite'} 已连接</strong>
-    <code>{database}</code><span>{transactions ? '事务已启用' : '事务未启用'}</span>
+    <span className="status-dot" /><strong>{backend === 'mongodb' ? '主存储引擎 (MongoDB)' : '本地兼容引擎 (SQLite)'} 已就绪</strong>
+    <code>库名：{database}</code><span>{transactions ? '多文档原子事务已启用' : '事务未启用'}</span>
   </div>;
 }

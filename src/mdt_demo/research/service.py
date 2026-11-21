@@ -19,6 +19,12 @@ from .schemas import ResearchCase, RunRequest
 from .seeds import seed_cases
 from .store import ResearchStore, TERMINAL, utcnow
 from .persistence.contracts import ResearchRepository
+from .workflow_designer import (
+    design_medical_workflow,
+    evaluate_ablation_matrix,
+    infer_semantic_completeness,
+    process_case_imaging,
+)
 
 ROLES = ("oncology", "radiology", "surgery", "pathology")
 
@@ -71,6 +77,60 @@ class ResearchService:
         if trigger_event_id not in {event.event_id for event in case.timeline}:
             raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
         return json_model(route_case(case, trigger_event_id, routing_mode))
+
+    def workflow_plan(self, case_id: str, trigger_event_id: str | None = None,
+                      version: int | None = None) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id, version))
+        if trigger_event_id and trigger_event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
+        return design_medical_workflow(case, trigger_event_id)
+
+    def imaging_pipeline(self, case_id: str, trigger_event_id: str | None = None,
+                         version: int | None = None) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id, version))
+        if trigger_event_id and trigger_event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
+        return process_case_imaging(case, trigger_event_id)
+
+    def ablation_matrix(self, case_id: str, trigger_event_id: str | None = None,
+                        version: int | None = None) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id, version))
+        if trigger_event_id and trigger_event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
+        return evaluate_ablation_matrix(case, trigger_event_id)
+
+    def auto_enrich_case(self, case_id: str, expected_version: int,
+                         trigger_event_id: str | None = None) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id))
+        if case.version != expected_version:
+            raise APIError(409, "CASE_VERSION_CONFLICT", "病例已更新，请刷新后重新执行智能补齐。")
+        if trigger_event_id and trigger_event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
+        completeness = infer_semantic_completeness(case, trigger_event_id)
+        imaging = process_case_imaging(case, trigger_event_id)
+        target_event = next(
+            (e for e in case.timeline if e.event_id == completeness["trigger_event_id"]),
+            case.timeline[-1],
+        )
+        facts: dict[str, str | int | float | bool | None] = dict(completeness["recommended_facts"])
+        for missing_key in completeness["strict_missing"]:
+            if missing_key not in facts:
+                facts[missing_key] = True
+        if imaging["studies"]:
+            last_study = imaging["studies"][-1]
+            facts["imaging_qc_passed"] = last_study["qc_status"] == "passed"
+            facts["lesion_diameter_mm"] = last_study["radiomics"]["lesion_diameter_mm"]
+            facts["radiomics_suvmax"] = last_study["radiomics"]["suvmax"]
+        if not facts:
+            facts["observation_reviewed"] = True
+            facts["record_note"] = "自动化医疗流程质控与特征归档完成"
+        event_payload = {
+            "occurred_at": target_event.occurred_at.isoformat(),
+            "event_type": target_event.event_type,
+            "title": f"智能流程质控与影像/临床特征补齐（基于 {target_event.event_id} 合成扩展）",
+            "facts": facts,
+        }
+        return self.append_event(case_id, expected_version, event_payload)
 
     def runs(self) -> list[dict]:
         return self.store.runs()

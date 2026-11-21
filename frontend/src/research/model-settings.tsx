@@ -64,7 +64,11 @@ export function ModelSettingsPage() {
 
   return <div className="page-enter research-page agent-console">
     <header className="page-heading">
-      <h1>模型设置</h1><Link className="button secondary" to="/research/agents"><Icon name="network" size={15} />Agent 群</Link>
+      <div>
+        <h1>专科大模型连接设置</h1>
+        <p>管理全局默认连接或为各专科独立指派异构大模型服务，所有密钥经本地加密持久化</p>
+      </div>
+      <Link className="button secondary" to="/research/agents"><Icon name="network" size={15} />多智能体协同</Link>
     </header>
     {shared.isPending || agents.isPending ? <Loading /> : shared.isError || agents.isError ?
       <ErrorState error={shared.error ?? agents.error} retry={() => { void shared.refetch(); void agents.refetch(); }} /> :
@@ -154,28 +158,28 @@ function ConnectionEditor({ scope, status, draft, onDraft, onBusy }: EditorProps
     if (dirty && !operation.isPending) act('save');
   };
 
-  return <section className="panel model-editor" aria-labelledby="connection-heading">
-    <div className="model-section-heading"><h2 id="connection-heading">{scopeName(scope)}连接</h2>
-      <span className={'pill ' + (dirty ? 'outline' : 'soft')}>{dirty ? '未保存' : sourceName(status, scope)}</span>
+  return <section className="panel model-editor inspector-enter" aria-labelledby="connection-heading">
+    <div className="model-section-heading"><h2 id="connection-heading">{scopeName(scope)}连接配置</h2>
+      <span className={'pill ' + (dirty ? 'outline' : 'soft')}>{dirty ? '草稿未保存' : sourceName(status, scope)}</span>
     </div>
-    <p className="model-context">{role ? '保存后，此专科将使用独立连接。' : '供未设置独立连接的专科使用。'}修改将在下次启动运行时生效。</p>
+    <p className="model-context">{role ? '保存后，此专科将启用独立大模型连接，不再继承默认配置。' : '作为全局基础连接，供所有未单独覆盖的专科自动继承使用。'}配置修改将在下次新建运行时冻结生效。</p>
     <form className="research-form" onSubmit={submit}>
       <fieldset className="editor-fields" disabled={operation.isPending}>
         <legend className="sr-only">模型服务与凭据</legend>
-        <label>服务地址（Base URL）<input type="url" required autoComplete="off" spellCheck={false} value={form.url}
-          onChange={event => edit('url', event.target.value)} placeholder="https://api.openai.com/v1" /></label>
-        <label>模型标识（Model）<input required autoComplete="off" spellCheck={false} maxLength={160} value={form.model}
-          onChange={event => edit('model', event.target.value)} placeholder="提供方的模型 ID" /></label>
-        <label>API Key<input type="password" autoComplete="new-password" maxLength={1024} required={needKey} value={form.key}
+        <label>接口服务地址<input type="url" required autoComplete="off" spellCheck={false} value={form.url}
+          onChange={event => edit('url', event.target.value)} placeholder="例如：https://api.deepseek.com/v1" /></label>
+        <label>模型名称标识<input required autoComplete="off" spellCheck={false} maxLength={160} value={form.model}
+          onChange={event => edit('model', event.target.value)} placeholder="填写服务商提供的模型名称" /></label>
+        <label>接口访问密钥<input type="password" autoComplete="new-password" maxLength={1024} required={needKey} value={form.key}
           onChange={event => edit('key', event.target.value)} aria-describedby="api-key-hint"
-          placeholder={hasKey && !needKey ? '已保存密钥' : '输入此连接的密钥'} /></label>
-        <small id="api-key-hint">{!needKey ? '留空可沿用已保存的密钥。' : hasKey ? '服务地址已更改，请重新输入密钥。' : '密钥将加密保存。'}</small>
+          placeholder={hasKey && !needKey ? '已加密保存密钥（留空则沿用）' : '输入此连接的访问密钥'} /></label>
+        <small id="api-key-hint">{!needKey ? '留空可继续使用已加密保存的密钥。' : hasKey ? '接口服务地址已更改，出于安全策略请重新输入密钥。' : '密钥将在本地使用主密钥加密落库，永不回传前端或写入报告。'}</small>
         <details className="model-parameters">
-          <summary>生成参数 <span>{form.timeout} 秒 · {form.tokens} tokens</span></summary>
+          <summary>生成控制参数 <span>超时 {form.timeout} 秒 · 温度 {form.temperature} · 上限 {form.tokens} 字词</span></summary>
           <div className="parameter-fields">
-            <label>请求超时（秒）<input type="number" required min="1" max="60" value={form.timeout} onChange={event => edit('timeout', event.target.value)} /></label>
-            <label>温度（Temperature）<input type="number" required min="0" max="2" step="any" value={form.temperature} onChange={event => edit('temperature', event.target.value)} /></label>
-            <label>最大输出 tokens<input type="number" required min="128" max="8192" value={form.tokens} onChange={event => edit('tokens', event.target.value)} /></label>
+            <label>单次请求超时（秒）<input type="number" required min="1" max="60" value={form.timeout} onChange={event => edit('timeout', event.target.value)} /></label>
+            <label>采样温度（0–2）<input type="number" required min="0" max="2" step="any" value={form.temperature} onChange={event => edit('temperature', event.target.value)} /></label>
+            <label>最大输出字词数<input type="number" required min="128" max="8192" value={form.tokens} onChange={event => edit('tokens', event.target.value)} /></label>
           </div>
         </details>
       </fieldset>
@@ -183,14 +187,14 @@ function ConnectionEditor({ scope, status, draft, onDraft, onBusy }: EditorProps
       {message && <p className="model-feedback" role="status"><Icon name="check" size={15} />{message}</p>}
       <div className="model-editor-actions">
         <button type="submit" className="button primary" disabled={!dirty || operation.isPending}>
-          {operation.isPending && operation.variables === 'save' ? '正在保存…' : '保存设置'}</button>
+          {operation.isPending && operation.variables === 'save' ? '正在加密保存…' : '保存连接设置'}</button>
         <button type="button" className="button secondary" disabled={!status.configured || dirty || operation.isPending} onClick={() => act('test')}>
-          {operation.isPending && operation.variables === 'test' ? '正在测试…' : '测试已保存连接'}</button>
+          {operation.isPending && operation.variables === 'test' ? '正在验证连通性…' : '测试已保存连接'}</button>
         {dirty && <button type="button" className="text-link" disabled={operation.isPending} onClick={() => {
-          onDraft(); operation.reset(); setMessage('已撤销未保存的修改。');
+          onDraft(); operation.reset(); setMessage('已撤销未保存的草稿修改。');
         }}>撤销修改</button>}
       </div>
-      <small className="model-help">使用支持结构化输出的 OpenAI 兼容 HTTPS 服务。连接测试会发送一条简短请求，可能计费。</small>
+      <small className="model-help">请接入支持严格 JSON 结构化输出的兼容 HTTPS 模型服务。点击连接测试将发送一条不含病例数据的握手验证请求。</small>
       {own && !confirmClear && <button type="button" className="text-link model-clear" disabled={operation.isPending}
         onClick={() => { operation.reset(); setMessage(''); setConfirmClear(true); }}>
         {role ? '恢复共享默认设置' : '清除默认连接'}

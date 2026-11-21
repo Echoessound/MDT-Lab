@@ -1,5 +1,5 @@
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { useRef, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 
 export function useWorkspaceParams() {
   const [params, setParams] = useSearchParams();
@@ -27,15 +27,32 @@ export function pageSlice<T>(rows: T[], requested: number, size = 20) {
 export function PageLinks({ page, pages, onPage }: { page: number; pages: number; onPage: (page: number) => void }) {
   return pages > 1 ? <div className="workspace-pagination" aria-label="分页">
     <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)}>上一页</button>
-    <span>{page} / {pages}</span>
+    <span>第 {page} / {pages} 页</span>
     <button type="button" disabled={page >= pages} onClick={() => onPage(page + 1)}>下一页</button>
   </div> : null;
 }
 
+export function computeSlideDirection<K extends string>(
+  tabs: readonly { key: K }[],
+  previousKey: K,
+  nextKey: K,
+): 'right' | 'left' | 'none' {
+  if (previousKey === nextKey) return 'none';
+  const prevIdx = tabs.findIndex(t => t.key === previousKey);
+  const nextIdx = tabs.findIndex(t => t.key === nextKey);
+  if (prevIdx === -1 || nextIdx === -1) return 'right';
+  return nextIdx > prevIdx ? 'right' : 'left';
+}
+
 export function WorkspaceViews<K extends string>({ label, tabs, value, onChange }: {
-  label: string; tabs: readonly { key: K; label: string }[]; value: K; onChange: (key: K) => void;
+  label: string;
+  tabs: readonly { key: K; label: string; badge?: string | number }[];
+  value: K;
+  onChange: (key: K) => void;
 }) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const activeIndex = Math.max(0, tabs.findIndex(t => t.key === value));
+
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
     if (!keys.includes(event.key)) return;
@@ -46,11 +63,55 @@ export function WorkspaceViews<K extends string>({ label, tabs, value, onChange 
     buttons.current[next]?.focus();
     onChange(tabs[next].key);
   }
-  return <div className="workspace-views" role="tablist" aria-label={label}>
+
+  const barStyle = {
+    '--tab-count': tabs.length,
+    '--active-tab-index': activeIndex,
+  } as CSSProperties;
+
+  return <div className="workspace-views" role="tablist" aria-label={label} style={barStyle}>
     {tabs.map((tab, index) => <button key={tab.key} type="button" role="tab" aria-selected={value === tab.key}
       id={`workspace-tab-${tab.key}`} aria-controls="workspace-panel" tabIndex={value === tab.key ? 0 : -1}
       ref={element => { buttons.current[index] = element; }} onKeyDown={event => moveFocus(event, index)}
-      onClick={() => onChange(tab.key)}>{tab.label}</button>)}
+      onClick={() => onChange(tab.key)}>
+      <span>{tab.label}</span>
+      {tab.badge !== undefined && <small className="workspace-tab-badge">{tab.badge}</small>}
+    </button>)}
+  </div>;
+}
+
+export function TabPanelTransition<K extends string>({
+  tabs,
+  activeKey,
+  className = '',
+  children,
+}: {
+  tabs: readonly { key: K }[];
+  activeKey: K;
+  className?: string;
+  children: ReactNode;
+}) {
+  const prevKeyRef = useRef<K>(activeKey);
+  const [direction, setDirection] = useState<'right' | 'left' | 'none'>('none');
+
+  useEffect(() => {
+    if (prevKeyRef.current !== activeKey) {
+      setDirection(computeSlideDirection(tabs, prevKeyRef.current, activeKey));
+      prevKeyRef.current = activeKey;
+    }
+  }, [activeKey, tabs]);
+
+  const animClass = direction === 'left' ? 'tab-slide-left' : 'tab-slide-right';
+
+  return <div
+    key={activeKey}
+    id="workspace-panel"
+    role="tabpanel"
+    aria-labelledby={`workspace-tab-${activeKey}`}
+    tabIndex={0}
+    className={`tab-panel-animated ${animClass} ${className}`.trim()}
+  >
+    {children}
   </div>;
 }
 

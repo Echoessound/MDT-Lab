@@ -40,6 +40,12 @@ class AppendEvent(BaseModel):
     event: EventInput
 
 
+class AutoEnrichInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_version: int = Field(ge=1, strict=True)
+    trigger_event_id: str | None = Field(default=None, min_length=1, max_length=80)
+
+
 @router.get("/health")
 def health(request: Request):
     return {"data": {"status": "ok", "version": "0.3.0", "storage": request.app.state.research.store.health()["backend"], "stream": "sse",
@@ -70,6 +76,29 @@ def append_event(case_id: str, body: AppendEvent, request: Request):
 def routing(case_id: str, request: Request, trigger_event_id: str = Query(min_length=1),
             version: int | None = Query(None, ge=1), routing_mode: Literal["event", "fixed"] = "event"):
     return {"data": request.app.state.research.routing(case_id, trigger_event_id, version, routing_mode)}
+
+
+@router.get("/cases/{case_id}/workflow-plan")
+def workflow_plan(case_id: str, request: Request, trigger_event_id: str | None = Query(None, min_length=1),
+                  version: int | None = Query(None, ge=1)):
+    return {"data": request.app.state.research.workflow_plan(case_id, trigger_event_id, version)}
+
+
+@router.get("/cases/{case_id}/imaging")
+def imaging_pipeline(case_id: str, request: Request, trigger_event_id: str | None = Query(None, min_length=1),
+                     version: int | None = Query(None, ge=1)):
+    return {"data": request.app.state.research.imaging_pipeline(case_id, trigger_event_id, version)}
+
+
+@router.get("/cases/{case_id}/ablation")
+def ablation_matrix(case_id: str, request: Request, trigger_event_id: str | None = Query(None, min_length=1),
+                    version: int | None = Query(None, ge=1)):
+    return {"data": request.app.state.research.ablation_matrix(case_id, trigger_event_id, version)}
+
+
+@router.post("/cases/{case_id}/auto-enrich", status_code=201)
+def auto_enrich(case_id: str, body: AutoEnrichInput, request: Request):
+    return {"data": request.app.state.research.auto_enrich_case(case_id, body.expected_version, body.trigger_event_id)}
 
 
 @router.post("/runs", status_code=202)

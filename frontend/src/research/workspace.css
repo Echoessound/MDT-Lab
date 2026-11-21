@@ -70,24 +70,158 @@
 .workspace-page .workspace-advanced { margin: 0; }
 .workspace-advanced summary, .workspace-report-opinion summary { cursor: pointer; font-size: 12px; }
 .workspace-advanced select { margin-top: 8px; }
-.workspace-views { display: flex; gap: 4px; min-width: 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
-.workspace-views button { font: inherit; color: var(--muted); border: none; border-bottom: 2px solid transparent; margin: 0; padding: 7px 13px; background: transparent; white-space: nowrap; font-size: 13px; }
-.workspace-views button[aria-selected=true] { border-bottom-color: var(--green); color: var(--text); font-weight: 600; }
-.workspace-views button:hover { background: var(--soft); }
-.workspace-event-row { display: flex; align-items: flex-start; gap: 8px; padding: 9px 14px; border-top: 1px solid var(--line); }
-.workspace-event-row.event-used { background: var(--soft); }
+.workspace-views { position: relative; display: flex; gap: 6px; min-width: 0; border-bottom: 1px solid var(--line); overflow-x: auto; padding-bottom: 1px; }
+.workspace-views button { position: relative; display: inline-flex; align-items: center; gap: 7px; font: inherit; color: var(--muted); border: none; border-bottom: 2px solid transparent; margin: 0; padding: 8px 14px; background: transparent; white-space: nowrap; font-size: 13px; border-radius: 6px 6px 0 0; transition: color 180ms ease, background 180ms ease, border-color 220ms ease; }
+.workspace-views button::after { content: ''; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2.5px; border-radius: 2px; background: var(--green); transform: scaleX(0); transform-origin: center; transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+.workspace-views button[aria-selected=true] { color: var(--green); font-weight: 600; background: color-mix(in srgb, var(--soft) 55%, transparent); }
+.workspace-views button[aria-selected=true]::after { transform: scaleX(1); }
+.workspace-views button:hover { background: var(--soft); color: var(--text); }
+.workspace-tab-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); line-height: 1.45; }
+.workspace-views button[aria-selected=true] .workspace-tab-badge { background: var(--green); color: var(--panel); border-color: var(--green); }
+
+/* Directional Tab Slide-In / Slide-Out & Inspector Transitions */
+.tab-panel-animated { will-change: transform, opacity; }
+.tab-slide-right { animation: tabSlideRight 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.tab-slide-left { animation: tabSlideLeft 280ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.inspector-enter { animation: inspectorEnter 240ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes tabSlideRight {
+  from { opacity: 0; transform: translateX(22px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes tabSlideLeft {
+  from { opacity: 0; transform: translateX(-22px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes inspectorEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Collaboration Node Pulse & Smooth Details Disclosure */
+.console-flow-node { transition: border-color 180ms ease, background 180ms ease, transform 160ms ease, box-shadow 180ms ease; }
+.console-flow-node:hover { transform: translateY(-1px); }
+.console-flow-node.node-is-running { border-color: var(--green); animation: nodePulse 1.8s ease-in-out infinite; }
+@keyframes nodePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(24, 89, 65, 0.25); }
+  50% { box-shadow: 0 0 0 5px rgba(24, 89, 65, 0.06); }
+}
+
+/* Temporal Freeze Cutoff Visualization & Quick Actions */
+.workspace-event-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line); transition: background 180ms ease, opacity 180ms ease; }
+.workspace-event-row.event-used { background: var(--soft); border-left: 3px solid var(--green); }
+.workspace-event-row.event-included { border-left: 3px solid color-mix(in srgb, var(--green) 35%, transparent); }
+.workspace-event-row.event-future-excluded { opacity: 0.62; background: color-mix(in srgb, var(--bg) 60%, var(--panel)); border-left: 3px dashed var(--line); }
+.workspace-event-row.event-future-excluded:hover { opacity: 0.92; }
 .workspace-event-row details { flex: 1; min-width: 0; margin: 0; border: 0; }
 .workspace-event-row summary { cursor: pointer; list-style: none; display: flex; align-items: baseline; min-height: 32px; gap: 10px; }
 .workspace-event-row summary::-webkit-details-marker { display: none; }
-.workspace-event-row summary:before { content: '›'; flex: none; color: var(--muted); font-size: 15px; }
+.workspace-event-row summary:before { content: '›'; flex: none; color: var(--muted); font-size: 15px; transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1); }
 .workspace-event-row details[open] > summary:before { transform: rotate(90deg); }
+.workspace-event-row details[open] .workspace-event-facts { animation: inspectorEnter 200ms ease both; }
 .workspace-event-row summary time { flex: none; font-size: 11px; font-variant-numeric: tabular-nums; }
 .workspace-event-row summary strong, .workspace-event-row summary small { display: block; overflow-wrap: anywhere; }
 .workspace-event-row summary strong { font-size: 12px; }
 .workspace-event-row summary small, .workspace-event-facts > code { font-size: 10px; color: var(--muted); }
 .workspace-event-row .workspace-tool { font-size: 11px; min-height: 28px; flex: none; }
-.workspace-event-current { padding: 5px 2px; flex: none; color: var(--green); font-size: 11px; }
+.workspace-event-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
+.event-cutoff-tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; font-weight: 500; white-space: nowrap; }
+.event-cutoff-tag.tag-included { background: var(--soft); color: var(--green); }
+.event-cutoff-tag.tag-future { background: var(--bg); color: var(--muted); border: 1px dashed var(--line); }
+.workspace-event-current { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: var(--green); color: var(--panel); font-size: 11px; font-weight: 600; flex: none; }
+.workspace-tool.primary-tool { background: var(--green); color: var(--panel); border-color: var(--green); }
+.workspace-tool.primary-tool:hover:not(:disabled) { background: var(--green-hover); }
+.table-quick-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.launch-footer-links { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--line); }
+.opinion-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .workspace-event-facts { margin: 8px 0 0 17px; overflow-wrap: anywhere; }
+
+/* Visual Clinical Facts Builder in Append Event Form */
+.visual-facts-builder { display: flex; flex-direction: column; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.builder-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.fact-toggle-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.fact-toggle-chip { display: inline-flex !important; flex-direction: row !important; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); font-size: 12px !important; cursor: pointer; transition: all 160ms ease; user-select: none; }
+.fact-toggle-chip:hover { border-color: var(--green); }
+.fact-toggle-chip.is-active { background: var(--soft); border-color: var(--green); color: var(--green); font-weight: 600; }
+.fact-toggle-chip input { width: 14px; height: 14px; accent-color: var(--green); margin: 0; }
+.builder-note-input { margin-top: 4px; }
+
+/* Automated Workflow Blueprint & Semantic Completeness */
+.workflow-card { display: flex; flex-direction: column; gap: 16px; }
+.workflow-summary-banner { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+.workflow-summary-banner > div { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.workflow-summary-banner span { font-size: 11px; color: var(--muted); }
+.workflow-summary-banner strong { font-size: 15px; color: var(--text); }
+.workflow-summary-banner small { font-size: 11px; color: var(--muted); }
+.completeness-bar { height: 7px; width: 100%; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 3px; }
+.completeness-bar > div { height: 100%; background: var(--muted); border-radius: 999px; transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+.completeness-bar.semantic > div { background: var(--green); }
+.predicted-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.semantic-inference-box { padding: 14px 16px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--green) 35%, var(--line)); background: var(--soft); display: flex; flex-direction: column; gap: 10px; }
+.semantic-box-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.semantic-box-header strong { display: block; font-size: 13px; color: var(--text); }
+.semantic-box-header p { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.semantic-inference-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.semantic-inference-list li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.6; }
+.workflow-dag-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.workflow-dag-node { padding: 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; gap: 8px; transition: border-color 160ms ease, transform 160ms ease; }
+.workflow-dag-node:hover { border-color: var(--green); transform: translateY(-2px); }
+.workflow-dag-node.status-active { border-left: 3px solid var(--green); }
+.workflow-dag-node.status-skipped { opacity: 0.65; border-style: dashed; }
+.dag-node-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.dag-step-num { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--green); background: var(--soft); padding: 2px 6px; border-radius: 4px; }
+.dag-status-tag { margin-left: auto; font-size: 10px; color: var(--muted); white-space: nowrap; }
+.workflow-dag-node p { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; }
+.specialist-task-cards h3 { font-size: 14px; margin-bottom: 10px; }
+.specialist-task-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.specialist-task-card { padding: 13px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); }
+.specialist-task-card.is-selected { background: var(--panel); border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+.specialist-task-card.is-skipped { opacity: 0.68; border-style: dashed; }
+.specialist-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.specialist-focus { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.specialist-task-card ul { margin: 0; padding-left: 18px; font-size: 12px; color: var(--text); line-height: 1.65; }
+
+/* Interactive Medical Imaging & Radiomics Workbench */
+.imaging-study-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.imaging-study-tab { display: flex; flex-direction: column; align-items: flex-start; padding: 7px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); font-size: 12px; transition: all 160ms ease; }
+.imaging-study-tab[aria-selected="true"] { border-color: var(--green); background: var(--soft); color: var(--green); }
+.imaging-study-tab small { font-size: 10px; color: var(--muted); }
+.imaging-viewer-grid { display: grid; grid-template-columns: minmax(260px, 1.05fr) minmax(0, 1.2fr); gap: 18px; align-items: start; }
+.imaging-slice-column { display: flex; flex-direction: column; gap: 10px; }
+.imaging-controls-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.imaging-window-group { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg); }
+.imaging-window-group button { padding: 5px 10px; font-size: 11px; color: var(--muted); border-right: 1px solid var(--line); transition: background 150ms ease, color 150ms ease; }
+.imaging-window-group button:last-child { border-right: 0; }
+.imaging-window-group button[aria-pressed="true"] { background: var(--green); color: var(--panel); font-weight: 600; }
+.imaging-roi-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: pointer; }
+.imaging-roi-toggle input { accent-color: var(--green); }
+.imaging-svg-container { border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #0f171e; box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35); }
+.imaging-slice-svg { display: block; width: 100%; height: auto; }
+.roi-pulse-ring { transform-box: fill-box; transform-origin: center; animation: roiPulse 2.4s ease-in-out infinite; }
+@keyframes roiPulse {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.08); }
+}
+.imaging-morphology-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+.imaging-metrics-column { display: flex; flex-direction: column; gap: 14px; }
+.radiomics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.radiomics-grid > div { padding: 10px 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); }
+.radiomics-grid span { display: block; font-size: 11px; color: var(--muted); }
+.radiomics-grid strong { display: block; margin-top: 4px; font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+.radiomics-grid small { font-size: 11px; font-weight: 400; color: var(--muted); }
+.imaging-pipeline-steps h3 { font-size: 13px; margin-bottom: 8px; }
+.imaging-step-row { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+.imaging-step-icon { color: var(--green); margin-top: 2px; flex: none; }
+.imaging-step-row.step-warning .imaging-step-icon { color: var(--warning); }
+.imaging-step-row.step-blocked .imaging-step-icon { color: var(--danger); }
+.imaging-step-row.step-skipped { opacity: 0.65; }
+.imaging-step-row strong { display: block; font-size: 12px; }
+.imaging-step-row p { margin: 3px 0 0; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.imaging-step-badge { margin-left: auto; font-size: 10px; white-space: nowrap; color: var(--muted); }
+
+/* Ablation Comparison Table */
+.ablation-table td { vertical-align: middle; }
+.ablation-highlight-row { background: color-mix(in srgb, var(--soft) 65%, transparent); }
+.ablation-finding-cell { max-width: 280px; font-size: 11px; color: var(--muted); line-height: 1.55; }
 .workspace-factbar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin: 0; }
 .workspace-factbar > div { padding: 13px 15px; border-right: 1px solid var(--line); }
 .workspace-factbar > div:last-child { border-right: none; }
@@ -104,6 +238,9 @@
   .workspace-library-layout { grid-template-columns: minmax(0, 1fr); }
   .workspace-recent-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-recent-list li:nth-child(even) { border-left: 1px solid var(--line); }
+  .workflow-summary-banner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workflow-dag-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .imaging-viewer-grid { grid-template-columns: 1fr; }
 }
 @media (max-width:860px) {
   .workspace-case-layout { grid-template-columns: 1fr; }
@@ -130,4 +267,5 @@
   .workspace-event-row summary > span { width: 100%; }
   .workspace-event-row .workspace-tool, .workspace-toolbar select, .workspace-toolbar input { min-height: 40px; }
   .workspace-help dl > div { grid-template-columns: 1fr; gap: 4px; }
+  .workflow-summary-banner, .workflow-dag-grid, .specialist-task-grid, .radiomics-grid { grid-template-columns: 1fr; }
 }
