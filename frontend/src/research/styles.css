@@ -34,7 +34,7 @@
 .research-config{position:sticky;top:20px}
 .research-form{display:flex;flex-direction:column;gap:17px;margin-top:23px;min-width:0}
 .research-form label,.version-selector{display:flex;flex-direction:column;gap:8px;font-size:12px;font-weight:500;min-width:0}
-.research-form input,.research-form select,.research-form textarea,.version-selector select{border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);padding:11px 12px;min-height:44px;width:100%;font:inherit;outline-offset:3px}
+.research-form input:where(:not([type=radio],[type=checkbox])),.research-form select,.research-form textarea,.version-selector select{border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);padding:11px 12px;min-height:44px;width:100%;font:inherit;outline-offset:3px}
 .research-form textarea{font-family:"SFMono-Regular",Consolas,monospace;resize:vertical;line-height:1.7;font-size:12px;min-height:110px}
 .research-form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .version-selector{min-width:140px;color:var(--muted);font-size:11px}
@@ -91,7 +91,7 @@
 .research-metrics small{font:10px/1.5 sans-serif;color:var(--muted)}
 .research-run-bottom{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:23px;align-items:start}
 .research-audit{min-width:0;padding-bottom:17px}
-.research-audit .audit-scroll{height:430px;margin:0 -25px}
+.research-audit .audit-scroll{height:clamp(220px,52dvh,430px)}
 .research-audit .audit-row{font-size:11px;align-items:flex-start;padding:14px 18px}
 .research-audit .audit-row time{font-size:9px;max-width:83px;white-space:normal;line-height:1.7}
 .research-audit .audit-toolbar{padding:14px 0}
@@ -121,7 +121,7 @@
 .research-roadmap{margin-top:24px}
 @media(max-width:1190px){.research-case-grid{grid-template-columns:1fr}.research-case-card .case-card-bottom .button{width:auto}.research-case-layout{grid-template-columns:minmax(0,1fr) 280px}.research-intro{grid-template-columns:1fr}.research-loop{display:none}.research-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.research-metrics>div{border-bottom:1px solid var(--line)}}
 @media(max-width:960px){.research-page h1{font-size:26px}.research-case-layout{grid-template-columns:1fr}.research-case-layout>aside{order:-1}.research-config{position:static}.research-config .research-form{display:grid;grid-template-columns:1fr 1fr}.research-config .config-facts,.research-config .inline-error{grid-column:1/-1}.research-run-bottom{grid-template-columns:1fr}.research-settings-grid{grid-template-columns:1fr}}
-@media(max-width:740px){.research-page h1{font-size:23px}.research-agent-grid{grid-template-columns:1fr}.research-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.research-metrics>div{padding:17px 12px}.research-case-card h2{font-size:18px}.routing-grid{grid-template-columns:1fr}.event-facts>div{grid-template-columns:1fr;gap:2px}.research-config .research-form{display:flex}.research-form-row{grid-template-columns:1fr}.research-timeline>li{padding:20px 6px 20px 15px}.event-source{align-items:flex-start}.event-source .text-link{min-height:40px}.research-evidence-list .evidence-chip{min-height:40px}.research-audit .audit-scroll{margin:0 -21px}.research-stage-list>span{font-size:11px;padding:8px 10px}.research-page .button-group{flex-wrap:wrap}.research-settings-grid .research-form .button{width:100%}.version-selector{width:100%}.research-case-card .case-card-bottom .button{width:100%}.research-loop{display:none}.research-metrics strong{font-size:22px}}
+@media(max-width:740px){.research-page h1{font-size:23px}.research-agent-grid{grid-template-columns:1fr}.research-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.research-metrics>div{padding:17px 12px}.research-case-card h2{font-size:18px}.routing-grid{grid-template-columns:1fr}.event-facts>div{grid-template-columns:1fr;gap:2px}.research-config .research-form{display:flex}.research-form-row{grid-template-columns:1fr}.research-timeline>li{padding:20px 6px 20px 15px}.event-source{align-items:flex-start}.event-source .text-link{min-height:40px}.research-evidence-list .evidence-chip{min-height:40px}.research-stage-list>span{font-size:11px;padding:8px 10px}.research-page .button-group{flex-wrap:wrap}.research-settings-grid .research-form .button{width:100%}.version-selector{width:100%}.research-case-card .case-card-bottom .button{width:100%}.research-loop{display:none}.research-metrics strong{font-size:22px}}
 
 /* Dataset intake and the connected agent workspace reuse the workbench tokens. */
 .source-panel details,.import-preview{margin-top:18px}

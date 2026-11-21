@@ -1,62 +1,205 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorState, Icon, Loading } from '../ui';
 import { researchApi, type ModelConfiguration } from './api';
 import { InlineError, roleNames } from './components';
-import type { AgentModelStatus, ModelStatus, Role } from './schemas';
+import { roleSchema, type AgentModelStatus, type ModelStatus, type Role } from './schemas';
 import { StorageStatus } from './storage-status';
+import './agent-console.css';
 
 export function selectedModelsReady(selected: Role[] | undefined, models: AgentModelStatus[] | undefined) {
   return !!selected?.length && selected.every(role => models?.some(item => item.agent_id === role && item.configured));
 }
 
-function ModelEditor({ status, role, onClose }: { status: ModelStatus; role?: Role; onClose?: () => void }) {
-  const client = useQueryClient();
-  const [form, setForm] = useState<ModelConfiguration>({ provider: status.provider, base_url: status.base_url, model: status.model, api_key: '', timeout_seconds: status.timeout_seconds, temperature: status.temperature, max_output_tokens: status.max_output_tokens });
-  const [message, setMessage] = useState('');
-  const invalidate = async () => {
-    await Promise.all([client.invalidateQueries({ queryKey: ['research-model'] }), client.invalidateQueries({ queryKey: ['research-agent-models'] })]);
+type Scope = Role | 'default';
+type ConnectionDraft = {
+  url: string; model: string; key: string;
+  timeout: string; temperature: string; tokens: string;
+};
+
+function draftFrom(status: ModelStatus): ConnectionDraft {
+  return {
+    url: status.base_url, model: status.model, key: '',
+    timeout: String(status.timeout_seconds), temperature: String(status.temperature), tokens: String(status.max_output_tokens),
   };
-  const save = useMutation({ mutationFn: () => role ? researchApi.configureAgent(role, form) : researchApi.configureModel(form), onSuccess: async () => { setForm(old => ({ ...old, api_key: '' })); setMessage('已保存，密钥已加密，密码输入已清空。'); await invalidate(); } });
-  const clear = useMutation({ mutationFn: () => role ? researchApi.clearAgent(role) : researchApi.clearModel(), onSuccess: async value => { setForm({ provider: value.provider, base_url: value.base_url, model: value.model, api_key: '', timeout_seconds: value.timeout_seconds, temperature: value.temperature, max_output_tokens: value.max_output_tokens }); setMessage(role ? '已恢复继承默认配置。' : '已清除默认配置，独立 Agent 配置仍保留。'); await invalidate(); } });
-  const test = useMutation({ mutationFn: () => role ? researchApi.testAgent(role) : researchApi.testModel(), onSuccess: value => setMessage(value.message) });
-  const busy = save.isPending || clear.isPending || test.isPending;
-  const ownsKey = role ? (status as AgentModelStatus).overridden : status.has_api_key;
-  const update = (key: keyof ModelConfiguration, value: string | number) => { setMessage(''); setForm(old => ({ ...old, [key]: value })); };
-  return <form className="research-form" onSubmit={event => { event.preventDefault(); setMessage(''); save.mutate(); }}>
-    <label>Base URL<input type="url" autoComplete="off" required value={form.base_url} onChange={event => update('base_url', event.target.value)} placeholder="https://api.openai.com/v1" /></label>
-    <label>Model<input autoComplete="off" required maxLength={160} value={form.model} onChange={event => update('model', event.target.value)} placeholder="服务提供方的模型标识" /></label>
-    <label>API Key<input type="password" autoComplete="new-password" maxLength={1024} value={form.api_key} onChange={event => update('api_key', event.target.value)} placeholder={ownsKey ? '同地址可留空保留已有密钥' : '独立配置需要填写自己的密钥'} /></label>
-    <div className="research-form-row"><label>单次超时 / 秒<input type="number" required min={1} max={60} value={form.timeout_seconds} onChange={event => update('timeout_seconds', Number(event.target.value))} /></label><label>Temperature<input type="number" required min={0} max={2} step={0.1} value={form.temperature} onChange={event => update('temperature', Number(event.target.value))} /></label></div>
-    <label>最大输出 Token<input type="number" required min={128} max={8192} value={form.max_output_tokens} onChange={event => update('max_output_tokens', Number(event.target.value))} /></label>
-    <InlineError error={save.error || clear.error || test.error} />{message && <p className="notice neutral" role="status">{message}</p>}
-    <div className="button-group"><button className="button primary" disabled={busy}>{save.isPending ? '正在保存…' : role ? '保存独立配置' : '保存默认配置'}</button><button type="button" className="button secondary" disabled={!status.configured || busy} onClick={() => { setMessage(''); test.mutate(); }}>{test.isPending ? '正在测试…' : '测试已保存配置'}</button></div>
-    <div className="button-group"><button type="button" className="text-link" disabled={!ownsKey || busy} onClick={() => clear.mutate()}>{role ? '恢复继承默认' : '清除默认配置'}</button>{onClose && <button type="button" className="text-link" onClick={onClose}>收起设置</button>}</div>
-  </form>;
 }
 
-export function AgentModelCard({ item }: { item: AgentModelStatus }) {
-  const [editing, setEditing] = useState(false);
-  return <article className="panel agent-model-card">
-    <div className="section-heading"><div><span className="eyebrow">{item.agent_id.toUpperCase()}</span><h3>{roleNames[item.agent_id]}</h3></div><span className={`pill ${item.configured ? 'soft' : 'outline'}`}>{item.overridden ? '独立配置' : item.configured ? '继承默认' : '未配置'}</span></div>
-    <p className="model-name">{item.model || 'Mock 可用 · LLM 待配置'}</p><p className="model-endpoint">{item.configured ? item.base_url : '可为此专科指定模型服务和独立密钥。'}</p>
-    <button className="text-link" aria-expanded={editing} onClick={() => setEditing(value => !value)}><Icon name="settings" size={14} />{editing ? '收起配置' : `配置${roleNames[item.agent_id]}`}</button>
-    {editing && <ModelEditor status={item} role={item.agent_id} onClose={() => setEditing(false)} />}
-  </article>;
+function scopeName(scope: Scope) {
+  return scope === 'default' ? '共享默认' : roleNames[scope];
 }
 
-export function AgentSettingsGrid() {
-  const query = useQuery({ queryKey: ['research-agent-models'], queryFn: researchApi.agentModels });
-  if (query.isPending) return <Loading />;
-  if (query.isError) return <ErrorState error={query.error} retry={() => void query.refetch()} />;
-  return <div className="agent-settings-grid">{query.data.map(item => <AgentModelCard item={item} key={item.agent_id} />)}</div>;
+function sourceName(status: ModelStatus, scope: Scope) {
+  if (!status.configured) return '未配置';
+  if (scope === 'default') return '已配置';
+  return 'overridden' in status && status.overridden ? '独立配置' : '继承默认';
+}
+
+function sameDraft(a: ConnectionDraft, b: ConnectionDraft) {
+  return (Object.keys(a) as (keyof ConnectionDraft)[]).every(key => a[key] === b[key]);
 }
 
 export function ModelSettingsPage() {
-  const query = useQuery({ queryKey: ['research-model'], queryFn: researchApi.modelStatus });
-  return <div className="page-enter research-page"><div className="page-heading"><div><span className="eyebrow">MODEL CONNECTIONS / PER-AGENT CONTROL</span><h1>每个专科，独立配置<span className="title-period">.</span></h1><p>统一默认连接，也可为每个 Agent 指定 URL、模型、密钥和生成参数。</p></div></div>
-    <div className="research-stack"><StorageStatus /><AgentSettingsGrid />
-      <div className="research-settings-grid"><section className="panel"><h2>共享默认配置</h2><p className="muted">没有独立配置的 Agent 会继承这里的连接。</p>{query.isPending ? <Loading /> : query.isError ? <InlineError error={query.error} /> : <ModelEditor status={query.data} />}</section>
-        <aside className="panel"><h2>配置如何生效</h2><ol className="settings-notes"><li>独立配置优先；恢复继承后使用共享默认连接。</li><li>启动时冻结本次参与 Agent 的配置。后续修改只影响新运行。</li><li>密钥加密保存，页面、报告与审计只显示模型和参数。重启后可恢复配置。</li><li>更换 URL 必须重新填写密钥。服务需支持 Chat Completions 与严格 JSON Schema。</li><li>“测试已保存配置”会发送一条不含病例的短请求，可能产生少量费用。</li></ol><p className="subtle-note">当前应用供本机使用。模型服务使用公网 HTTPS；独立配置不会复制其他 Agent 的密钥。</p></aside></div>
-    </div></div>;
+  const shared = useQuery({ queryKey: ['research-model'], queryFn: researchApi.modelStatus });
+  const agents = useQuery({ queryKey: ['research-agent-models'], queryFn: researchApi.agentModels });
+  const [params, setParams] = useSearchParams();
+  const requested = roleSchema.safeParse(params.get('agent'));
+  const scope: Scope = requested.success ? requested.data : 'default';
+  // Drafts stay in component memory so switching specialists does not discard edits.
+  const [drafts, setDrafts] = useState<Partial<Record<Scope, ConnectionDraft>>>({});
+  const [busy, setBusy] = useState(false);
+  const status = scope === 'default' ? shared.data : agents.data?.find(item => item.agent_id === scope);
+
+  const selectScope = (value: Scope) => setParams(next => {
+    if (value === 'default') next.delete('agent');
+    else next.set('agent', value);
+    return next;
+  });
+  const updateDraft = (draft?: ConnectionDraft) => setDrafts(old => {
+    const next = { ...old };
+    if (draft) next[scope] = draft;
+    else delete next[scope];
+    return next;
+  });
+
+  return <div className="page-enter research-page agent-console">
+    <header className="page-heading">
+      <h1>模型设置</h1><Link className="button secondary" to="/research/agents"><Icon name="network" size={15} />Agent 群</Link>
+    </header>
+    {shared.isPending || agents.isPending ? <Loading /> : shared.isError || agents.isError ?
+      <ErrorState error={shared.error ?? agents.error} retry={() => { void shared.refetch(); void agents.refetch(); }} /> :
+      <div className="model-workspace">
+        <section className="panel model-roster" aria-label="模型连接列表">
+          <div className="model-section-heading"><h2>连接列表</h2></div>
+          {[{ scope: 'default' as Scope, status: shared.data }, ...agents.data.map(agent => ({ scope: agent.agent_id, status: agent }))].map(item => (
+            <button key={item.scope} type="button" aria-pressed={item.scope === scope} disabled={busy && item.scope !== scope}
+              onClick={() => selectScope(item.scope)} className="model-connection">
+              <span className="model-connection-name"><strong>{scopeName(item.scope)}</strong>
+                {drafts[item.scope] && <small className="draft-marker">未保存</small>}
+              </span>
+              <span className="model-summary">{item.status.model || '—'}<span>{sourceName(item.status, item.scope)}</span></span>
+            </button>
+          ))}
+        </section>
+        {status && <ConnectionEditor key={scope} scope={scope} status={status} draft={drafts[scope]}
+          onDraft={updateDraft} onBusy={setBusy} />}
+      </div>}
+    <StorageStatus />
+  </div>;
+}
+
+type EditorProps = {
+  scope: Scope; status: ModelStatus; draft?: ConnectionDraft;
+  onDraft: (draft?: ConnectionDraft) => void; onBusy: (value: boolean) => void;
+};
+
+function ConnectionEditor({ scope, status, draft, onDraft, onBusy }: EditorProps) {
+  const client = useQueryClient();
+  const [message, setMessage] = useState('');
+  const [confirmClear, setConfirmClear] = useState(false);
+  const current = draftFrom(status);
+  const form = draft ?? current;
+  const dirty = !sameDraft(current, form);
+  const role = scope === 'default' ? undefined : scope;
+  const own = role ? 'overridden' in status && !!status.overridden : status.has_api_key;
+  const hasKey = own && status.has_api_key;
+  const normalizeUrl = (url: string) => url.trim().replace(/\/+$/, '');
+  const needKey = !hasKey || normalizeUrl(form.url) !== normalizeUrl(status.base_url);
+  const record = async (value: ModelStatus | AgentModelStatus) => {
+    if (role) {
+      client.setQueryData<AgentModelStatus[]>(['research-agent-models'], old =>
+        old?.map(item => item.agent_id === role ? value as AgentModelStatus : item));
+    } else {
+      client.setQueryData(['research-model'], value);
+    }
+    onDraft();
+    await client.invalidateQueries({ queryKey: ['research-agent-models'] });
+  };
+  const operation = useMutation({
+    mutationFn: async (action: 'save' | 'test' | 'clear') => {
+      if (action === 'test') {
+        const result = role ? await researchApi.testAgent(role) : await researchApi.testModel();
+        return result.message;
+      }
+      if (action === 'clear') {
+        await record(role ? await researchApi.clearAgent(role) : await researchApi.clearModel());
+        return role ? '已恢复共享默认设置。' : '已清除共享默认设置。';
+      }
+      const body: ModelConfiguration = {
+        provider: status.provider, base_url: form.url.trim(), model: form.model.trim(), api_key: form.key,
+        timeout_seconds: Number(form.timeout), temperature: Number(form.temperature), max_output_tokens: Number(form.tokens),
+      };
+      await record(role ? await researchApi.configureAgent(role, body) : await researchApi.configureModel(body));
+      return '连接设置已保存。';
+    },
+    onSuccess: setMessage,
+    onSettled: () => onBusy(false),
+  });
+
+  const act = (action: 'save' | 'test' | 'clear') => {
+    setMessage('');
+    setConfirmClear(false);
+    onBusy(true);
+    operation.mutate(action);
+  };
+  const edit = (key: keyof ConnectionDraft, value: string) => {
+    const updated = { ...form, [key]: value };
+    onDraft(sameDraft(updated, current) ? undefined : updated);
+    setConfirmClear(false);
+    setMessage('');
+    if (operation.isError) operation.reset();
+  };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (dirty && !operation.isPending) act('save');
+  };
+
+  return <section className="panel model-editor" aria-labelledby="connection-heading">
+    <div className="model-section-heading"><h2 id="connection-heading">{scopeName(scope)}连接</h2>
+      <span className={'pill ' + (dirty ? 'outline' : 'soft')}>{dirty ? '未保存' : sourceName(status, scope)}</span>
+    </div>
+    <p className="model-context">{role ? '保存后，此专科将使用独立连接。' : '供未设置独立连接的专科使用。'}修改将在下次启动运行时生效。</p>
+    <form className="research-form" onSubmit={submit}>
+      <fieldset className="editor-fields" disabled={operation.isPending}>
+        <legend className="sr-only">模型服务与凭据</legend>
+        <label>服务地址（Base URL）<input type="url" required autoComplete="off" spellCheck={false} value={form.url}
+          onChange={event => edit('url', event.target.value)} placeholder="https://api.openai.com/v1" /></label>
+        <label>模型标识（Model）<input required autoComplete="off" spellCheck={false} maxLength={160} value={form.model}
+          onChange={event => edit('model', event.target.value)} placeholder="提供方的模型 ID" /></label>
+        <label>API Key<input type="password" autoComplete="new-password" maxLength={1024} required={needKey} value={form.key}
+          onChange={event => edit('key', event.target.value)} aria-describedby="api-key-hint"
+          placeholder={hasKey && !needKey ? '已保存密钥' : '输入此连接的密钥'} /></label>
+        <small id="api-key-hint">{!needKey ? '留空可沿用已保存的密钥。' : hasKey ? '服务地址已更改，请重新输入密钥。' : '密钥将加密保存。'}</small>
+        <details className="model-parameters">
+          <summary>生成参数 <span>{form.timeout} 秒 · {form.tokens} tokens</span></summary>
+          <div className="parameter-fields">
+            <label>请求超时（秒）<input type="number" required min="1" max="60" value={form.timeout} onChange={event => edit('timeout', event.target.value)} /></label>
+            <label>温度（Temperature）<input type="number" required min="0" max="2" step="any" value={form.temperature} onChange={event => edit('temperature', event.target.value)} /></label>
+            <label>最大输出 tokens<input type="number" required min="128" max="8192" value={form.tokens} onChange={event => edit('tokens', event.target.value)} /></label>
+          </div>
+        </details>
+      </fieldset>
+      <InlineError error={operation.error} />
+      {message && <p className="model-feedback" role="status"><Icon name="check" size={15} />{message}</p>}
+      <div className="model-editor-actions">
+        <button type="submit" className="button primary" disabled={!dirty || operation.isPending}>
+          {operation.isPending && operation.variables === 'save' ? '正在保存…' : '保存设置'}</button>
+        <button type="button" className="button secondary" disabled={!status.configured || dirty || operation.isPending} onClick={() => act('test')}>
+          {operation.isPending && operation.variables === 'test' ? '正在测试…' : '测试已保存连接'}</button>
+        {dirty && <button type="button" className="text-link" disabled={operation.isPending} onClick={() => {
+          onDraft(); operation.reset(); setMessage('已撤销未保存的修改。');
+        }}>撤销修改</button>}
+      </div>
+      <small className="model-help">使用支持结构化输出的 OpenAI 兼容 HTTPS 服务。连接测试会发送一条简短请求，可能计费。</small>
+      {own && !confirmClear && <button type="button" className="text-link model-clear" disabled={operation.isPending}
+        onClick={() => { operation.reset(); setMessage(''); setConfirmClear(true); }}>
+        {role ? '恢复共享默认设置' : '清除默认连接'}
+      </button>}
+      {confirmClear && <div className="model-clear-prompt">
+        <p>{role ? '恢复后将删除此专科的独立连接和密钥。' : '清除后，继承此连接的专科需要重新配置模型。'}</p>
+        <button type="button" className="button secondary" onClick={() => act('clear')}>确认{role ? '恢复' : '清除'}</button>
+        <button type="button" className="text-link" onClick={() => setConfirmClear(false)}>取消</button>
+      </div>}
+    </form>
+  </section>;
 }

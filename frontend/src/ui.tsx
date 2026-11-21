@@ -14,6 +14,13 @@ export const shortId = (value: string) => value.replace('run_', '').slice(0, 8).
 
 const iconPaths: Record<string, ReactNode> = {
   settings: <><path d="M4 7h16M4 17h16" /><circle cx="9" cy="7" r="3" fill="var(--panel)" /><circle cx="15" cy="17" r="3" fill="var(--panel)" /></>,
+  sidebar: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16"/></>,
+  menu: <path d="M3 6h18M3 12h18M3 18h18"/>,
+  database: <><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v12c0 4 16 4 16 0v-12M4 11.5c0 4 16 4 16 0"/></>,
+  search: <><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></>,
+  book: <><path d="M4 4h7a2 2 0 0 1 2 2v14a4 4 0 0 0-3-1H4zM13 6c0-2 2-2 3-2h4v15h-4a4 4 0 0 0-3 1"/></>,
+  enter: <path d="M20 5v8H5m4-4-4 4 4 4"/>,
+  refresh: <><path d="M20 9a8 8 0 1 0 0 6M20 4v5h-5"/></>,
   pulse: <path d="M2 12h5l3-8 5 16 3-8h4" />,
   grid: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
   history: <><path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7" /><path d="M12 7v5l3 2" /></>,
@@ -89,7 +96,7 @@ export function Timeline({ events, onSelect, selected }: { events: TimelineEvent
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => { ref.current?.showModal(); return () => ref.current?.close(); }, []);
-  return <dialog ref={ref} className="detail-dialog" onCancel={onClose} aria-label={title} onClick={event => { if (event.target === event.currentTarget) onClose(); }}><div className="dialog-content"><div className="section-heading"><div><div className="eyebrow">SOURCE & TRACE</div><h2>{title}</h2></div><button className="icon-button" aria-label="关闭详情" onClick={onClose}><Icon name="close" /></button></div>{children}</div></dialog>;
+  return <dialog ref={ref} className="detail-dialog" onCancel={onClose} aria-label={title} onClick={event => { if (event.target === event.currentTarget) onClose(); }}><div className="dialog-content"><div className="section-heading"><div><h2>{title}</h2></div><button className="icon-button" aria-label="关闭详情" onClick={onClose}><Icon name="close" /></button></div>{children}</div></dialog>;
 }
 
 export function EvidenceModal({ event, onClose }: { event: TimelineEvent; onClose: () => void }) {
@@ -123,7 +130,7 @@ export function AuditLog({ events, runId }: { events: RunEvent[]; runId: string 
   const container = useRef<HTMLDivElement>(null);
   const visible = events.filter(event => filter === 'all' || (filter === 'failed' ? event.payload.event_type === 'agent_failed' : event.payload.agent_name === filter));
   useEffect(() => { if (auto && container.current) container.current.scrollTop = container.current.scrollHeight; }, [events, auto]);
-  return <section className="panel audit-panel"><div className="section-heading"><div><div className="eyebrow">AUDIT TRAIL</div><h2>运行审计 <span className="count">{events.length}</span></h2></div><a className="icon-button" href={`/api/v1/runs/${runId}/audit/download`} aria-label="下载审计日志"><Icon name="download" /></a></div>
+  return <section className="panel audit-panel"><div className="section-heading"><div><h2>运行审计 <span className="count">{events.length}</span></h2></div><a className="icon-button" href={`/api/v1/runs/${runId}/audit/download`} aria-label="下载审计日志"><Icon name="download" /></a></div>
     <div className="audit-toolbar"><label className="sr-only" htmlFor="audit-filter">筛选审计事件</label><select id="audit-filter" value={filter} onChange={event => setFilter(event.target.value)}><option value="all">全部事件</option>{roles.map(role => <option key={role} value={role}>{roleNames[role]}</option>)}<option value="failed">仅失败事件</option></select><label className="check-label"><input type="checkbox" checked={auto} onChange={event => setAuto(event.target.checked)} />跟随最新</label></div>
     <div className="audit-scroll" ref={container} onScroll={() => { const element = container.current; if (element && element.scrollHeight - element.scrollTop - element.clientHeight > 40 && auto) setAuto(false); }}>
       {!visible.length && <div className="empty-inline">{events.length ? '没有符合筛选条件的事件。' : '等待第一条真实审计事件…'}</div>}

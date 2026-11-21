@@ -42,22 +42,24 @@ cd ..
 
 首次安装需要联网，安装后 Mock 演示可完全离线。当前工作区的 `.python/bin/python3.11` 也可用于重建 `.venv`。
 
-## 页面与演示路径
+## 控制台工作流
+
+从「病例工作台」按病例名称、编号或数据来源检索，选择版本和触发事件后启动运行。「最近运行」可直接回到正在处理的任务。顶部「快速跳转」支持搜索页面、病例和运行编号。按 `⌘K`（Windows/Linux 为 `Ctrl+K`）打开，用 ↑、↓ 选择，Enter 打开，Esc 关闭。
 
 | 页面 | 用途 |
 | --- | --- |
-| `/` | 自建与导入的版本化病例及最近运行 |
-| `/research/datasets` | 官方数据连接、文件预检、确认导入、批次记录与 JSON 模板 |
-| `/research/agents` | Agent 群：独立连接设置、可点击协作图、证据与讨论变化、MongoDB 状态、SSE 审计 |
-| `/research/cases/{case_id}` | 选择病例版本、触发事件和调度方式；追加合成事件 |
-| `/research/runs/{run_id}` | 实际节点进度、四专科状态、讨论、证据检查与 SSE 审计 |
-| `/research/runs/{run_id}/report` | 冻结输入、初始/最终意见、未解决分歧、报告与审计下载 |
-| `/research/runs` | 历史运行，按版本和触发事件追溯 |
-| `/settings/models` | 服务端模型连接配置、短请求测试与清除配置 |
-| `/roadmap` | 当前实现与后续开发顺序 |
-| `/legacy` | 保留的 V0.2 三角色基础 Demo |
+| `/` | 病例目录，可按来源类型筛选、按末次事件或事件数量排序，旁边列出最近四次运行 |
+| `/research/datasets` | 选择来源和获取方式、预检、确认导入，按批次或病例编号查询记录 |
+| `/research/cases/{case_id}` | 选择版本、触发事件和调度方式，查看来源或追加人工合成事件 |
+| `/research/runs` | 按状态、运行模式筛选，按运行、病例或触发事件编号检索 |
+| `/research/agents?run={run_id}` | 固定监视一项运行，选择协作图中的专科核对意见与证据，或切换到实时审计 |
+| `/research/runs/{run_id}` | 查看协作、运行输入和执行记录，停止进行中的运行或重跑已结束的任务 |
+| `/research/runs/{run_id}/report` | 查看资料缺口、未解决分歧、初始与最终意见，下载报告或完整审计 |
+| `/settings/models` | 管理共享连接与各专科覆盖，测试已保存的连接，查看数据库状态 |
+| `/roadmap` | 使用说明，包含常用操作、输入范围及审阅结果解释 |
+| `/legacy` | V0.2 三角色病例库与原有运行记录 |
 
-建议先用标准 Mock 场景演示以下过程：
+### 用内置病例核对运行结果
 
 1. 打开 `LUNG-SYN-001`，选择 v1 / `E002`（影像事件），采用按事件调度。只有肿瘤科与影像科参与，不能看到之后 `E003` 的病理记录；结果需要补充资料。
 2. 打开任意证据引用，核对原始事实、来源与冻结版本；刷新后确认运行与审计恢复。
@@ -66,11 +68,13 @@ cd ..
 5. 打开 `LUNG-SYN-003` / `E004`，观察同日矛盾事实被保留、最终暂缓判断。也可选择“无效引用”或“角色失败”验证阻断路径。
 6. 新建运行后立即停止，检查取消记录存在且不生成报告；在历史页查看或重跑其他已结束运行。
 
-支持桌面与移动端、深浅主题、证据弹窗、审计筛选及 JSON 查看。停止属于协作式取消，在流程或角色调用边界生效；已发出的模型 HTTP 请求需要返回或超时后才能结束。
+病例目录的检索、筛选、排序和页码保存在 URL 中。病例详情、运行和报告也可用当前链接重新打开选中的视图。宽屏可收起侧栏，窄屏通过顶部菜单切换模块。侧栏和深浅外观偏好保存在当前浏览器。
+
+停止属于协作式取消，在流程或角色调用边界生效。已发出的模型 HTTP 请求需要返回或超时后才能结束。
 
 ## 外部数据与 Agent 群
 
-打开 `/research/datasets`，选择数据源，使用“连接官方数据源并预检”或上传本地文件；核对数量、排除原因、来源和 SHA-256 后确认导入。点击导入结果中的病例，选择触发事件并启动 MDT，在 `/research/agents` 或运行详情查看真实进度与报告。数据源连接通过后端执行，支持本机 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`（含 SOCKS）环境配置。
+打开「数据导入」，选择来源，连接官方数据源或上传本地文件，点击「开始预检」。核对病例数量、排除原因、来源和 SHA-256 后确认导入。点击导入结果中的病例，选择触发事件并启动 MDT。进入「Agent 群」后选择要监视的运行，在协作图中查看各专科的意见与引用，或打开审计及已生成的报告。数据源连接通过后端执行，支持本机 `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`（含 SOCKS）环境配置。
 
 - **Synthea CSV ZIP**：读取 patients、conditions 及可选 encounters、imaging_studies、procedures、medications、observations 表。只映射研究所需字段；姓名、地址、证件、保险与费用不导入。每病例超过1000条事件时明确排除，不静默截断。
 - **TCIA NSCLC 临床 CSV**：导入可定位日期的检查与随访；无可用日期的病理、分子、治疗和结局字段保留为相关资料，不进入历史 Agent 输入。占位值保留为未知，不转换成阴性。
@@ -111,7 +115,7 @@ Mock 场景包括 `standard`、`partial_failure`、`persistent_disagreement`、`
 
 V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只用模拟 HTTP 上游测试，尚未使用真实凭据验证任何模型服务，也没有发起付费调用**。
 
-在“模型设置”填写服务地址、模型标识与密钥后，可测试已保存配置，再选择 LLM 运行。服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数；不能据此假定所有兼容服务或所有模型都可直接使用。测试按钮发送不含病例的短请求，实际使用时可能产生费用。
+在「模型设置」的连接列表中选择「共享默认」或具体专科，填写服务地址、模型标识与密钥，点击「保存设置」。同一页面内切换专科会保留草稿，刷新或离开页面会丢弃未保存修改。可用 `/settings/models?agent=radiology` 直接打开影像科。具有独立连接的专科可选择「恢复共享默认设置」移除覆盖。服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数。「测试已保存连接」会发送一条不含病例的短请求，可能产生费用。
 
 每个 Agent 可独立设置 URL、API Key、模型、超时、温度与输出上限；未覆盖时继承共享默认配置。只要求本次参与的角色配置齐全。密钥经 Fernet 加密后写入 `model_settings` 集合，不回传页面、报告或审计；浏览器保存成功后清空密码框。加密主密钥在 `outputs/.model-settings.key`（0600 权限），也可由 `MDT_SECRET_KEY` 环境变量提供。重启后恢复配置；丢失主密钥会明确报错并保留原密文，不能自动恢复密钥。每次运行冻结角色配置，并保存不含密钥的参数快照。更换 URL 必须重新输入密钥。
 
@@ -134,7 +138,13 @@ cd frontend
 npm run dev
 ```
 
-访问 <http://127.0.0.1:5173>，Vite 代理 `/api`（包括 SSE 和旧版 WebSocket）到后端。正式本地演示用 `./start.sh`。`MDT_DEMO_EVENT_DELAY` 控制网页演示节奏，默认 0.22 秒，范围 0–2 秒；不会给旧 CLI 添加延迟。
+访问 <http://127.0.0.1:5173>，Vite 代理 `/api`（包括 SSE 和旧版 WebSocket）到后端。日常本地使用可运行 `./start.sh`。`MDT_DEMO_EVENT_DELAY` 控制网页运行的事件间隔，默认 0.22 秒，范围 0–2 秒。
+
+### Electron 桌面入口
+
+启动本地服务后可以在浏览器打开桌面入口。入口参数 `shell=desktop` 启用哈希路由，页面路径和筛选参数均跟在 `#` 之后。后续 Electron 的 `BrowserWindow.loadURL` 可加载同一入口，由本机 FastAPI 同源提供前端资源、REST、事件流及下载。当前交付为 Web 控制台，Electron 主进程及安装包属于后续工作。[打开桌面病例工作台](http://127.0.0.1:8000/?shell=desktop#/) · [打开影像科模型设置](http://127.0.0.1:8000/?shell=desktop#/settings/models?agent=radiology)
+
+### 运行测试
 
 ```bash
 MDT_TEST_MONGODB_URI='mongodb://127.0.0.1:27018/?replicaSet=mdt-rs&directConnection=true' .venv/bin/python -m pytest -q
@@ -174,7 +184,8 @@ mdt-demo/
 │   │   ├── secret_vault.py     # 独立密钥与凭据加密
 │   │   └── provider_api.py     # 模型设置 API
 │   └── ...                    # 原 CLI / V0.2 实现保留
-├── frontend/src/research/     # React 页面、Zod 契约、SSE 恢复与样式
+├── frontend/src/console/      # 控制台导航、快速跳转、外观与侧栏偏好
+├── frontend/src/research/     # 病例工作台、运行监视、导入、模型设置与接口契约
 ├── docs/                      # 技术方案、接口和验收
 ├── compose.yaml               # 本机 MongoDB 单节点副本集
 ├── scripts/                   # 契约导出、MongoDB 启动、迁移

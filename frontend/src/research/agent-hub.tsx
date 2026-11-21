@@ -1,35 +1,100 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, Icon, Loading, Status, shortId } from '../ui';
+import { ErrorState, Icon, Loading, Status, dateTime, shortId } from '../ui';
 import { researchApi } from './api';
-import { AgentCards, AuditPanel, EvidenceDialog, InlineError, WorkflowPanel, roleNames } from './components';
-import { DataPath, caseKindName } from './data-components';
-import { useResearchRun, useResearchStream } from './realtime';
-import { AgentSettingsGrid } from './model-settings';
-import { StorageStatus } from './storage-status';
+import { AuditPanel, EvidenceDialog, InlineError, stageNames } from './components';
 import { CollaborationGraph } from './collaboration-graph';
-import type { Evidence } from './schemas';
+import { terminal, useResearchRun, useResearchStream } from './realtime';
+import type { Evidence, Run } from './schemas';
+import './agent-console.css';
 
 export function AgentHubPage() {
-  const cases = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases });
+  const [params, setParams] = useSearchParams();
   const runs = useQuery({ queryKey: ['research-runs'], queryFn: researchApi.runs, refetchInterval: 4000 });
-  const [chosen, setChosen] = useState('');
-  const selected = chosen || runs.data?.[0]?.run_id;
-  return <div className="page-enter research-page"><div className="page-heading"><div><div className="eyebrow">AGENT COLLECTIVE / CONNECTED WORKSPACE</div><h1>同一份输入，协同且可追溯<span className="title-period">.</span></h1><p>从病例进入协作，查看各专科真实状态、证据与审计。</p></div><Link className="button primary" to="/research/datasets">接入数据 <Icon name="arrow" /></Link></div>
-    <StorageStatus /><div className="section-heading recent-section"><h2>Agent 独立设置</h2><Link to="/settings/models" className="text-link">管理共享默认配置</Link></div><AgentSettingsGrid />
-    <section className="panel recent-section"><div className="section-heading"><h2>选择病例，配置协作</h2><span className="pill outline">4 个专科 · 按事件调度</span></div><div className="agent-roster">{Object.entries(roleNames).map(([key, name]) => <span key={key}><Icon name="network" size={16} />{name}</span>)}</div>{cases.isPending ? <Loading /> : cases.isError ? <InlineError error={cases.error} /> : <div className="import-case-list hub-cases">{cases.data.map(item => <Link className="text-link" key={item.case_id} to={`/research/cases/${encodeURIComponent(item.case_id)}`}><span>{item.case_id}<small>{caseKindName[item.case_kind]} · v{item.version} · {item.timeline.length} 条事件</small></span><Icon name="arrow" size={14} /></Link>)}</div>}</section>
-    <section className="panel recent-section"><div className="section-heading"><h2>协作运行</h2><Link className="text-link" to="/research/runs">全部运行</Link></div>{runs.isError ? <ErrorState error={runs.error} /> : runs.isPending ? <Loading /> : runs.data.length ? <label className="research-form">查看运行<select value={selected} onChange={event => setChosen(event.target.value)}>{runs.data.map(run => <option key={run.run_id} value={run.run_id}>{run.case_id} · v{run.case_version} · {shortId(run.run_id)} · {run.status}</option>)}</select></label> : <p className="empty-inline">尚无运行。打开一个病例，选择触发事件后启动 MDT。</p>}</section>
-    {selected && <LiveAgents key={selected} id={selected} />}
+  const selected = params.get('run');
+  const initialRun = runs.data?.find(run => !terminal(run.status)) ?? runs.data?.[0];
+
+  // Pin the initial selection, so an arriving run never replaces the one being inspected.
+  useEffect(() => {
+    if (!selected && initialRun) {
+      setParams(next => { next.set('run', initialRun.run_id); return next; }, { replace: true });
+    }
+  }, [selected, initialRun?.run_id, setParams]);
+
+  const selectRun = (id: string) => setParams(next => { next.set('run', id); return next; });
+  return <div className="page-enter research-page agent-console">
+    <header className="page-heading">
+      <h1>Agent 群</h1>
+      <div className="button-group">
+        <Link className="button secondary" to="/settings/models"><Icon name="settings" size={15} />模型设置</Link>
+        <Link className="button primary" to="/">选择病例运行 <Icon name="arrow" size={15} /></Link>
+      </div>
+    </header>
+    {runs.isPending ? <Loading /> : runs.isError ? <ErrorState error={runs.error} retry={() => void runs.refetch()} /> :
+      runs.data.length || selected ? <>
+        <div className="agent-run-selector">
+          <label htmlFor="monitored-run">监视运行</label>
+          <select id="monitored-run" value={selected ?? initialRun?.run_id} onChange={event => selectRun(event.target.value)}>
+            {selected && !runs.data.some(run => run.run_id === selected) && <option value={selected}>运行 {shortId(selected)}</option>}
+            {runs.data.map(run => <option key={run.run_id} value={run.run_id}>{dateTime(run.created_at)} · {run.case_id} · v{run.case_version} · {shortId(run.run_id)}</option>)}
+          </select>
+          <Link to="/research/runs" className="text-link">运行记录 <Icon name="arrow" size={13} /></Link>
+        </div>
+        {(selected || initialRun) && <RunMonitor key={selected ?? initialRun!.run_id} id={selected ?? initialRun!.run_id} />}
+      </> : <section className="panel console-blank">
+        <h2>暂无协作运行</h2><p>在病例中选择触发事件并启动运行后，可在这里查看各专科的进度和意见。</p>
+        <Link className="button secondary" to="/">打开病例库</Link>
+      </section>}
   </div>;
 }
-function LiveAgents({ id }: { id: string }) {
-  const query = useResearchRun(id); const stream = useResearchStream(id);
-  const run = query.data; const [evidence, setEvidence] = useState<Evidence>();
-  const source = useQuery({ queryKey: ['research-case', run?.case_id, run?.case_version], queryFn: () => researchApi.case(run!.case_id, run!.case_version), enabled: !!run });
+
+function RunMonitor({ id }: { id: string }) {
+  const query = useResearchRun(id);
+  const [evidence, setEvidence] = useState<Evidence>();
+  const [params, setParams] = useSearchParams();
+  const auditView = params.get('view') === 'audit';
+  const source = useQuery({
+    queryKey: ['research-case', query.data?.case_id, query.data?.case_version],
+    queryFn: () => researchApi.case(query.data!.case_id, query.data!.case_version),
+    enabled: !!query.data && !!evidence,
+  });
+  const showAudit = (audit: boolean) => setParams(next => {
+    if (audit) next.set('view', 'audit');
+    else next.delete('view');
+    return next;
+  }, { replace: true });
+
   if (query.isPending) return <Loading />;
-  if (query.isError) return <ErrorState error={query.error} />;
-  const trigger = source.data?.timeline.find(event => event.event_id === run!.trigger_event_id);
-  const frozen = source.data && trigger ? { ...source.data, unplaced_records: [], timeline: source.data.timeline.filter(event => event.occurred_at < trigger.occurred_at || (event.occurred_at === trigger.occurred_at && event.event_id <= trigger.event_id)) } : undefined;
-  return <div className="research-stack recent-section"><div className="section-heading"><Status status={run!.status} /><Link className="button secondary" to={`/research/runs/${id}`}>打开完整协作运行 <Icon name="arrow" size={15} /></Link></div><InlineError error={source.error} />{frozen && <DataPath item={frozen} run={run!} />}<CollaborationGraph run={run!} onEvidence={setEvidence} /><WorkflowPanel run={run!} /><AgentCards run={run!} onEvidence={setEvidence} /><AuditPanel events={stream.events} runId={id} connection={stream.connection} reconnect={stream.reconnect} />{run!.report_ready && <Link className="button primary" to={`/research/runs/${id}/report`}>查看报告与证据</Link>}{evidence && <EvidenceDialog evidence={evidence} researchCase={frozen} onClose={() => setEvidence(undefined)} />}</div>;
+  if (!query.data) return <ErrorState error={query.error} retry={() => void query.refetch()} />;
+  const run = query.data;
+  return <div className="monitor-workspace">
+    <section className="panel monitor-overview" aria-label="所选运行">
+      <div className="monitor-summary">
+        <div className="monitor-title"><Link to={`/research/cases/${encodeURIComponent(run.case_id)}?version=${run.case_version}&trigger=${encodeURIComponent(run.trigger_event_id)}`}>{run.case_id}</Link><Status status={run.status} /></div>
+        <div className="monitor-actions">
+          <Link className="text-link" to={`/research/runs/${run.run_id}`}>运行详情 <Icon name="arrow" size={13} /></Link>
+          {run.report_ready && <Link className="button secondary" to={`/research/runs/${run.run_id}/report`}><Icon name="file" size={14} />查看报告</Link>}
+        </div>
+      </div>
+      <dl className="monitor-metrics">
+        <div><dt>病例版本</dt><dd>v{run.case_version}</dd></div>
+        <div><dt>触发事件</dt><dd>{run.trigger_event_id}</dd></div>
+        <div><dt>当前阶段</dt><dd>{stageNames[run.stage] ?? run.stage}</dd></div>
+        <div><dt>最后更新</dt><dd><time dateTime={run.updated_at}>{dateTime(run.updated_at)}</time></dd></div>
+      </dl>
+    </section>
+    {query.isError && <InlineError error={query.error} />}
+    <div className="monitor-switch" role="group" aria-label="监视内容">
+      <button type="button" aria-pressed={!auditView} onClick={() => showAudit(false)}><Icon name="network" size={15} />协作视图</button>
+      <button type="button" aria-pressed={auditView} onClick={() => showAudit(true)}><Icon name="history" size={15} />运行审计 <span>{run.last_seq}</span></button>
+    </div>
+    {auditView ? <RunAudit run={run} /> : <CollaborationGraph run={run} onEvidence={setEvidence} />}
+    {evidence && <EvidenceDialog evidence={evidence} researchCase={source.data} onClose={() => setEvidence(undefined)} />}
+  </div>;
+}
+
+function RunAudit({ run }: { run: Run }) {
+  const stream = useResearchStream(run.run_id);
+  return <AuditPanel events={stream.events} connection={stream.connection} reconnect={stream.reconnect} runId={run.run_id} />;
 }

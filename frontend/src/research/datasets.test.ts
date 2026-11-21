@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import contract from '../../tests/fixtures/dataset-contract.json';
+import { inputThroughTrigger } from './run-input';
 import { caseSchema, datasetCatalogSchema, importBatchSchema, importPreviewSchema, reportSchema, runSchema } from './schemas';
 
 describe('external dataset API to agent workspace contract', () => {
@@ -15,6 +16,13 @@ describe('external dataset API to agent workspace contract', () => {
     expect(importPreviewSchema.parse(contract.preview).case_count).toBe(1);
     expect(importBatchSchema.parse(contract.batch).imported_case_ids).toEqual([contract.case.case_id]);
     expect(datasetCatalogSchema.parse(contract.catalog).sources).toHaveLength(3);
+  });
+  it('renders the same frozen input in the console as in the saved report', () => {
+    const source = caseSchema.parse(contract.case);
+    const report = reportSchema.parse(contract.report);
+    expect(inputThroughTrigger(source, report.trigger_event_id)).toEqual(report.case_snapshot);
+    expect(inputThroughTrigger(source, 'absent')).toBeUndefined();
+    expect(source.unplaced_records).toHaveLength(2);
   });
   it('carries frozen evidence from imported data through agents and reports', () => {
     const run = runSchema.parse(contract.run);
