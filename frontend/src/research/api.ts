@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { APIError } from '../api';
-import { agentModelSchema, storageSchema, auditPageSchema, caseSchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
+import { agentModelSchema, annotationSchema, attachmentSchema, storageSchema, auditPageSchema, caseSchema, dataCapabilitySchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, libraryEvaluationSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
 
 async function request<S extends z.ZodType>(path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
   let response: Response;
@@ -26,6 +26,7 @@ export const researchApi = {
   clearAgent: (role: Role) => request(`/settings/agents/${role}`, agentModelSchema, { method: 'DELETE' }),
   testAgent: (role: Role) => request(`/settings/agents/${role}/test`, modelTestSchema, body({})),
   datasets: () => request('/datasets', datasetCatalogSchema),
+  dataCapabilities: () => request('/datasets/capabilities', z.array(dataCapabilitySchema)),
   connectDataset: (source: string, limit: number) => request(`/datasets/connect?source=${id(source)}&max_cases=${limit}`, importPreviewSchema, body({})),
   previewDataset: (source: string, file: File, limit: number) => request(`/datasets/preview?source=${id(source)}&max_cases=${limit}`, importPreviewSchema, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file }),
   importDataset: (previewId: string) => request(`/datasets/import/${id(previewId)}`, importBatchSchema, body({})),
@@ -37,6 +38,13 @@ export const researchApi = {
   imagingPipeline: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/imaging?version=${version}&trigger_event_id=${id(trigger)}`, imagingPipelineSchema),
   ablationMatrix: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/ablation?version=${version}&trigger_event_id=${id(trigger)}`, ablationMatrixSchema),
   autoEnrich: (caseId: string, expectedVersion: number, triggerEventId?: string) => request(`/cases/${id(caseId)}/auto-enrich`, caseSchema, body({ expected_version: expectedVersion, trigger_event_id: triggerEventId })),
+  listAttachments: (caseId: string, eventId?: string) => request(`/cases/${id(caseId)}/attachments${eventId ? `?event_id=${id(eventId)}` : ''}`, z.array(attachmentSchema)),
+  uploadAttachment: (caseId: string, eventId: string, file: File) => request(`/cases/${id(caseId)}/events/${id(eventId)}/attachments?filename=${id(file.name)}`, attachmentSchema, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file }),
+  deleteAttachment: (caseId: string, attachmentId: string) => request(`/cases/${id(caseId)}/attachments/${id(attachmentId)}`, z.object({ deleted: z.boolean(), attachment_id: z.string() }), { method: 'DELETE' }),
+  evaluateExperiments: (value: { case_ids?: string[]; trigger_scope: 'all' | 'latest' }) => request('/experiments/evaluate', libraryEvaluationSchema, body(value)),
+  annotations: () => request('/annotations', z.array(annotationSchema)),
+  saveAnnotation: (scenarioId: string, value: { case_id: string; case_version: number; trigger_event_id: string; annotator_id: string; required_agents: Role[]; expected_decision: 'READY_FOR_REVIEW' | 'NEED_MORE_INFORMATION' | 'DEFER_DECISION'; missing_fields: string[]; rationale: string }) => request(`/annotations/${encodeURIComponent(scenarioId)}`, annotationSchema, body(value, 'PUT')),
+  deleteAnnotation: (scenarioId: string) => request(`/annotations/${encodeURIComponent(scenarioId)}`, z.object({ deleted: z.boolean(), scenario_id: z.string() }), { method: 'DELETE' }),
   runs: () => request('/runs', z.array(runSchema)),
   run: (runId: string) => request(`/runs/${id(runId)}`, runSchema),
   start: (value: RunRequest) => request('/runs', runSchema, body(value)),

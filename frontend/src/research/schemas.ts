@@ -266,3 +266,89 @@ export type WorkflowPlan = z.infer<typeof workflowPlanSchema>;
 export type ImagingStudy = z.infer<typeof imagingStudySchema>;
 export type ImagingPipeline = z.infer<typeof imagingPipelineSchema>;
 export type AblationMatrix = z.infer<typeof ablationMatrixSchema>;
+
+export const attachmentSchema = z.object({
+  attachment_id: z.string(),
+  case_id: z.string(),
+  event_id: z.string(),
+  filename: z.string(),
+  mime_type: z.string(),
+  kind: z.enum(['image', 'dicom', 'pdf']),
+  byte_count: z.number().int(),
+  sha256: z.string(),
+  uploaded_at: z.string(),
+  metadata: z.record(z.string(), z.unknown()),
+});
+
+export const dataCapabilitySchema = z.object({
+  modality_id: z.string(),
+  title: z.string(),
+  formats: z.array(z.string()),
+  processing: z.string(),
+  temporal_guard: z.string(),
+  status: z.string(),
+});
+
+export const annotationSchema = z.object({
+  scenario_id: z.string(),
+  case_id: z.string(),
+  case_version: z.number().int().positive(),
+  trigger_event_id: z.string(),
+  annotator_id: z.string(),
+  required_agents: z.array(roleSchema),
+  expected_decision: decisionSchema,
+  missing_fields: z.array(z.string()),
+  rationale: z.string(),
+  updated_at: z.string(),
+});
+
+export const libraryEvaluationSchema = z.object({
+  protocol_version: z.string(),
+  execution_mode: z.literal('mock'),
+  trigger_scope: z.enum(['all', 'latest']),
+  family_count: z.number().int(),
+  scenario_count: z.number().int(),
+  annotated_scenario_count: z.number().int(),
+  memory_impact_scenarios: z.number().int(),
+  methods: z.array(z.object({
+    method_id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    routing_strategy: z.string(),
+    scenario_count: z.number().int(),
+    total_calls: z.number().int(),
+    avg_calls: z.number(),
+    avg_discussion_rounds: z.number(),
+    call_saving_vs_fixed_pct: z.number(),
+    decisions: z.record(z.string(), z.number().int()),
+    gate_interceptions: z.number().int(),
+    annotated_count: z.number().int(),
+    specialist_recall: z.number().nullable(),
+    false_pass_rate: z.number().nullable(),
+    over_deferral_rate: z.number().nullable(),
+    accuracy: z.number().nullable(),
+  })),
+  scenarios: z.array(z.object({
+    scenario_id: z.string(),
+    case_family_id: z.string(),
+    case_id: z.string(),
+    case_version: z.number().int(),
+    case_title: z.string(),
+    trigger_event_id: z.string(),
+    trigger_event_title: z.string(),
+    trigger_event_type: eventTypeSchema,
+    occurred_at: z.string(),
+    visible_events: z.number().int(),
+    annotated: z.boolean(),
+    b3_decision: decisionSchema.nullable(),
+    b3_calls: z.number().int(),
+    fixed_calls: z.number().int(),
+  })),
+  latex_table: z.string(),
+  scores_csv: z.string(),
+});
+
+export type CaseAttachment = z.infer<typeof attachmentSchema>;
+export type DataCapability = z.infer<typeof dataCapabilitySchema>;
+export type BlindAnnotation = z.infer<typeof annotationSchema>;
+export type LibraryEvaluation = z.infer<typeof libraryEvaluationSchema>;

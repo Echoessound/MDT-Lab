@@ -9,6 +9,7 @@ export const destinations: Destination[] = [
   { label: '病例工作台', href: '/', icon: 'grid', group: '工作区' },
   { label: '运行记录', href: '/research/runs', icon: 'history', group: '工作区' },
   { label: '多智能体协同', href: '/research/agents', icon: 'network', group: '工作区' },
+  { label: '实验与盲标', href: '/research/experiments', icon: 'route', group: '工作区' },
   { label: '数据导入', href: '/research/datasets', icon: 'database', group: '管理' },
   { label: '模型设置', href: '/settings/models', icon: 'settings', group: '管理' },
 ];

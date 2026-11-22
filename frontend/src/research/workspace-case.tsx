@@ -297,6 +297,36 @@ function CaseWorkspace({ id }: { id: string }) {
           </label>
         </section>
 
+        {item.timeline.length <= 24 && (
+          <section className="panel timeline-scrubber-panel" aria-label="纵向病程时间轴与冻结截点速览">
+            <div className="scrubber-header">
+              <span><strong>纵向病程时间轴滑轨</strong> · 点击任意节点即时移动历史冻结截点</span>
+              <small>已纳入 {item.timeline.findIndex(e => e.event_id === trigger.event_id) + 1} / {item.timeline.length} 条事件</small>
+            </div>
+            <div className="timeline-scrubber-rail" role="group" aria-label="选择病程冻结截点">
+              {item.timeline.map((ev, idx) => {
+                const triggerIdx = item.timeline.findIndex(e => e.event_id === trigger.event_id);
+                const state = idx === triggerIdx ? 'is-trigger' : idx < triggerIdx ? 'is-included' : 'is-future';
+                return (
+                  <button
+                    key={ev.event_id}
+                    type="button"
+                    className={`scrubber-node ${state}`}
+                    aria-pressed={idx === triggerIdx}
+                    title={`${ev.occurred_at} · ${ev.title} (${eventNames[ev.event_type]})`}
+                    onClick={() => update({ trigger: ev.event_id })}
+                  >
+                    <span className="scrubber-dot" />
+                    <strong>{ev.event_id}</strong>
+                    <small>{eventNames[ev.event_type]}</small>
+                    <time>{ev.occurred_at.slice(5)}</time>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <WorkspaceViews
           label="病例视图切换"
           tabs={tabsWithBadges}

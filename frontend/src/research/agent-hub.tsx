@@ -6,7 +6,7 @@ import { researchApi } from './api';
 import { AuditPanel, EvidenceDialog, InlineError, roleNames, stageNames } from './components';
 import { CollaborationGraph } from './collaboration-graph';
 import { terminal, useResearchRun, useResearchStream } from './realtime';
-import { TabPanelTransition, WorkspaceViews } from './workspace-controls';
+import { RunProgressStrip, TabPanelTransition, WorkspaceViews } from './workspace-controls';
 import type { Evidence, Run } from './schemas';
 import { modeNameZh } from './zh-dict';
 import './agent-console.css';
@@ -122,6 +122,7 @@ function RunMonitor({ id, onSelectRun }: { id: string; onSelectRun: (runId: stri
         <div><dt>参与专科</dt><dd>{run.routing ? run.routing.selected_agents.map(r => roleNames[r]).join('、') : '待调度'}</dd></div>
         <div><dt>最后更新时间</dt><dd><time dateTime={run.updated_at}>{dateTime(run.updated_at)}</time></dd></div>
       </dl>
+      <RunProgressStrip run={run} />
     </section>
     <InlineError error={query.error || stop.error || rerun.error} />
     <WorkspaceViews

@@ -19,6 +19,8 @@ from .schemas import ResearchCase, RunRequest
 from .seeds import seed_cases
 from .store import ResearchStore, TERMINAL, utcnow
 from .persistence.contracts import ResearchRepository
+from .evaluation import AnnotationStore, BlindAnnotationInput, evaluate_library
+from .media_store import MediaAttachmentStore
 from .workflow_designer import (
     design_medical_workflow,
     evaluate_ablation_matrix,
@@ -45,6 +47,8 @@ class ResearchService:
                  store: ResearchRepository | None = None) -> None:
         self.store = store if store is not None else ResearchStore(output_dir / "research.sqlite3")
         self.imports = ImportPreviews(self.store)
+        self.media = MediaAttachmentStore(output_dir / "media")
+        self.annotations = AnnotationStore(output_dir / "annotations.json")
         self.settings = settings if settings is not None else SettingsService()
         self.event_delay = max(0, min(event_delay, 2))
         self.run_timeout_seconds = max(0.01, min(run_timeout_seconds, 600))
@@ -111,6 +115,54 @@ class ResearchService:
         if not completeness["can_auto_enrich"]:
             raise APIError(422, "NO_SUPPORTED_ENRICHMENT", "此截点没有可凭已定位证据安全追加的研究标记。")
         return self.append_event(case_id, expected_version, semantic_extension(case, completeness))
+
+    def list_attachments(self, case_id: str, event_id: str | None = None) -> list[dict]:
+        self.store.case(case_id)
+        return self.media.list_for_case(case_id, event_id)
+
+    def add_attachment(self, case_id: str, event_id: str, filename: str, raw: bytes) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id))
+        if event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该事件不属于当前病例最新版本。")
+        return self.media.add(case_id, event_id, filename, raw)
+
+    def attachment_content(self, case_id: str, attachment_id: str) -> tuple[bytes, str, str]:
+        self.store.case(case_id)
+        return self.media.get_content(case_id, attachment_id)
+
+    def delete_attachment(self, case_id: str, attachment_id: str) -> dict:
+        self.store.case(case_id)
+        return self.media.delete(case_id, attachment_id)
+
+    def list_annotations(self) -> list[dict]:
+        return self.annotations.list_all()
+
+    def save_annotation(self, scenario_id: str, body: BlindAnnotationInput) -> dict:
+        case = ResearchCase.model_validate(self.store.case(body.case_id, body.case_version))
+        if body.trigger_event_id not in {event.event_id for event in case.timeline}:
+            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
+        return self.annotations.upsert(scenario_id, body)
+
+    def delete_annotation(self, scenario_id: str) -> dict:
+        return self.annotations.delete(scenario_id)
+
+    def evaluate_experiments(self, *, case_ids: list[str] | None = None,
+                             trigger_scope: str = "all") -> dict:
+        all_cases = [ResearchCase.model_validate(item) for item in self.store.cases()]
+        if case_ids:
+            wanted = set(case_ids)
+            selected = [case for case in all_cases if case.case_id in wanted]
+            if not selected:
+                raise APIError(404, "CASE_NOT_FOUND", "未找到所选实验病例。")
+        else:
+            selected = all_cases
+        if not selected:
+            raise APIError(422, "NO_CASES_AVAILABLE", "病例库为空，无法执行实验评测。")
+        return evaluate_library(
+            selected,
+            trigger_scope=trigger_scope,
+            annotations=self.annotations.map_all(),
+        )
 
     def runs(self) -> list[dict]:
         return self.store.runs()

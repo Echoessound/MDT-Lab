@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 import csv
 import hashlib
 import io
@@ -45,6 +45,16 @@ CATALOG = {
         "description": "仅导入临床表。有日期的检查和随访进入时间线；无可用时间的病理、分子与治疗字段单独展示。",
     },
 }
+CATALOG["tcga_cbioportal_tsv"] = {
+    "source": "tcga_cbioportal_tsv", "name": "TCGA / cBioPortal 肺癌临床表", "format": "TSV / CSV",
+    "filename": "tcga_luad_clinical_patient.tsv", "synthetic": False,
+    "source_name": "tcga_cbioportal_nsclc", "dataset_version": "TCGA-NSCLC-cBioPortal-clinical-v1",
+    "source_url": "https://www.cbioportal.org/study/summary?id=luad_tcga_pan_can_atlas_2018",
+    "download_url": None,
+    "license": "TCGA 公开开放层临床数据（Open Access）；须遵守 GDC/cBioPortal 出版引用规范。",
+    "citation": "Cerami et al. Cancer Discov 2012; Gao et al. Sci Signal 2013; TCGA Research Network.",
+    "description": "支持 cBioPortal 导出的制表符 TSV（自动跳过 # 注释行）或 CSV。提取可定位基线/病理/随访事件；无时间戳的 TNM 分期、驱动基因及生存结局严格隔离至未定位资料。",
+}
 CATALOG["research_json"] = {
     "source": "research_json", "name": "研究病例与相关资料", "format": "JSON",
     "filename": "research_cases.json", "synthetic": None,
@@ -53,6 +63,49 @@ CATALOG["research_json"] = {
     "citation": "由导入文件提供引用。",
     "description": "按模板导入结构化病例、带日期的相关事实与无日期资料；所有病例须声明来源。",
 }
+
+DATA_CAPABILITIES = [
+    {
+        "modality_id": "longitudinal_tables",
+        "title": "多表关系型纵向病程（Synthea CSV ZIP）",
+        "formats": ["ZIP (patients/conditions/imaging_studies/procedures/medications/observations)"],
+        "processing": "流式解包安全防路径穿越 → 按患者主键聚合 7 张临床事件表 → 剔除姓名/证件/费用等隐私与非研究列 → 按 (occurred_at, event_id) 稳定编号排序，单病例超 1,000 事件显式拒收不静默截断。",
+        "temporal_guard": "保留原始 ISO 时间戳并显式标注技术排序约定，绝不将检查登记行存在性推断为报告齐备。",
+        "status": "已落地（在线直连 + 本地上传）",
+    },
+    {
+        "modality_id": "oncology_cohort_tables",
+        "title": "肿瘤专病队列宽表（TCIA NSCLC CSV & TCGA/cBioPortal TSV）",
+        "formats": ["CSV", "TSV (支持 cBioPortal # 注释头)"],
+        "processing": "区分含日期列（CT/PET/病理/复发/随访）与回顾性汇总列（组织学/TNM 分期/EGFR/KRAS/ALK/OS）；缺失占位值（NA/Not collected）保留原始缺失原因而非转为阴性。",
+        "temporal_guard": "回顾性无日期字段全部隔离至 unplaced_records，运行冻结上下文时强制清空，杜绝未来结局泄漏。",
+        "status": "已落地（TCIA 在线/上传 + TCGA/cBioPortal 上传）",
+    },
+    {
+        "modality_id": "structured_case_bundle",
+        "title": "标准纵向研究病例包（Research JSON）",
+        "formats": ["JSON (ResearchCase v1 严格契约)"],
+        "processing": "Pydantic 严格类型校验（禁止字符串伪装布尔值、禁止 NaN/Inf）→ 记录文件 SHA-256 指纹与许可声明 → 事务性批次落库与冲突全批回滚。",
+        "temporal_guard": "新导入版本必须为 v1；后续实验增补通过不可变追加（v1 → v2）留痕并自动标注 mixed 来源。",
+        "status": "已落地（模板下载 + 预检导入）",
+    },
+    {
+        "modality_id": "real_medical_attachments",
+        "title": "真实医学影像与检查附件（DICOM / 断层图 / 报告 PDF）",
+        "formats": [".dcm (DICOM Part 10)", ".png / .jpg / .webp", ".pdf"],
+        "processing": "魔数校验 + 内容寻址落盘 (SHA-256) → 纯 Python 解析真实 DICOM 显式/隐式 VR 头标签（模态、层厚、矩阵、窗宽窗位）或光栅图像真实像素尺寸，不凭空伪造任何测量数值。",
+        "temporal_guard": "解析 DICOM 时强制剥离/跳过 0x0010 组患者身份隐私标签（姓名、ID、生日），实现端到端去标识与证据绑定。",
+        "status": "已落地（事件级实时上传、去标识解析与窗位可视化检视）",
+    },
+    {
+        "modality_id": "clinical_free_text",
+        "title": "临床自由文本与安全提示词边界",
+        "formats": ["事件标题、临床描述、摘要文本"],
+        "processing": "严格长度截断（≤2,000 字符）、标量白名单过滤、服务端构造证据注册表（event_id:fact_key），模型仅能引用已注册编号并逐项核验键值类型。",
+        "temporal_guard": "System Prompt 将全部病例自由文本标记为不可信数据（untrusted data），防止间接提示词注入篡改流程结论。",
+        "status": "已落地（服务端证据注册表 + 严格二次核验）",
+    },
+]
 MISSING = {"", "na", "n/a", "nan", "none", "null", "unknown", "not collected", "not available",
            "not assessed", "not performed", "not tested", "not recorded", "not applicable"}
 
@@ -112,9 +165,10 @@ def _provenance(source, digest):
 
 
 def _event(source, record, table, when, kind, title, facts, fields, timestamp=None):
+    table_stem = table.removesuffix(".csv").removesuffix(".tsv")
     return {"event_id": "PENDING", "occurred_at": when.isoformat(), "event_type": kind,
             "title": title, "facts": facts, "source": CATALOG[source]["source_name"],
-            "source_record_id": f"{table.removesuffix('.csv')}_{record['row']:07d}",
+            "source_record_id": f"{table_stem}_{record['row']:07d}",
             "synthetic_extension": False, "confidence": "source_record", "introduced_in_version": 1,
             "source_record_locator": f"{CATALOG[source]['filename']}!{table}:line={record['row']}",
             "source_fields": {key: record["columns"].get(column, column) for key, column in fields.items()},
@@ -322,6 +376,188 @@ def _tcia(raw, digest, max_cases, warnings, rejected, table_counts):
     return cases
 
 
+TCGA_ALIASES = {
+    "patient_id": ("PATIENT_ID", "Patient ID", "bcr_patient_barcode", "CASE_ID"),
+    "age": ("AGE", "Diagnosis Age", "age_at_initial_pathologic_diagnosis", "Age at Diagnosis"),
+    "sex": ("SEX", "Sex", "GENDER", "Gender", "gender"),
+    "diagnosis_date": ("DIAGNOSIS_DATE", "INITIAL_PATHOLOGIC_DIAGNOSIS_DATE", "Diagnosis Date"),
+    "diagnosis_year": ("INITIAL_PATHOLOGIC_DIAGNOSIS_YEAR", "year_of_initial_pathologic_diagnosis", "Diagnosis Year"),
+    "pathology_date": ("PATHOLOGY_DATE", "Pathology Date"),
+    "histology": ("HISTOLOGY", "CANCER_TYPE_DETAILED", "histological_type", "Cancer Type Detailed"),
+    "os_months": ("OS_MONTHS", "Overall Survival (Months)"),
+    "dfs_months": ("DFS_MONTHS", "Disease Free (Months)"),
+}
+
+TCGA_UNPLACED_GROUPS = {
+    "staging": ("基线与分期汇总（无时间戳）", {
+        "histology": ("HISTOLOGY", "CANCER_TYPE_DETAILED", "histological_type", "Cancer Type Detailed"),
+        "pathological_t": ("PATH_T_STAGE", "AJCC_T_STAGE", "Pathological T stage"),
+        "pathological_n": ("PATH_N_STAGE", "AJCC_N_STAGE", "Pathological N stage"),
+        "pathological_m": ("PATH_M_STAGE", "AJCC_M_STAGE", "Pathological M stage"),
+        "grade": ("AJCC_PATHOLOGIC_TUMOR_STAGE", "GRADE", "Neoplasm Disease Stage American Joint Committee on Cancer Code"),
+        "smoking_status": ("SMOKING_HISTORY", "Tobacco Smoking History"),
+    }),
+    "molecular": ("基因组与分子标志物（无时间戳）", {
+        "egfr_status": ("EGFR_STATUS", "EGFR"),
+        "kras_status": ("KRAS_STATUS", "KRAS"),
+        "alk_status": ("ALK_STATUS", "ALK"),
+    }),
+    "treatment_outcome": ("治疗与随访结局汇总（无时间戳）", {
+        "survival_status": ("OS_STATUS", "Overall Survival Status"),
+        "recurrence_status": ("DFS_STATUS", "Disease Free Status"),
+        "radiation": ("RADIATION_THERAPY", "Radiation Therapy"),
+        "chemotherapy": ("PHARMACEUTICAL_TX", "Chemotherapy"),
+    }),
+}
+
+
+def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
+    try:
+        text = raw.decode("utf-8-sig")
+        lines = [line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
+        if len(lines) < 2:
+            raise ValueError("缺少有效表头或数据行")
+        delimiter = "\t" if "\t" in lines[0] else ","
+        reader = csv.DictReader(io.StringIO("\n".join(lines), newline=""), delimiter=delimiter)
+        names = reader.fieldnames or []
+        normalized = [name.strip() for name in names]
+        if len(normalized) != len(set(normalized)) or len(names) > 150:
+            raise ValueError("列名重复或列数超出限制")
+        col_lookup = {name.lower(): name for name in normalized}
+
+        def find_col(aliases: tuple[str, ...]) -> str | None:
+            for alias in aliases:
+                if alias.lower() in col_lookup:
+                    return col_lookup[alias.lower()]
+            return None
+
+        pid_col = find_col(TCGA_ALIASES["patient_id"])
+        age_col = find_col(TCGA_ALIASES["age"])
+        sex_col = find_col(TCGA_ALIASES["sex"])
+        if not (pid_col and age_col and sex_col):
+            raise ValueError("缺少必要列：需包含 PATIENT_ID、AGE（或 Diagnosis Age）、SEX（或 Gender）")
+
+        rows = []
+        for idx, row in enumerate(reader, 2):
+            if len(rows) >= 10_000 or None in row:
+                raise ValueError("行数超限或存在列数不一致的记录")
+            record = {key.strip(): (value or "").strip() for key, value in row.items()}
+            if any(len(v) > 2000 for v in record.values()):
+                raise ValueError("单个字段超过2000字符")
+            rows.append({"row": idx, "data": record, "columns": dict(zip(normalized, names))})
+    except (UnicodeError, csv.Error, ValueError) as exc:
+        raise APIError(422, "INVALID_DATASET_CSV", f"TCGA / cBioPortal 表格校验失败：{exc}") from None
+
+    table_counts["clinical_patient"] = len(rows)
+    pids = [r["data"][pid_col] for r in rows]
+    if len(pids) != len(set(pids)):
+        raise APIError(422, "DUPLICATE_PATIENT_ID", "临床表含重复 PATIENT_ID，未生成导入批次。")
+
+    diag_date_col = find_col(TCGA_ALIASES["diagnosis_date"])
+    diag_year_col = find_col(TCGA_ALIASES["diagnosis_year"])
+    path_date_col = find_col(TCGA_ALIASES["pathology_date"])
+    hist_col = find_col(TCGA_ALIASES["histology"])
+    os_col = find_col(TCGA_ALIASES["os_months"])
+    dfs_col = find_col(TCGA_ALIASES["dfs_months"])
+
+    cases = []
+    provenance = _provenance("tcga_cbioportal_tsv", digest)
+    for record in sorted(rows, key=lambda r: r["data"][pid_col]):
+        if len(cases) >= max_cases:
+            break
+        row = record["data"]
+        pid = row[pid_col]
+        case_id = f"TCGA-CBIO-{pid}"
+        try:
+            age_val = int(round(float(row[age_col])))
+            sex_raw = row[sex_col].strip().lower()
+            sex = "male" if sex_raw in {"m", "male"} else "female" if sex_raw in {"f", "female"} else "unknown"
+            base_date: date | None = None
+            base_time_note = "仅保留来源记录日期；未从存在性推断资料齐备。"
+            base_orig_ts: str | None = None
+            if diag_date_col and row.get(diag_date_col, "").lower() not in MISSING:
+                base_date = _date(row[diag_date_col])
+                base_orig_ts = row[diag_date_col]
+            elif diag_year_col and row.get(diag_year_col, "").lower() not in MISSING:
+                year_int = int(float(row[diag_year_col]))
+                if 1970 <= year_int <= 2100:
+                    base_date = date(year_int, 1, 1)
+                    base_orig_ts = str(year_int)
+                    base_time_note = "来源仅提供初诊年份，暂以当年 01-01 作年粒度锚点，不代表精确就诊日。"
+                    warnings["TCGA/cBioPortal 行仅提供诊断年份，已以当年 01-01 锚定并标注年粒度说明。"] += 1
+
+            if base_date is None:
+                raise ValueError("缺少可定位的诊断日期或年份；未凭空编造时间。")
+
+            events, unplaced = [], []
+            diag_facts = {"source_subject_id": pid}
+            diag_fields = {"source_subject_id": pid_col}
+            if hist_col and row.get(hist_col, "").lower() not in MISSING:
+                diag_facts["disease_label"] = row[hist_col]
+                diag_fields["disease_label"] = hist_col
+            ev_diag = _event("tcga_cbioportal_tsv", record, "clinical_patient.tsv", base_date, "diagnosis",
+                             "TCGA/cBioPortal 初诊基线登记", diag_facts, diag_fields, base_orig_ts)
+            ev_diag["time_note"] = base_time_note
+            events.append(ev_diag)
+
+            # Optional dated pathology record
+            if path_date_col and row.get(path_date_col, "").lower() not in MISSING:
+                path_dt = _date(row[path_date_col])
+                if path_dt and hist_col and row.get(hist_col, "").lower() not in MISSING:
+                    events.append(_event("tcga_cbioportal_tsv", record, "clinical_patient.tsv", path_dt, "pathology",
+                                         "组织病理学诊断记录",
+                                         {"histology": row[hist_col], "source_subject_id": pid},
+                                         {"histology": hist_col, "source_subject_id": pid_col},
+                                         row[path_date_col]))
+
+            # Optional relative follow-up / progression derived from OS_MONTHS or DFS_MONTHS
+            for col_name, kind, title, label_key in [
+                (dfs_col, "follow_up", "无病生存随访节点（按月数换算）", "dfs_months"),
+                (os_col, "follow_up", "总生存末次随访节点（按月数换算）", "os_months"),
+            ]:
+                if col_name and row.get(col_name, "").lower() not in MISSING:
+                    months = float(row[col_name])
+                    if math.isfinite(months) and 0 < months <= 600:
+                        rel_date = base_date + timedelta(days=max(1, round(months * 30.4375)))
+                        ev_rel = _event("tcga_cbioportal_tsv", record, "clinical_patient.tsv", rel_date, kind, title,
+                                        {"observed_value": round(months, 2), "unit": "months", "category": label_key},
+                                        {"observed_value": col_name}, f"+{months}m")
+                        ev_rel["confidence"] = "derived"
+                        ev_rel["time_note"] = "基于基线锚点与公开随访月数换算的相对时点，非真实日历日期。"
+                        events.append(ev_rel)
+
+            # Undated retrospective fields -> strictly unplaced_records
+            for grp_key, (grp_title, mapping) in TCGA_UNPLACED_GROUPS.items():
+                facts, fields = {}, {}
+                for field_key, aliases in mapping.items():
+                    col = find_col(aliases)
+                    if not col or col not in row:
+                        continue
+                    raw_val = row[col]
+                    is_missing = raw_val.lower() in MISSING
+                    facts[field_key] = None if is_missing else raw_val
+                    fields[field_key] = record["columns"][col]
+                    if is_missing:
+                        facts[f"{field_key}_missing_reason"] = raw_val or "empty"
+                        fields[f"{field_key}_missing_reason"] = record["columns"][col]
+                if facts:
+                    unplaced.append({
+                        "record_id": f"{grp_key}_{pid}", "title": grp_title, "facts": facts,
+                        "source": provenance["source_name"], "source_record_id": pid,
+                        "source_record_locator": f"{CATALOG['tcga_cbioportal_tsv']['filename']}!clinical_patient:line={record['row']}",
+                        "source_fields": fields,
+                    })
+
+            disease_title = row[hist_col] if (hist_col and row.get(hist_col, "").lower() not in MISSING) else "TCGA/cBioPortal 肺癌公开队列"
+            cases.append(_case(case_id, f"TCGA/cBioPortal 公开病例 {pid}", {"age": age_val, "sex": sex}, events, provenance, [
+                "来源为 TCGA / cBioPortal 公开临床表；回顾性 TNM 分期、驱动基因及生存结局已隔离至未定位资料，不进入历史截点。",
+                "若原始表仅含诊断年份或随访月数，时间轴采用相对锚点并显式标注 time_note，不还原真实日历。",
+            ], unplaced=unplaced, disease=disease_title))
+        except (ValueError, ValidationError) as exc:
+            rejected.append({"case_id": case_id[:80], "reason": str(exc)[:180] or "年龄、标识或日期不符合契约；未补造。"})
+    return cases
+
+
 def _research_json(raw, digest, max_cases, warnings, rejected, table_counts):
     try:
         payload = json.loads(raw)
@@ -352,14 +588,19 @@ def _research_json(raw, digest, max_cases, warnings, rejected, table_counts):
 
 def prepare_import(source: str, raw: bytes, max_cases: int = 10) -> PreparedImport:
     if source not in CATALOG:
-        raise APIError(422, "UNSUPPORTED_DATASET", "当前支持 Synthea CSV ZIP、TCIA 临床 CSV 与研究 JSON。")
+        raise APIError(422, "UNSUPPORTED_DATASET", "当前支持 Synthea CSV ZIP、TCIA 临床 CSV、TCGA/cBioPortal 临床表与研究 JSON。")
     if not raw or len(raw) > MAX_UPLOAD_BYTES:
         raise APIError(413, "DATASET_SIZE_LIMIT", "文件为空或超过20MB限制。")
     if type(max_cases) is not int or not 1 <= max_cases <= 50:
         raise APIError(422, "INVALID_IMPORT_LIMIT", "每批请选择1至50个病例。")
     digest = _hash(raw)
     warnings, rejected, table_counts = Counter(), [], {}
-    adapter = {"synthea_csv": _synthea, "tcia_nsclc_csv": _tcia, "research_json": _research_json}[source]
+    adapter = {
+        "synthea_csv": _synthea,
+        "tcia_nsclc_csv": _tcia,
+        "tcga_cbioportal_tsv": _tcga_cbioportal,
+        "research_json": _research_json,
+    }[source]
     cases = adapter(raw, digest, max_cases, warnings, rejected, table_counts)
     batch_id = "imp_" + _hash(f"{source}:{digest}:{max_cases}:{MAPPING_VERSION}".encode())[:24]
     summary = {"batch_id": batch_id, "source": source, "source_name": CATALOG[source]["name"],

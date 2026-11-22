@@ -112,6 +112,7 @@ export const sourceNamesZh: Record<string, string> = {
   research_scenario_generator: '内置合成场景生成器',
   synthea: 'Synthea 合成病程数据集',
   tcia_nsclc_radiogenomics: 'TCIA 肺癌影像基因组公开队列',
+  tcga_cbioportal_nsclc: 'TCGA / cBioPortal 肺癌公开队列',
 };
 
 export function sourceNameLabel(name: string): string {

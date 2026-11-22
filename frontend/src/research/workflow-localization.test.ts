@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ablationMatrixSchema, imagingPipelineSchema, workflowPlanSchema } from './schemas';
+import { ablationMatrixSchema, annotationSchema, attachmentSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, workflowPlanSchema } from './schemas';
 import { computeSlideDirection } from './workspace-controls';
 import {
   conflictDimensionLabel,
@@ -185,5 +185,46 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       agent_calls: 1, failed_calls: 1, valid_opinions: 0, gate_applied: false, pre_gate_decision: null, final_decision: null,
     };
     expect(ablationMatrixSchema.safeParse({ ...ablation, methods: [empty] }).success).toBe(true);
+  });
+
+  it('validates real attachments, data capabilities, blind annotations and library evaluation payloads', () => {
+    expect(sourceNameLabel('tcga_cbioportal_nsclc')).toBe('TCGA / cBioPortal 肺癌公开队列');
+    expect(attachmentSchema.parse({
+      attachment_id: 'att_01', case_id: 'LUNG-SYN-001', event_id: 'E002',
+      filename: 'ct_slice.dcm', mime_type: 'application/dicom', kind: 'dicom',
+      byte_count: 2048, sha256: 'a'.repeat(64), uploaded_at: '2026-11-22T00:00:00+00:00',
+      metadata: { format: 'DICOM Part 10', pii_group_0010_skipped: 1 },
+    }).kind).toBe('dicom');
+    expect(dataCapabilitySchema.parse({
+      modality_id: 'real_medical_attachments', title: '真实医学影像', formats: ['.dcm', '.png'],
+      processing: '内容寻址与头解析', temporal_guard: '剥离 0x0010 隐私标签', status: '已落地',
+    }).formats).toContain('.dcm');
+    expect(annotationSchema.parse({
+      scenario_id: 'LUNG-SYN-001:v1:E002', case_id: 'LUNG-SYN-001', case_version: 1,
+      trigger_event_id: 'E002', annotator_id: 'reviewer_01',
+      required_agents: ['oncology', 'radiology'], expected_decision: 'NEED_MORE_INFORMATION',
+      missing_fields: ['pathology_confirmed'], rationale: '尚未提供病理分型。',
+      updated_at: '2026-11-22T00:00:00+00:00',
+    }).required_agents).toHaveLength(2);
+    expect(libraryEvaluationSchema.parse({
+      protocol_version: 'mdt-library-eval-v1', execution_mode: 'mock', trigger_scope: 'all',
+      family_count: 3, scenario_count: 13, annotated_scenario_count: 1, memory_impact_scenarios: 4,
+      methods: [{
+        method_id: 'B3', name: 'B3 · 完整工作流', category: '基线对照', routing_strategy: '事件路由',
+        scenario_count: 13, total_calls: 36, avg_calls: 2.77, avg_discussion_rounds: 0.46,
+        call_saving_vs_fixed_pct: 40.0,
+        decisions: { READY_FOR_REVIEW: 4, NEED_MORE_INFORMATION: 6, DEFER_DECISION: 3, NO_OUTPUT: 0 },
+        gate_interceptions: 1, annotated_count: 1, specialist_recall: 1.0,
+        false_pass_rate: 0.0, over_deferral_rate: null, accuracy: 1.0,
+      }],
+      scenarios: [{
+        scenario_id: 'LUNG-SYN-001:v1:E002', case_family_id: 'LUNG-SYN-001', case_id: 'LUNG-SYN-001',
+        case_version: 1, case_title: '资料逐步补齐', trigger_event_id: 'E002',
+        trigger_event_title: '影像归档', trigger_event_type: 'imaging', occurred_at: '2026-01-12',
+        visible_events: 2, annotated: true, b3_decision: 'NEED_MORE_INFORMATION', b3_calls: 4, fixed_calls: 8,
+      }],
+      latex_table: '\\begin{table}\\end{table}',
+      scores_csv: 'scenario_id,method_id\n',
+    }).family_count).toBe(3);
   });
 });

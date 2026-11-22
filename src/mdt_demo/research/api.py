@@ -11,6 +11,8 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
 
 from ..api_schemas import APIError
+from .evaluation import BlindAnnotationInput
+from .media_store import MAX_ATTACHMENT_BYTES
 from .schemas import RunRequest
 from .store import TERMINAL
 
@@ -44,6 +46,12 @@ class AutoEnrichInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_version: int = Field(ge=1, strict=True)
     trigger_event_id: str | None = Field(default=None, min_length=1, max_length=80)
+
+
+class EvaluateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    case_ids: list[str] | None = Field(default=None, max_length=50)
+    trigger_scope: Literal["all", "latest"] = "all"
 
 
 @router.get("/health")
@@ -99,6 +107,66 @@ def ablation_matrix(case_id: str, request: Request, trigger_event_id: str | None
 @router.post("/cases/{case_id}/auto-enrich", status_code=201)
 def auto_enrich(case_id: str, body: AutoEnrichInput, request: Request):
     return {"data": request.app.state.research.auto_enrich_case(case_id, body.expected_version, body.trigger_event_id)}
+
+
+@router.get("/cases/{case_id}/attachments")
+def list_attachments(case_id: str, request: Request, event_id: str | None = Query(None, min_length=1)):
+    return {"data": request.app.state.research.list_attachments(case_id, event_id)}
+
+
+@router.post("/cases/{case_id}/events/{event_id}/attachments", status_code=201)
+async def upload_attachment(case_id: str, event_id: str, request: Request, filename: str = Query(min_length=1, max_length=160)):
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw.extend(chunk)
+        if len(raw) > MAX_ATTACHMENT_BYTES:
+            raise APIError(413, "ATTACHMENT_SIZE_LIMIT", "附件超过 10MB 大小限制。")
+    record = await asyncio.to_thread(
+        request.app.state.research.add_attachment, case_id, event_id, filename, bytes(raw)
+    )
+    return {"data": record}
+
+
+@router.get("/cases/{case_id}/attachments/{attachment_id}/content")
+def get_attachment_content(case_id: str, attachment_id: str, request: Request):
+    raw, mime_type, filename = request.app.state.research.attachment_content(case_id, attachment_id)
+    disposition = "inline" if mime_type.startswith("image/") else f'attachment; filename="{filename}"'
+    return Response(
+        raw,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": disposition,
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
+
+
+@router.delete("/cases/{case_id}/attachments/{attachment_id}")
+def delete_attachment(case_id: str, attachment_id: str, request: Request):
+    return {"data": request.app.state.research.delete_attachment(case_id, attachment_id)}
+
+
+@router.post("/experiments/evaluate")
+def evaluate_experiments(body: EvaluateRequest, request: Request):
+    return {"data": request.app.state.research.evaluate_experiments(
+        case_ids=body.case_ids, trigger_scope=body.trigger_scope
+    )}
+
+
+@router.get("/annotations")
+def list_annotations(request: Request):
+    return {"data": request.app.state.research.list_annotations()}
+
+
+@router.put("/annotations/{scenario_id:path}")
+def save_annotation(scenario_id: str, body: BlindAnnotationInput, request: Request):
+    return {"data": request.app.state.research.save_annotation(scenario_id, body)}
+
+
+@router.delete("/annotations/{scenario_id:path}")
+def delete_annotation(scenario_id: str, request: Request):
+    return {"data": request.app.state.research.delete_annotation(scenario_id)}
 
 
 @router.post("/runs", status_code=202)

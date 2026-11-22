@@ -8,7 +8,7 @@ import { AuditPanel, EvidenceDialog, InlineError, MetricsPanel, OpinionView, Rou
 import { CaseSources } from './data-components';
 import { CollaborationGraph } from './collaboration-graph';
 import { terminal, useResearchRun, useResearchStream } from './realtime';
-import { TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
+import { RunProgressStrip, TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
 import { WorkspaceEvents } from './workspace-events';
 import { AblationExperimentMatrix, MedicalImagingWorkbench } from './workflow-visualizer';
 import type { Evidence, Report } from './schemas';
@@ -144,6 +144,7 @@ function RunWorkspace({ id }: { id: string }) {
       <div><dt>本次调度专科</dt><dd>{run.routing ? run.routing.selected_agents.map(role => roleNames[role]).join('、') : '等待动态调度'}</dd></div>
       <div><dt>已归档审计事件</dt><dd>{run.last_seq} 条</dd></div>
     </dl>
+    <RunProgressStrip run={run} />
     <WorkspaceViews
       label="运行视图"
       tabs={[

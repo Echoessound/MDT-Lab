@@ -55,6 +55,7 @@ function RecentRuns() {
 
 export function ResearchHome() {
   const cases = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases });
+  const runs = useQuery({ queryKey: ['research-runs'], queryFn: researchApi.runs, refetchInterval: 5000 });
   const { params, update } = useWorkspaceParams();
   const keyword = params.get('q') ?? '';
   const queryText = keyword.trim().toLowerCase();
@@ -70,18 +71,43 @@ export function ResearchHome() {
   function reset() { update({ q: '', kind: '', page: '' }); }
   const totalEvents = cases.data.reduce((count, item) => count + item.timeline.length, 0);
   const publicCount = cases.data.filter(item => item.case_kind !== 'synthetic').length;
+  const activeRuns = runs.data?.filter(r => !terminal(r.status)).length ?? 0;
+  const totalRuns = runs.data?.length ?? 0;
 
   return <div className="page-enter research-page workspace-page">
     <header className="workspace-heading">
       <div>
         <h1>多学科病例协同工作台</h1>
-        <p>共纳管 {cases.data.length} 份纵向研究病例（含 {publicCount} 份公开/混合队列） · 累计 {totalEvents.toLocaleString()} 条时序病程事件</p>
+        <p>面向重大疾病全病程的 MDT 多智能体序贯协同决策、证据门控与可复现评测平台</p>
       </div>
       <div className="button-group">
+        <Link className="button secondary" to="/research/experiments"><Icon name="route" size={16} />实验与盲标</Link>
         <Link className="button secondary" to="/research/agents"><Icon name="network" size={16} />多智能体协同</Link>
         <Link className="button primary" to="/research/datasets"><Icon name="download" size={16} />导入外部数据集</Link>
       </div>
     </header>
+    <div className="telemetry-grid" aria-label="科研工作台态势总览">
+      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 0 } as React.CSSProperties}>
+        <span>纳管纵向病例</span>
+        <strong>{cases.data.length} <small>份</small></strong>
+        <p>合成 {cases.data.length - publicCount} 份 · 公开/混合队列 {publicCount} 份</p>
+      </div>
+      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 1 } as React.CSSProperties}>
+        <span>时序病程事件</span>
+        <strong>{totalEvents.toLocaleString()} <small>条</small></strong>
+        <p>均按不可变版本留痕与截点冻结管理</p>
+      </div>
+      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 2 } as React.CSSProperties}>
+        <span>协同运行轨迹</span>
+        <strong>{totalRuns} <small>次</small></strong>
+        <p>{activeRuns > 0 ? `当前有 ${activeRuns} 项协同任务正在执行` : '支持 SSE 断线重放与同配置重跑'}</p>
+      </div>
+      <Link to="/research/experiments" className="telemetry-card telemetry-link-card stagger-item accent" style={{ '--stagger-i': 3 } as React.CSSProperties}>
+        <span>论文实验与独立盲标</span>
+        <strong>B0–B3 · A1–A4 <Icon name="arrow" size={16} /></strong>
+        <p>一键执行 8 组配对评测并导出 LaTeX / CSV</p>
+      </Link>
+    </div>
     <div className="workspace-library-layout"><section className="panel workspace-registry" aria-labelledby="registry-title">
       <div className="workspace-section-heading"><h2 id="registry-title">纵向病例名录</h2><button type="button" className="workspace-tool" disabled={cases.isFetching} onClick={() => void cases.refetch()}><Icon name="refresh" size={14} />{cases.isFetching ? '正在刷新…' : '刷新列表'}</button></div>
       <div className="workspace-toolbar">

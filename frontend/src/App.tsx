@@ -1,5 +1,6 @@
 import { DatasetPage } from './research/dataset-page';
 import { AgentHubPage } from './research/agent-hub';
+import { ExperimentsPage } from './research/experiments-page';
 import { useState } from 'react';
 import { ConsoleShell } from './console/shell';
 import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom';
@@ -16,6 +17,7 @@ export function App() {
       <Route path="/" element={<ResearchHome />} />
       <Route path="/research/datasets" element={<DatasetPage />} />
       <Route path="/research/agents" element={<AgentHubPage />} />
+      <Route path="/research/experiments" element={<ExperimentsPage />} />
       <Route path="/legacy" element={<HomePage />} />
       <Route path="/research/cases/:caseId" element={<ResearchCasePage />} />
       <Route path="/research/runs" element={<ResearchHistoryPage />} />

@@ -1,13 +1,152 @@
-import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DecisionBadge, Icon, Loading } from '../ui';
 import { researchApi } from './api';
 import { InlineError, roleNames } from './components';
-import type { AblationMatrix, ImagingPipeline, ResearchCase, WorkflowPlan } from './schemas';
+import type { AblationMatrix, CaseAttachment, ImagingPipeline, ResearchCase, WorkflowPlan } from './schemas';
 
 import { factKeyLabel, sourceNameLabel } from './zh-dict';
 
-export function MedicalImagingWorkbench({ imaging }: { imaging: ImagingPipeline }) {
+type RealImageFilter = 'normal' | 'lung' | 'mediastinal' | 'invert';
+
+function RealAttachmentPanel({ caseId, eventId, allowUpload }: {
+  caseId: string;
+  eventId: string;
+  allowUpload?: boolean;
+}) {
+  const client = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [filter, setFilter] = useState<RealImageFilter>('normal');
+  const [zoomed, setZoomed] = useState(false);
+
+  const listQuery = useQuery({
+    queryKey: ['research-attachments', caseId, eventId],
+    queryFn: () => researchApi.listAttachments(caseId, eventId),
+  });
+
+  const upload = useMutation({
+    mutationFn: (file: File) => researchApi.uploadAttachment(caseId, eventId, file),
+    onSuccess: () => {
+      if (fileRef.current) fileRef.current.value = '';
+      void client.invalidateQueries({ queryKey: ['research-attachments', caseId, eventId] });
+    },
+  });
+
+  const remove = useMutation({
+    mutationFn: (attachmentId: string) => researchApi.deleteAttachment(caseId, attachmentId),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['research-attachments', caseId, eventId] });
+    },
+  });
+
+  const attachments = listQuery.data ?? [];
+
+  function renderAttachmentBody(item: CaseAttachment) {
+    const contentUrl = `/api/v2/cases/${encodeURIComponent(caseId)}/attachments/${encodeURIComponent(item.attachment_id)}/content`;
+    const meta = item.metadata;
+    const dicomTags = (meta.dicom_tags && typeof meta.dicom_tags === 'object') ? meta.dicom_tags as Record<string, unknown> : null;
+    const piiSkipped = typeof meta.pii_group_0010_skipped === 'number' ? meta.pii_group_0010_skipped : 0;
+
+    return (
+      <div key={item.attachment_id} className="real-attachment-card">
+        <div className="real-attachment-head">
+          <div>
+            <strong>{item.filename}</strong>
+            <small>
+              {String(meta.format ?? item.kind.toUpperCase())} · {(item.byte_count / 1024).toFixed(1)} KB
+              {meta.width && meta.height ? ` · 真实尺寸 ${meta.width} × ${meta.height} px` : ''}
+              {piiSkipped > 0 ? ` · 已安全剥离 ${piiSkipped} 项 0x0010 患者隐私标签` : ''}
+            </small>
+          </div>
+          <div className="button-group">
+            <a className="workspace-tool" href={contentUrl} target="_blank" rel="noreferrer">
+              <Icon name="download" size={13} />原始文件
+            </a>
+            {allowUpload && (
+              <button
+                type="button"
+                className="workspace-tool"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(item.attachment_id)}
+              >
+                移除
+              </button>
+            )}
+          </div>
+        </div>
+
+        {item.kind === 'image' && (
+          <div className="real-image-viewer">
+            <div className="imaging-controls-bar">
+              <div className="imaging-window-group" role="group" aria-label="真实影像视觉窗位滤镜">
+                {([
+                  ['normal', '原始灰度'],
+                  ['lung', '高对比肺窗'],
+                  ['mediastinal', '柔和纵隔'],
+                  ['invert', '反相突出'],
+                ] as const).map(([key, label]) => (
+                  <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="workspace-tool" onClick={() => setZoomed(z => !z)}>
+                <Icon name="eye" size={13} />{zoomed ? '还原 1×' : '放大 1.5×'}
+              </button>
+            </div>
+            <div className={`real-image-frame filter-${filter} ${zoomed ? 'is-zoomed' : ''}`}>
+              <img src={contentUrl} alt={item.filename} loading="lazy" />
+            </div>
+          </div>
+        )}
+
+        {dicomTags && Object.keys(dicomTags).length > 0 && (
+          <dl className="event-facts">
+            {Object.entries(dicomTags).map(([k, v]) => (
+              <div key={k}><dt>DICOM · {k}</dt><dd>{String(v)}</dd></div>
+            ))}
+          </dl>
+        )}
+
+        <small className="source-hash">内容寻址指纹 (SHA-256)：<code>{item.sha256}</code></small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="real-attachment-section">
+      <div className="real-attachment-bar">
+        <div>
+          <h3>真实医学影像与检查附件（已挂载 {attachments.length} 份）</h3>
+          <p className="muted">支持真实 DICOM (.dcm，自动剥离 0x0010 患者隐私标签)、断层图像 (.png/.jpg/.webp) 或检查报告 (.pdf)；仅展示文件真实解析头信息，不虚构任何测量值。</p>
+        </div>
+        {allowUpload && (
+          <label className="button secondary real-upload-btn">
+            <Icon name="download" size={14} />
+            {upload.isPending ? '正在校验并解析…' : '挂载真实影像 / DICOM'}
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".png,.jpg,.jpeg,.webp,.dcm,.pdf"
+              hidden
+              disabled={upload.isPending}
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) upload.mutate(f);
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <InlineError error={upload.error || remove.error || listQuery.error} />
+      {attachments.length > 0 && (
+        <div className="real-attachment-list">{attachments.map(renderAttachmentBody)}</div>
+      )}
+    </div>
+  );
+}
+
+export function MedicalImagingWorkbench({ imaging, allowUpload = false }: { imaging: ImagingPipeline; allowUpload?: boolean }) {
   const [selectedId, setSelectedId] = useState('');
   const study = imaging.studies.find(item => item.study_id === selectedId) ?? imaging.studies[0];
   if (!study) {
@@ -69,6 +208,7 @@ export function MedicalImagingWorkbench({ imaging }: { imaging: ImagingPipeline 
           {study.artifact_sha256 && <div><dt>文件指纹 SHA-256</dt><dd><code>{study.artifact_sha256}</code></dd></div>}
         </dl>
       </details>
+      <RealAttachmentPanel caseId={imaging.case_id} eventId={study.event_id} allowUpload={allowUpload} />
     </section>
   );
 }
@@ -301,7 +441,7 @@ export function CaseWorkflowAndImagingSection({
         isLatestVersion={isLatestVersion}
         onEnriched={onEnriched}
       />
-      <MedicalImagingWorkbench imaging={imagingQuery.data} />
+      <MedicalImagingWorkbench imaging={imagingQuery.data} allowUpload={isLatestVersion} />
       <AblationExperimentMatrix matrix={ablationQuery.data} />
     </div>
   );

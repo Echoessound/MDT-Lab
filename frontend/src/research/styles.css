@@ -39,10 +39,10 @@
 .research-form-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .version-selector{min-width:140px;color:var(--muted);font-size:11px}
 .version-selector select{padding:8px 10px;min-height:36px}
-.append-event{border-color:#b4c796}
+.append-event{border-color:color-mix(in srgb, var(--green) 42%, var(--line))}
 .routing-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
-.routing-role{display:flex;gap:11px;padding:16px 13px;border:1px solid var(--line);border-radius:9px;color:var(--muted);background:var(--bg);min-width:0}
-.routing-role.selected-role{background:var(--soft);color:var(--text);border-color:#bdcca6}
+.routing-role{display:flex;gap:11px;padding:16px 13px;border:1px solid var(--line);border-radius:12px;color:var(--muted);background:var(--bg);min-width:0;transition:border-color 180ms ease, background 180ms ease}
+.routing-role.selected-role{background:var(--soft);color:var(--text);border-color:color-mix(in srgb, var(--green) 38%, var(--line))}
 .routing-role strong{display:block;font-size:13px;font-weight:600}
 .routing-role small{font-size:11px;display:block;margin-top:4px;color:var(--muted)}
 .routing-role p{font-size:11px;margin-top:10px;color:var(--muted);line-height:1.8}
@@ -97,7 +97,7 @@
 .research-audit .audit-toolbar{padding:14px 0}
 .research-audit .audit-note{font-size:10px}
 .research-connection{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px}
-.safety-verdict{display:flex;gap:12px;align-items:center;padding:16px;background:var(--soft);border-radius:8px;font-size:15px;color:var(--green);margin-bottom:20px}
+.safety-verdict{display:flex;gap:12px;align-items:center;padding:15px 16px;background:var(--success-bg, var(--soft));border-radius:12px;font-size:14px;color:var(--success, var(--green));margin-bottom:18px}
 .safety-blocked .safety-verdict{background:var(--danger-bg);color:var(--danger)}
 .safety-needs_information .safety-verdict{background:var(--warning-bg);color:var(--warning)}
 .safety-check{display:flex;gap:13px;padding:16px 0;border-top:1px solid var(--line);align-items:flex-start;font-size:12px}

@@ -1,5 +1,7 @@
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import type { Run } from './schemas';
+import { terminal } from './realtime';
 
 export function useWorkspaceParams() {
   const [params, setParams] = useSearchParams();
@@ -50,8 +52,26 @@ export function WorkspaceViews<K extends string>({ label, tabs, value, onChange 
   value: K;
   onChange: (key: K) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const activeIndex = Math.max(0, tabs.findIndex(t => t.key === value));
+  const [glider, setGlider] = useState<{ left: number; width: number; ready: boolean }>({ left: 0, width: 0, ready: false });
+
+  useLayoutEffect(() => {
+    const sync = () => {
+      const btn = buttons.current[activeIndex];
+      if (!btn) return;
+      setGlider({ left: btn.offsetLeft, width: btn.offsetWidth, ready: true });
+    };
+    sync();
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(sync);
+    observer.observe(container);
+    const activeBtn = buttons.current[activeIndex];
+    if (activeBtn) observer.observe(activeBtn);
+    return () => observer.disconnect();
+  }, [activeIndex, tabs.length]);
 
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const keys = ['ArrowRight', 'ArrowLeft', 'Home', 'End'];
@@ -64,12 +84,13 @@ export function WorkspaceViews<K extends string>({ label, tabs, value, onChange 
     onChange(tabs[next].key);
   }
 
-  const barStyle = {
-    '--tab-count': tabs.length,
-    '--active-tab-index': activeIndex,
+  const gliderStyle = {
+    '--glider-x': `${glider.left}px`,
+    '--glider-w': `${glider.width}px`,
   } as CSSProperties;
 
-  return <div className="workspace-views" role="tablist" aria-label={label} style={barStyle}>
+  return <div ref={containerRef} className="workspace-views" role="tablist" aria-label={label}>
+    {glider.ready && <span aria-hidden="true" className="workspace-views-glider" style={gliderStyle} />}
     {tabs.map((tab, index) => <button key={tab.key} type="button" role="tab" aria-selected={value === tab.key}
       id={`workspace-tab-${tab.key}`} aria-controls="workspace-panel" tabIndex={value === tab.key ? 0 : -1}
       ref={element => { buttons.current[index] = element; }} onKeyDown={event => moveFocus(event, index)}
@@ -113,6 +134,33 @@ export function TabPanelTransition<K extends string>({
   >
     {children}
   </div>;
+}
+
+export function RunProgressStrip({ run }: { run: Run }) {
+  const total = run.completed_nodes.length + run.running_nodes.length + run.pending_nodes.length;
+  const completed = run.completed_nodes.length;
+  const pct = total > 0 ? Math.round((completed / total) * 100) : (run.status === 'completed' ? 100 : 0);
+  const isActive = !terminal(run.status);
+  const tone = run.status === 'failed' || run.status === 'incomplete'
+    ? 'is-danger'
+    : run.status === 'cancelled'
+      ? 'is-muted'
+      : 'is-active';
+
+  return (
+    <div className="run-progress-strip" aria-label="真实节点执行进度">
+      <div className="run-progress-meta">
+        <span>工作流真实节点进度</span>
+        <strong>{total > 0 ? `${completed} / ${total} 个节点已完成（${pct}%）` : '等待任务节点初始化…'}</strong>
+      </div>
+      <div className="run-progress-track">
+        <div
+          className={`run-progress-fill ${tone} ${isActive ? 'is-shimmering' : ''}`}
+          style={{ width: `${Math.max(isActive ? 8 : 0, pct)}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function currentView<K extends string>(tabs: readonly { key: K }[], requested: string | null): K {

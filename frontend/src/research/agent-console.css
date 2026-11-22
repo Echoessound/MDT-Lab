@@ -33,11 +33,11 @@
 .console-graph { min-width: 0; container-type: inline-size; }
 .console-graph .model-section-heading h2, .model-section-heading h2 { font-size: 16px; }
 .console-flow {
-  --wire: color-mix(in srgb, var(--text) 30%, var(--line));
+  --wire: color-mix(in srgb, var(--text) 24%, var(--line));
   --rail: clamp(16px, 3cqi, 32px);
   display: grid; grid-template-columns: 1fr 1.6fr 1fr 1fr 1fr; gap: var(--rail);
-  align-items: center; padding: 16px 12px; margin-top: 12px;
-  border: 1px solid var(--line); border-radius: 7px; background: var(--bg);
+  align-items: center; padding: 18px 14px; margin-top: 14px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
 }
 .console-flow-stage, .console-flow-specialists, .specialist-branch { position: relative; min-width: 0; }
 .console-flow-stage:not(:last-child)::after, .console-flow-specialists::after {
@@ -56,12 +56,12 @@
 .specialist-branch:last-child::before, .specialist-branch:last-child::after { height: 0; }
 .specialist-branch[data-skipped="true"] .console-flow-node { border-style: dashed; }
 .console-flow-node {
-  display: flex; width: 100%; min-height: 48px; padding: 8px; align-items: flex-start; justify-content: center; flex-direction: column;
-  gap: 3px; border: 1px solid var(--line); border-radius: 5px; text-align: left; color: var(--text); background: var(--panel);
-  overflow-wrap: anywhere; font-size: 12px; line-height: 1.35;
+  display: flex; width: 100%; min-height: 50px; padding: 9px 11px; align-items: flex-start; justify-content: center; flex-direction: column;
+  gap: 3px; border: 1px solid var(--line); border-radius: 11px; text-align: left; color: var(--text); background: var(--panel);
+  overflow-wrap: anywhere; font-size: 12px; line-height: 1.35; box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
-.console-flow-node:hover { border-color: var(--wire); }
-.console-flow-node[aria-pressed="true"] { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); background: var(--soft); }
+.console-flow-node:hover { border-color: color-mix(in srgb, var(--green) 45%, var(--line)); }
+.console-flow-node[aria-pressed="true"] { border-color: var(--green); box-shadow: 0 0 0 2px var(--soft); background: color-mix(in srgb, var(--soft) 50%, var(--panel)); }
 .console-flow-node small { color: var(--muted); font-size: 10px; }
 .console-flow-node small:empty { display: none; }
 .specialist-branch .console-flow-node {

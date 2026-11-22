@@ -4,7 +4,7 @@ import asyncio
 from fastapi import APIRouter, Query, Request
 
 from ..api_schemas import APIError
-from .datasets import CATALOG, MAX_UPLOAD_BYTES
+from .datasets import CATALOG, DATA_CAPABILITIES, MAX_UPLOAD_BYTES
 from .downloads import download_dataset
 from .import_service import ImportPreviews
 
@@ -42,11 +42,28 @@ async def connect(request: Request, source: str, max_cases: int = Query(10, ge=1
     return {"data": result}
 
 
+@router.get("/capabilities")
+def capabilities():
+    return {"data": DATA_CAPABILITIES}
+
+
 @router.get("/template")
-def template():
+def template(source: str = Query("research_json")):
     from fastapi.responses import Response
     from .seeds import seed_cases
     import json
+    if source == "tcga_cbioportal_tsv":
+        sample_tsv = "\n".join([
+            "#Patient Identifier\tDiagnosis Age\tSex\tDiagnosis Date\tPathology Date\tCancer Type Detailed\tPathological T stage\tPathological N stage\tPathological M stage\tEGFR_STATUS\tKRAS_STATUS\tOS_MONTHS\tOS_STATUS",
+            "PATIENT_ID\tAGE\tSEX\tDIAGNOSIS_DATE\tPATHOLOGY_DATE\tHISTOLOGY\tPATH_T_STAGE\tPATH_N_STAGE\tPATH_M_STAGE\tEGFR_STATUS\tKRAS_STATUS\tOS_MONTHS\tOS_STATUS",
+            "TCGA-LUAD-DEMO-01\t62\tFemale\t2024-03-10\t2024-03-15\tAdenocarcinoma\tT2a\tN1\tM0\tMutant\tWildtype\t14.5\t0:LIVING",
+            "TCGA-LUSC-DEMO-02\t68\tMale\t2024-05-02\t2024-05-08\tSquamous cell carcinoma\tT3\tN2\tM0\tWildtype\tNot collected\t9.2\t0:LIVING",
+        ]) + "\n"
+        return Response(
+            sample_tsv,
+            media_type="text/tab-separated-values; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="tcga_luad_clinical_template.tsv"'},
+        )
     case = seed_cases()[0].model_dump(mode="json")
     case["case_id"] = "CUSTOM-RESEARCH-001"
     return Response(json.dumps({"cases": [case]}, ensure_ascii=False, indent=2),

@@ -9,7 +9,7 @@ import { caseKindName } from './data-components';
 import type { ImportBatch, ImportPreview } from './schemas';
 import './dataset-console.css';
 
-const formats: Record<string, string> = { synthea_csv: '.zip', tcia_nsclc_csv: '.csv', research_json: '.json' };
+const formats: Record<string, string> = { synthea_csv: '.zip', tcia_nsclc_csv: '.csv', tcga_cbioportal_tsv: '.tsv,.txt,.csv', research_json: '.json' };
 const nowExpired = (preview: ImportPreview) => Date.parse(preview.expires_at) <= Date.now();
 const formatBytes = (bytes: number) => bytes >= 1024 * 1024
   ? `${(bytes / (1024 * 1024)).toLocaleString('zh-CN', { maximumFractionDigits: 1 })} MB`
@@ -165,8 +165,11 @@ export function DatasetPage() {
     returnToSource();
   };
   return <div className="research-page page-enter dataset-console">
-    <header className="page-heading"><div><h1>外部医学数据集导入</h1><p>接入公开研究队列或本地病例文件，完成结构化映射与指纹校验后原子写入病例库。</p></div>
-      <a className="button secondary" href="/api/v2/datasets/template" download><Icon name="download" size={15} />下载标准病例模板 (JSON)</a>
+    <header className="page-heading"><div><h1>外部医学数据集导入</h1><p>接入 Synthea、TCIA NSCLC、TCGA / cBioPortal 公开队列或标准研究 JSON，完成指纹校验与时序隔离后原子写入病例库。</p></div>
+      <div className="button-group">
+        <a className="button secondary" href="/api/v2/datasets/template?source=tcga_cbioportal_tsv" download><Icon name="download" size={15} />TCGA/cBioPortal 模板</a>
+        <a className="button secondary" href="/api/v2/datasets/template" download><Icon name="download" size={15} />标准病例模板 (JSON)</a>
+      </div>
     </header>
     <div className="dataset-source-grid" hidden={!!preview || !!imported}>
       <section className="panel"><h2>新建导入</h2>
