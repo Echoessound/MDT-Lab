@@ -640,11 +640,16 @@ export function ExperimentsPage() {
 
   useEffect(() => {
     if (casesQuery.data && !initialized) {
-      const ids = casesQuery.data.map(c => c.case_id);
+      const compact = casesQuery.data.filter(c => c.timeline.length <= 30);
+      const defaultCases = compact.length > 0 ? compact : casesQuery.data;
+      const totalCutoffs = defaultCases.reduce((sum, c) => sum + c.timeline.length, 0);
+      const initialScope: 'all' | 'latest' = totalCutoffs <= 80 ? 'all' : 'latest';
+      const ids = defaultCases.map(c => c.case_id);
+      setScope(initialScope);
       setSelectedIds(ids);
       setInitialized(true);
       if (ids.length > 0) {
-        evaluate.mutate({ case_ids: ids, trigger_scope: 'all' });
+        evaluate.mutate({ case_ids: ids, trigger_scope: initialScope });
       }
     }
   }, [casesQuery.data, initialized]);
