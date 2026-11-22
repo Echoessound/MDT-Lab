@@ -221,10 +221,30 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
         scenario_id: 'LUNG-SYN-001:v1:E002', case_family_id: 'LUNG-SYN-001', case_id: 'LUNG-SYN-001',
         case_version: 1, case_title: '资料逐步补齐', trigger_event_id: 'E002',
         trigger_event_title: '影像归档', trigger_event_type: 'imaging', occurred_at: '2026-01-12',
-        visible_events: 2, annotated: true, b3_decision: 'NEED_MORE_INFORMATION', b3_calls: 4, fixed_calls: 8,
+        visible_events: 2, annotated: true, memory_impacted: true, b3_decision: 'NEED_MORE_INFORMATION', b3_calls: 4, fixed_calls: 8,
       }],
+      paired_statistics: {
+        bootstrap_resamples: 1000,
+        bootstrap_seed: 2026,
+        cluster_unit: 'case_family_id',
+        family_count: 3,
+        sample_size_note: '小样本提示',
+        contrasts: [{
+          contrast_id: 'B3_vs_A3',
+          label: 'B3 vs A3',
+          metric_name: '专科调用节省比例',
+          point_estimate: 40.0,
+          ci_low: 25.0,
+          ci_high: 50.0,
+          unit: '%',
+          discordant_scenarios: 8,
+          total_scenarios: 13,
+          mcnemar_exact_p: 1.0,
+          interpretation: '计算开销压缩幅度',
+        }],
+      },
       latex_table: '\\begin{table}\\end{table}',
       scores_csv: 'scenario_id,method_id\n',
-    }).family_count).toBe(3);
+    }).paired_statistics?.contrasts).toHaveLength(1);
   });
 });

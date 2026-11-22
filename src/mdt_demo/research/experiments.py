@@ -129,3 +129,58 @@ def export_results(db, plan, output_dir):
             if temporary is not None:
                 temporary.unlink(missing_ok=True)
     return summary
+
+
+def load_annotations_file(path: Path | None) -> dict[str, dict]:
+    """Load blind annotations exported from either AnnotationStore (dict) or Web UI (list)."""
+    if path is None:
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(raw, dict):
+        if "items" in raw and isinstance(raw["items"], list):
+            return {item["scenario_id"]: item for item in raw["items"] if isinstance(item, dict) and "scenario_id" in item}
+        return {k: v for k, v in raw.items() if isinstance(v, dict)}
+    if isinstance(raw, list):
+        return {item["scenario_id"]: item for item in raw if isinstance(item, dict) and "scenario_id" in item}
+    raise ValueError("标注文件格式无效，应为 JSON 对象或数组。")
+
+
+def _atomic_write_text(target: Path, text: str) -> None:
+    temporary = None
+    try:
+        with NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent, delete=False) as fp:
+            temporary = Path(fp.name)
+            fp.write(text)
+        os.replace(temporary, target)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def export_paper_artifacts(output_dir: Path, evaluation: dict) -> dict[str, str]:
+    """Write thesis-ready CSV, LaTeX booktabs table, and family-clustered statistics JSON."""
+    scores_path = output_dir / "scores.csv"
+    latex_path = output_dir / "ablation_table.tex"
+    stats_path = output_dir / "statistics_summary.json"
+    _atomic_write_text(scores_path, evaluation["scores_csv"])
+    _atomic_write_text(latex_path, evaluation["latex_table"] + "\n")
+    summary_payload = {
+        "protocol_version": evaluation["protocol_version"],
+        "execution_mode": evaluation["execution_mode"],
+        "trigger_scope": evaluation["trigger_scope"],
+        "family_count": evaluation["family_count"],
+        "scenario_count": evaluation["scenario_count"],
+        "annotated_scenario_count": evaluation["annotated_scenario_count"],
+        "memory_impact_scenarios": evaluation["memory_impact_scenarios"],
+        "methods": evaluation["methods"],
+        "paired_statistics": evaluation["paired_statistics"],
+    }
+    _atomic_write_text(
+        stats_path,
+        json.dumps(summary_payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+    )
+    return {
+        "scores_csv": str(scores_path),
+        "latex_table": str(latex_path),
+        "statistics_summary": str(stats_path),
+    }

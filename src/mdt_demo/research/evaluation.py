@@ -6,8 +6,10 @@ import csv
 from datetime import datetime, timezone
 import io
 import json
+import math
 import os
 from pathlib import Path
+import random
 from tempfile import NamedTemporaryFile
 from threading import RLock
 
@@ -157,6 +159,168 @@ def _build_scores_csv(scenario_rows: list[dict]) -> str:
     return buf.getvalue()
 
 
+def _mcnemar_exact_p(b: int, c: int) -> float | None:
+    """Exact two-sided binomial McNemar test on paired discordant counts (b, c)."""
+    n = b + c
+    if n <= 0:
+        return None
+    k = min(b, c)
+    tail = sum(math.comb(n, i) for i in range(k + 1)) / (2 ** n)
+    return round(min(1.0, 2.0 * tail), 4)
+
+
+def _cluster_bootstrap_ci(
+    family_groups: dict[str, list[dict]],
+    statistic,
+    *,
+    n_bootstrap: int = 1000,
+    seed: int = 2026,
+) -> tuple[float, float, float]:
+    """Deterministic family-clustered percentile Bootstrap 95% CI."""
+    family_ids = sorted(family_groups.keys())
+    all_items = [item for fid in family_ids for item in family_groups[fid]]
+    if not all_items:
+        return 0.0, 0.0, 0.0
+    point = round(float(statistic(all_items)), 2)
+    if len(family_ids) <= 1:
+        return point, point, point
+    rng = random.Random(seed)
+    k = len(family_ids)
+    samples: list[float] = []
+    for _ in range(n_bootstrap):
+        drawn_ids = [family_ids[rng.randrange(k)] for _ in range(k)]
+        pooled = [item for fid in drawn_ids for item in family_groups[fid]]
+        samples.append(float(statistic(pooled)))
+    samples.sort()
+    low_idx = max(0, int(0.025 * n_bootstrap) - 1)
+    high_idx = min(n_bootstrap - 1, int(0.975 * n_bootstrap) - 1)
+    return point, round(samples[low_idx], 2), round(samples[high_idx], 2)
+
+
+def _build_paired_statistics(
+    paired_records: list[dict],
+    *,
+    n_bootstrap: int = 1000,
+    seed: int = 2026,
+) -> dict:
+    family_groups: dict[str, list[dict]] = {}
+    for rec in paired_records:
+        family_groups.setdefault(rec["case_family_id"], []).append(rec)
+    family_count = len(family_groups)
+    total_scenarios = len(paired_records)
+
+    def _call_saving_pct(items: list[dict]) -> float:
+        fixed = sum(x["a3_calls"] for x in items)
+        b3 = sum(x["b3_calls"] for x in items)
+        return (100.0 * (fixed - b3) / fixed) if fixed > 0 else 0.0
+
+    def _gate_intercept_pct(items: list[dict]) -> float:
+        hits = sum(1 for x in items if x["b3_gate_intercepted"])
+        return 100.0 * hits / max(1, len(items))
+
+    def _memory_impact_pct(items: list[dict]) -> float:
+        hits = sum(1 for x in items if x["memory_impacted"])
+        return 100.0 * hits / max(1, len(items))
+
+    def _b3_vs_b0_diff_pct(items: list[dict]) -> float:
+        hits = sum(1 for x in items if x["b3_decision"] != x["b0_decision"])
+        return 100.0 * hits / max(1, len(items))
+
+    def _mcnemar_for(comp_key: str) -> float | None:
+        b = c = 0
+        for x in paired_records:
+            exp = x["expected_decision"]
+            if exp is None:
+                continue
+            b3_ok = x["b3_decision"] == exp
+            comp_ok = x[comp_key] == exp
+            if b3_ok and not comp_ok:
+                b += 1
+            elif comp_ok and not b3_ok:
+                c += 1
+        return _mcnemar_exact_p(b, c)
+
+    p_save, lo_save, hi_save = _cluster_bootstrap_ci(family_groups, _call_saving_pct, n_bootstrap=n_bootstrap, seed=seed)
+    p_gate, lo_gate, hi_gate = _cluster_bootstrap_ci(family_groups, _gate_intercept_pct, n_bootstrap=n_bootstrap, seed=seed)
+    p_mem, lo_mem, hi_mem = _cluster_bootstrap_ci(family_groups, _memory_impact_pct, n_bootstrap=n_bootstrap, seed=seed)
+    p_b0, lo_b0, hi_b0 = _cluster_bootstrap_ci(family_groups, _b3_vs_b0_diff_pct, n_bootstrap=n_bootstrap, seed=seed)
+
+    if family_count < 5:
+        sample_note = (
+            f"当前仅含 {family_count} 个独立病例族（{total_scenarios} 个截点），聚类 Bootstrap 区间仅反映当前样本波动；"
+            "建议在正式论文实验中通过 TCGA/TCIA 队列扩展至 ≥15 个独立病例族并完成独立盲标后再汇报推断显著性。"
+        )
+    else:
+        sample_note = (
+            f"基于 {family_count} 个独立病例族（{total_scenarios} 个截点）执行 {n_bootstrap} 次聚类重抽样（seed={seed}），"
+            "有效避免同一患者多截点相关性导致的置信区间过窄。"
+        )
+
+    contrasts = [
+        {
+            "contrast_id": "B3_vs_A3",
+            "label": "B3 完整工作流 vs A3 固定全员",
+            "metric_name": "专科调用节省比例",
+            "point_estimate": p_save,
+            "ci_low": lo_save,
+            "ci_high": hi_save,
+            "unit": "%",
+            "discordant_scenarios": sum(1 for x in paired_records if x["b3_calls"] < x["a3_calls"]),
+            "total_scenarios": total_scenarios,
+            "mcnemar_exact_p": _mcnemar_for("a3_decision"),
+            "interpretation": "衡量事件驱动路由相对固定四专科全员调度的计算开销压缩幅度。",
+        },
+        {
+            "contrast_id": "B3_vs_A2",
+            "label": "B3 完整门控 vs A2 无门控",
+            "metric_name": "安全门控拦截比例",
+            "point_estimate": p_gate,
+            "ci_low": lo_gate,
+            "ci_high": hi_gate,
+            "unit": "%",
+            "discordant_scenarios": sum(1 for x in paired_records if x["b3_gate_intercepted"]),
+            "total_scenarios": total_scenarios,
+            "mcnemar_exact_p": _mcnemar_for("a2_decision"),
+            "interpretation": "统计安全门控在门控前拟放行（READY）场景中成功阻断危险放行的比例。",
+        },
+        {
+            "contrast_id": "B3_vs_A1",
+            "label": "B3 含纵向记忆 vs A1 剥离历史",
+            "metric_name": "纵向记忆影响截点比例",
+            "point_estimate": p_mem,
+            "ci_low": lo_mem,
+            "ci_high": hi_mem,
+            "unit": "%",
+            "discordant_scenarios": sum(1 for x in paired_records if x["memory_impacted"]),
+            "total_scenarios": total_scenarios,
+            "mcnemar_exact_p": _mcnemar_for("a1_decision"),
+            "interpretation": "衡量引入截点前历史事件后，结论或缺失字段识别发生改变的截点占比。",
+        },
+        {
+            "contrast_id": "B3_vs_B0",
+            "label": "B3 完整 MDT vs B0 单模型基线",
+            "metric_name": "相对单模型结论差异率",
+            "point_estimate": p_b0,
+            "ci_low": lo_b0,
+            "ci_high": hi_b0,
+            "unit": "%",
+            "discordant_scenarios": sum(1 for x in paired_records if x["b3_decision"] != x["b0_decision"]),
+            "total_scenarios": total_scenarios,
+            "mcnemar_exact_p": _mcnemar_for("b0_decision"),
+            "interpretation": "量化多智能体序贯协同与安全门控相对单步通用审核的决策修正幅度。",
+        },
+    ]
+
+    return {
+        "bootstrap_resamples": n_bootstrap,
+        "bootstrap_seed": seed,
+        "cluster_unit": "case_family_id",
+        "family_count": family_count,
+        "sample_size_note": sample_note,
+        "contrasts": contrasts,
+    }
+
+
 def evaluate_library(
     cases: list[ResearchCase],
     *,
@@ -169,6 +333,7 @@ def evaluate_library(
     annotations = annotations or {}
     scenario_rows: list[dict] = []
     scenarios_meta: list[dict] = []
+    paired_records: list[dict] = []
 
     agg: dict[str, dict] = {}
     memory_impact_count = 0
@@ -184,10 +349,32 @@ def evaluate_library(
             matrix = evaluate_ablation_matrix(case, event.event_id)
 
             methods_by_id = {m["method_id"]: m for m in matrix["methods"]}
-            if methods_by_id["A1"]["final_decision"] != methods_by_id["B3"]["final_decision"] or (
-                methods_by_id["A1"]["missing_count"] != methods_by_id["B3"]["missing_count"]
-            ):
+            memory_impacted = (
+                methods_by_id["A1"]["final_decision"] != methods_by_id["B3"]["final_decision"]
+                or methods_by_id["A1"]["missing_count"] != methods_by_id["B3"]["missing_count"]
+            )
+            if memory_impacted:
                 memory_impact_count += 1
+
+            b3_m = methods_by_id["B3"]
+            a3_m = methods_by_id["A3"]
+            paired_records.append({
+                "scenario_id": scenario_id,
+                "case_family_id": case.case_id,
+                "b3_calls": b3_m["agent_calls"],
+                "a3_calls": a3_m["agent_calls"],
+                "b3_decision": b3_m["final_decision"],
+                "a3_decision": a3_m["final_decision"],
+                "a2_decision": methods_by_id["A2"]["final_decision"],
+                "a1_decision": methods_by_id["A1"]["final_decision"],
+                "b0_decision": methods_by_id["B0"]["final_decision"],
+                "b3_gate_intercepted": (
+                    b3_m["pre_gate_decision"] == "READY_FOR_REVIEW"
+                    and b3_m["final_decision"] != "READY_FOR_REVIEW"
+                ),
+                "memory_impacted": memory_impacted,
+                "expected_decision": ann["expected_decision"] if ann else None,
+            })
 
             scenarios_meta.append({
                 "scenario_id": scenario_id,
@@ -201,9 +388,10 @@ def evaluate_library(
                 "occurred_at": event.occurred_at.isoformat(),
                 "visible_events": len(frozen.timeline),
                 "annotated": ann is not None,
-                "b3_decision": methods_by_id["B3"]["final_decision"],
-                "b3_calls": methods_by_id["B3"]["agent_calls"],
-                "fixed_calls": methods_by_id["A3"]["agent_calls"],
+                "memory_impacted": memory_impacted,
+                "b3_decision": b3_m["final_decision"],
+                "b3_calls": b3_m["agent_calls"],
+                "fixed_calls": a3_m["agent_calls"],
             })
 
             for m in matrix["methods"]:
@@ -317,6 +505,7 @@ def evaluate_library(
         "memory_impact_scenarios": memory_impact_count,
         "methods": method_summary,
         "scenarios": scenarios_meta,
+        "paired_statistics": _build_paired_statistics(paired_records),
         "latex_table": _build_latex_table(method_summary, annotated_scenarios),
         "scores_csv": _build_scores_csv(scenario_rows),
     }

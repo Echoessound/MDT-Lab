@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DecisionBadge, ErrorState, Icon, Loading } from '../ui';
 import { researchApi } from './api';
@@ -48,6 +49,7 @@ function BatchEvaluationView({
   onRun: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [scenarioFilter, setScenarioFilter] = useState<'all' | 'memory' | 'annotated' | 'unannotated'>('all');
 
   async function copyLatex() {
     if (!evaluation) return;
@@ -62,6 +64,15 @@ function BatchEvaluationView({
 
   const b3 = evaluation?.methods.find(m => m.method_id === 'B3');
   const maxAvgCalls = Math.max(1, ...(evaluation?.methods.map(m => m.avg_calls) ?? [4]));
+  const filteredScenarios = useMemo(() => {
+    if (!evaluation) return [];
+    return evaluation.scenarios.filter(item => {
+      if (scenarioFilter === 'memory') return Boolean(item.memory_impacted);
+      if (scenarioFilter === 'annotated') return item.annotated;
+      if (scenarioFilter === 'unannotated') return !item.annotated;
+      return true;
+    });
+  }, [evaluation, scenarioFilter]);
 
   return (
     <div className="workspace-column">
@@ -214,6 +225,127 @@ function BatchEvaluationView({
               <pre className="json-view">{evaluation.latex_table}</pre>
             </details>
           </section>
+
+          {evaluation.paired_statistics && (
+            <section className="panel workflow-card">
+              <div className="workspace-section-heading">
+                <div>
+                  <h2>病例族聚类 Bootstrap 95% 置信区间与配对检验</h2>
+                  <p className="muted">
+                    以独立病例族（<code>{evaluation.paired_statistics.cluster_unit}</code>）为抽样单元执行{' '}
+                    {evaluation.paired_statistics.bootstrap_resamples} 次确定性重抽样（seed={evaluation.paired_statistics.bootstrap_seed}），避免同患者多截点相关性偏差。
+                  </p>
+                </div>
+                <span className="pill soft">聚类单元：{evaluation.paired_statistics.family_count} 个病例族</span>
+              </div>
+
+              <div className="contrast-grid">
+                {evaluation.paired_statistics.contrasts.map((item, idx) => (
+                  <article key={item.contrast_id} className="contrast-card stagger-item" style={{ '--stagger-i': idx } as React.CSSProperties}>
+                    <div className="contrast-head">
+                      <strong>{item.label}</strong>
+                      <span className="pill outline">{item.discordant_scenarios} / {item.total_scenarios} 截点</span>
+                    </div>
+                    <div className="contrast-metric-row">
+                      <span className="contrast-metric-label">{item.metric_name}</span>
+                      <strong className="contrast-point workspace-number">{item.point_estimate.toFixed(1)}{item.unit}</strong>
+                    </div>
+                    <div className="contrast-ci-row">
+                      <span className="ci-badge workspace-number">
+                        95% CI [{item.ci_low.toFixed(1)}{item.unit}, {item.ci_high.toFixed(1)}{item.unit}]
+                      </span>
+                      {item.mcnemar_exact_p !== null && (
+                        <span className={`pill ${item.mcnemar_exact_p < 0.05 ? 'status-completed' : 'outline'} workspace-number`}>
+                          McNemar p = {item.mcnemar_exact_p.toFixed(4)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="muted">{item.interpretation}</p>
+                  </article>
+                ))}
+              </div>
+
+              <p className="notice neutral" style={{ marginTop: 14, marginBottom: 0 }}>
+                <Icon name="info" size={16} />
+                <span>{evaluation.paired_statistics.sample_size_note}</span>
+              </p>
+            </section>
+          )}
+
+          <section className="panel workflow-card">
+            <div className="workspace-section-heading">
+              <div>
+                <h2>逐截点配对明细与快速筛选</h2>
+                <p className="muted">可按纵向记忆影响或盲标覆盖状态快速定位典型截点，直接跳转病例工作台复盘证据与工作流。</p>
+              </div>
+              <div className="scenario-filter-bar" role="group" aria-label="筛选评测截点">
+                {([
+                  ['all', `全部 (${evaluation.scenarios.length})`],
+                  ['memory', `记忆影响 (${evaluation.memory_impact_scenarios})`],
+                  ['annotated', `已盲标 (${evaluation.annotated_scenario_count})`],
+                  ['unannotated', `待盲标 (${evaluation.scenarios.length - evaluation.annotated_scenario_count})`],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`filter-chip ${scenarioFilter === key ? 'is-active' : ''}`}
+                    onClick={() => setScenarioFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="workspace-table-scroll">
+              <table className="workspace-table">
+                <thead>
+                  <tr>
+                    <th>病例 / 触发截点</th>
+                    <th>可见事件</th>
+                    <th>B3 结论</th>
+                    <th>调用对比 (B3 vs A3)</th>
+                    <th>特性标记</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredScenarios.map(item => (
+                    <tr key={item.scenario_id}>
+                      <td>
+                        <strong>{item.case_id} · {item.trigger_event_id}</strong>
+                        <small>{item.occurred_at} · {item.trigger_event_title}</small>
+                      </td>
+                      <td className="workspace-number">{item.visible_events} 条</td>
+                      <td>{item.b3_decision ? <DecisionBadge decision={item.b3_decision} /> : <span className="pill outline">无输出</span>}</td>
+                      <td className="workspace-number">
+                        <strong>{item.b3_calls}</strong> / {item.fixed_calls} 次
+                      </td>
+                      <td>
+                        <div className="badge-row">
+                          {item.memory_impacted && <span className="pill soft">纵向记忆影响</span>}
+                          <span className={`pill ${item.annotated ? 'status-completed' : 'outline'}`}>
+                            {item.annotated ? '已盲标' : '待盲标'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <Link
+                          className="text-link"
+                          to={`/research/cases/${encodeURIComponent(item.case_id)}?event=${encodeURIComponent(item.trigger_event_id)}&view=workflow`}
+                        >
+                          查看工作流 <Icon name="arrow" size={13} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredScenarios.length === 0 && (
+                    <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: '18px' }}>当前筛选条件下无匹配截点。</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </>
       )}
     </div>
@@ -291,6 +423,15 @@ function BlindAnnotationWorkbench({
 
   if (!active) return <p className="workspace-empty">病例库为空，无法开展盲标。</p>;
   const frozen = inputThroughTrigger(active.case_item, active.event.event_id);
+  const annotatedSet = new Set(annotations.map(a => a.scenario_id));
+  const progressPct = scenarios.length > 0 ? Math.round((annotatedSet.size / scenarios.length) * 100) : 0;
+  const nextUnannotated = scenarios.find(s => !annotatedSet.has(s.scenario_id) && s.scenario_id !== active.scenario_id)
+    ?? scenarios.find(s => !annotatedSet.has(s.scenario_id));
+
+  function exportAnnotationsJson() {
+    const payload = Object.fromEntries(annotations.map(a => [a.scenario_id, a]));
+    downloadText('mdt_blind_annotations.json', JSON.stringify(payload, null, 2) + '\n', 'application/json;charset=utf-8');
+  }
 
   function toggleRole(role: Role) {
     setRequiredAgents(prev => {
@@ -306,7 +447,33 @@ function BlindAnnotationWorkbench({
       <aside className="panel blind-scenario-list" aria-label="待盲标场景队列">
         <div className="workspace-section-heading">
           <h2>待标注截点队列</h2>
-          <span className="pill soft">已标 {annotations.length} / {scenarios.length}</span>
+          <span className="pill soft workspace-number">{annotatedSet.size} / {scenarios.length} ({progressPct}%)</span>
+        </div>
+        <div className="blind-progress-wrap" aria-label={`盲标进度 ${progressPct}%`}>
+          <div className="blind-progress-track">
+            <div className="blind-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+          <div className="blind-toolbar-actions">
+            {nextUnannotated && (
+              <button
+                type="button"
+                className="button secondary"
+                style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
+                onClick={() => setSelectedScenarioId(nextUnannotated.scenario_id)}
+              >
+                跳至下一待标
+              </button>
+            )}
+            <button
+              type="button"
+              className="button secondary"
+              style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
+              disabled={annotations.length === 0}
+              onClick={exportAnnotationsJson}
+            >
+              <Icon name="download" size={13} />导出盲标 JSON
+            </button>
+          </div>
         </div>
         <div className="blind-list-scroll">
           {scenarios.map(item => {

@@ -170,7 +170,7 @@ def test_library_evaluation_blind_annotations_and_thesis_exports(client):
     assert ann2.status_code == 200
     assert len(client.get("/api/v2/annotations").json()["data"]) == 2
 
-    # Re-evaluate and verify gold-standard thesis metrics
+    # Re-evaluate and verify gold-standard thesis metrics + family-clustered bootstrap CI
     eval2 = client.post("/api/v2/experiments/evaluate", json={"trigger_scope": "all"}).json()["data"]
     assert eval2["annotated_scenario_count"] == 2
     b3 = next(m for m in eval2["methods"] if m["method_id"] == "B3")
@@ -178,6 +178,67 @@ def test_library_evaluation_blind_annotations_and_thesis_exports(client):
     assert b3["false_pass_rate"] == 0.0
     assert b3["accuracy"] == 1.0
 
+    stats = eval2["paired_statistics"]
+    assert stats["bootstrap_resamples"] == 1000
+    assert stats["bootstrap_seed"] == 2026
+    assert stats["cluster_unit"] == "case_family_id"
+    assert stats["family_count"] == 3
+    contrasts = {c["contrast_id"]: c for c in stats["contrasts"]}
+    assert set(contrasts.keys()) == {"B3_vs_A3", "B3_vs_A2", "B3_vs_A1", "B3_vs_B0"}
+    assert contrasts["B3_vs_A3"]["ci_low"] <= contrasts["B3_vs_A3"]["point_estimate"] <= contrasts["B3_vs_A3"]["ci_high"]
+    assert contrasts["B3_vs_A3"]["point_estimate"] > 0
+
     # Delete annotation cleanly
     assert client.delete("/api/v2/annotations/LUNG-SYN-001:v1:E002").status_code == 200
     assert len(client.get("/api/v2/annotations").json()["data"]) == 1
+
+
+def test_cli_runner_supports_tcga_and_exports_paper_artifacts(client, tmp_path, project_root):
+    import subprocess
+    import sys
+
+    tpl = client.get("/api/v2/datasets/template?source=tcga_cbioportal_tsv")
+    assert tpl.status_code == 200
+    tsv_file = tmp_path / "tcga_nsclc.tsv"
+    tsv_file.write_bytes(tpl.content)
+
+    from mdt_demo.research.datasets import prepare_import
+    prepared = prepare_import("tcga_cbioportal_tsv", tpl.content, 10)
+    first_case = prepared.cases[0]
+    first_ev = first_case["timeline"][0]["event_id"]
+    first_sid = f"{first_case['case_id']}:v{first_case['version']}:{first_ev}"
+
+    ann_file = tmp_path / "annotations.json"
+    ann_file.write_text(json.dumps({
+        first_sid: {
+            "scenario_id": first_sid,
+            "case_id": first_case["case_id"],
+            "case_version": first_case["version"],
+            "trigger_event_id": first_ev,
+            "annotator_id": "reviewer_cli",
+            "required_agents": ["oncology"],
+            "expected_decision": "NEED_MORE_INFORMATION",
+            "missing_fields": ["imaging_complete"],
+            "rationale": "仅有诊断日记录，缺影像确认。",
+        }
+    }), encoding="utf-8")
+
+    out_dir = tmp_path / "tcga_batch"
+    cmd = [
+        sys.executable, str(project_root / "scripts/run_mock_experiments.py"),
+        "--source", "tcga_cbioportal_tsv",
+        "--input", str(tsv_file),
+        "--annotations", str(ann_file),
+        "--export-paper",
+        "--output-dir", str(out_dir),
+    ]
+    res = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    assert "论文产物已导出" in res.stdout
+    assert (out_dir / "results.json").exists()
+    assert (out_dir / "scores.csv").exists()
+    assert (out_dir / "ablation_table.tex").exists()
+    stats_json = json.loads((out_dir / "statistics_summary.json").read_text(encoding="utf-8"))
+    assert stats_json["family_count"] == 2
+    assert stats_json["annotated_scenario_count"] == 1
+    assert stats_json["paired_statistics"]["bootstrap_seed"] == 2026
+    assert "\\begin{table}" in (out_dir / "ablation_table.tex").read_text(encoding="utf-8")
