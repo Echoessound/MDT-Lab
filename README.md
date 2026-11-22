@@ -111,6 +111,27 @@ cd ..
 
 Mock 场景包括 `standard`、`partial_failure`、`persistent_disagreement`、`invalid_evidence`。“保留分歧”至少需要两个参与角色；需要时使用固定全员模式。Mock 不使用 Token，相关计数显示为未知/不适用，不伪造调用用量。
 
+## 离线批量对照
+
+从仓库根目录运行以下命令。每个截点按病例编号、版本和触发事件配对，记录冻结输入的 SHA-256、可见事件数和事实数。脚本从本地来源文件或内置病例读取数据，使用标准 Mock。
+
+```bash
+.venv/bin/python scripts/run_mock_experiments.py --output-dir outputs/experiments/seed
+.venv/bin/python scripts/run_mock_experiments.py --source tcia_nsclc_csv --input data/raw/external/tcia_nsclc_clinical.csv --max-cases 50 --output-dir outputs/experiments/tcia
+.venv/bin/python scripts/run_mock_experiments.py --source synthea_csv --input data/raw/external/synthea_sample_csv.zip --max-cases 3 --triggers latest --output-dir outputs/experiments/synthea
+```
+
+`--triggers all` 为默认值，按日期及同日事件编号逐个截取。`latest` 只取每个病例的末次事件。外部来源沿用导入器的纳排和排序规则。输出目录中的 `results.json` 包含来源和许可、病例族、场景清单、实现指纹、失败尝试及逐方法结果。`checkpoint.sqlite3` 记录每个场景的进度。重跑同一命令会复用成功场景，重试失败场景并保留上次失败记录。改变来源、代码、运行环境或截点范围后，应使用新的目录。
+
+| 方法 | 实际比较条件 |
+| --- | --- |
+| B0 / B1 | B0 由通用角色独立审阅一次。B1 固定四专科各做一次初审，以有效意见的相对多数给出标签。平票记暂缓，零有效意见记为无输出。 |
+| B2 / B3 | 二者读取同一条按事件路由、含定向讨论的轨迹。B2 取门控前的有效意见聚合，B3 取门控后的最终标签。 |
+| A1 / A3 / A4 | 分别在 B3 上单独移除前序事件、改为固定全员、关闭讨论。调用节省率的分母为 A3 的角色调用数，含讨论轮次。 |
+| A2 | 在冻结副本中尝试按证据生成扩展事件。无支持证据时使用 B3 轨迹。结果中记录实际使用的输入版本、触发事件和轨迹编号。 |
+
+工作台「智能流程与影像」可查看同截点的建议分工、影像检查登记和方法对照。「专科调度依据」显示实际运行的路由。若曾使用 `f8f6bc6` 的自动补齐生成过合成版本，请从补齐前的原始版本重算，再引用研究结果。本轮复算的样本量、标签分布及复核记录见[验收记录](docs/验收记录.md)。
+
 ## 真实模型适配器
 
 V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只用模拟 HTTP 上游测试，尚未使用真实凭据验证任何模型服务，也没有发起付费调用**。

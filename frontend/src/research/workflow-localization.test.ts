@@ -25,7 +25,7 @@ describe('Chinese localization dictionary (zh-dict)', () => {
     expect(formatFactValue(null)).toBe('未记录');
     expect(formatFactValue('Adenocarcinoma')).toBe('肺腺癌');
     expect(formatFactValue('Wildtype')).toBe('野生型（未见突变）');
-    expect(formatFactValue('CT')).toBe('胸部 CT 断层扫描');
+    expect(formatFactValue('CT')).toBe('CT 计算机断层扫描');
   });
 
   it('translates provenance sources, checks, conflicts, nodes, tools, rules, errors and providers', () => {
@@ -67,7 +67,7 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       trigger_event_title: '影像报告与附件归档（合成）',
       trigger_event_type: 'imaging',
       strategy_version: 'case-adaptive-workflow-v2',
-      clinical_phase: '多模态医学影像与病灶特征复核',
+      clinical_phase: '影像检查记录复核',
       complexity_level: 'elevated',
       complexity_label: '资料待补核查态',
       visible_event_count: 2,
@@ -112,7 +112,7 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
         can_auto_enrich: false,
         recommended_facts: {},
       },
-      imaging_summary: { study_count: 1, overall_qc_status: 'passed' },
+      imaging_summary: { study_count: 1, overall_qc_status: 'not_assessed', overall_record_status: 'documented' },
       predicted_decisions: {
         strict_rule_decision: 'NEED_MORE_INFORMATION',
         semantic_enriched_decision: 'NEED_MORE_INFORMATION',
@@ -124,56 +124,30 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       case_id: 'LUNG-SYN-001',
       case_version: 1,
       trigger_event_id: 'E002',
-      pipeline_version: 'medical-imaging-pipeline-v1',
+      pipeline_version: 'imaging-records-v2',
       study_count: 1,
-      overall_qc_status: 'passed',
-      studies: [
-        {
-          study_id: 'IMG_E002',
-          event_id: 'E002',
-          occurred_at: '2026-01-12',
-          title: '影像报告与附件归档',
-          modality: 'CT',
-          modality_label: '高分辨胸部增强 CT (HRCT)',
-          anatomical_site: '右肺上叶尖后段 (RUL)',
-          qc_status: 'passed',
-          qc_score: 94,
-          qc_message: '通过自动化影像质控',
-          dicom_metadata: {
-            series_uid: '1.2.840.113619.2.55.1234.1',
-            slice_thickness_mm: 1.25,
-            matrix_size: '512 × 512',
-            window_presets: {
-              lung: { label: '肺窗 (W:1500 / L:-600)', width: 1500, level: -600 },
-            },
-          },
-          radiomics: {
-            lesion_diameter_mm: 22.4,
-            hu_mean: -15,
-            suvmax: 4.6,
-            glcm_entropy: 4.32,
-            sphericity: 0.74,
-            lymph_node_mm: 9.5,
-            morphology_tags: ['分叶征', '短毛刺征'],
-          },
-          svg_slice: {
-            lesion_cx: 88,
-            lesion_cy: 104,
-            lesion_radius: 13,
-            contour_polygon: '100,104 95,112 88,118',
-            is_left_lung: false,
-            has_artifact_or_missing: false,
-            has_conflict_marker: false,
-          },
-          pipeline_steps: [
-            { step_id: 'dicom_normalization', title: 'DICOM 序列校验', status: 'passed', detail: '层厚 1.25mm' },
-          ],
-        },
-      ],
+      input_kind: 'event_metadata',
+      overall_qc_status: 'not_assessed',
+      overall_record_status: 'documented',
+      studies: [{
+        study_id: 'IMG_E002', event_id: 'E002', occurred_at: '2026-01-12', title: '影像报告与附件归档',
+        modality: null, anatomical_site: null, source_name: 'research_scenario_generator',
+        dataset_version: 'lung-scenarios-v1', synthetic: true, source_record_id: null,
+        source_record_locator: null, artifact_sha256: null, record_status: 'documented',
+        conflict_evidence_ids: [], record_fields: [{
+          fact_key: 'imaging_complete', value: true, evidence_id: 'E002:imaging_complete', source_field: null,
+        }],
+        qc_status: 'not_assessed', qc_score: null, dicom_metadata: null, radiomics: null, svg_slice: null,
+      }],
     });
-    expect(imaging.studies[0].radiomics.lesion_diameter_mm).toBe(22.4);
+    expect(imaging.studies[0].record_fields[0].evidence_id).toBe('E002:imaging_complete');
+    expect(imagingPipelineSchema.safeParse({
+      ...imaging, studies: [{ ...imaging.studies[0], qc_status: 'passed', radiomics: { lesion_diameter_mm: 22.4 } }],
+    }).success).toBe(false);
 
     const ablation = ablationMatrixSchema.parse({
+      protocol_version: 'mock-matrix-v2',
+      execution_mode: 'mock',
       case_id: 'LUNG-SYN-001',
       case_version: 1,
       trigger_event_id: 'E003',
@@ -184,12 +158,19 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       methods: [
         {
           method_id: 'B3',
+          trajectory_id: 'B3',
+          input_case_version: 1,
+          input_trigger_event_id: 'E003',
+          visible_events: 3,
           name: 'B3 · 完整门控工作流（本系统）',
           category: '核心机制',
           routing_strategy: '事件路由 + 安全门控',
           selected_agents: ['oncology', 'pathology'],
           agent_calls: 2,
           discussion_rounds: 0,
+          valid_opinions: 2,
+          failed_calls: 0,
+          gate_applied: true,
           pre_gate_decision: 'READY_FOR_REVIEW',
           final_decision: 'READY_FOR_REVIEW',
           missing_count: 0,
@@ -199,5 +180,10 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       ],
     });
     expect(ablation.call_saving_pct).toBe(50);
+    const empty = {
+      ...ablation.methods[0], method_id: 'B0', trajectory_id: 'B0', selected_agents: ['general_reviewer'],
+      agent_calls: 1, failed_calls: 1, valid_opinions: 0, gate_applied: false, pre_gate_decision: null, final_decision: null,
+    };
+    expect(ablationMatrixSchema.safeParse({ ...ablation, methods: [empty] }).success).toBe(true);
   });
 });

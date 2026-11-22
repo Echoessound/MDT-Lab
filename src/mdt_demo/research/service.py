@@ -24,6 +24,7 @@ from .workflow_designer import (
     evaluate_ablation_matrix,
     infer_semantic_completeness,
     process_case_imaging,
+    semantic_extension,
 )
 
 ROLES = ("oncology", "radiology", "surgery", "pathology")
@@ -107,30 +108,9 @@ class ResearchService:
         if trigger_event_id and trigger_event_id not in {event.event_id for event in case.timeline}:
             raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
         completeness = infer_semantic_completeness(case, trigger_event_id)
-        imaging = process_case_imaging(case, trigger_event_id)
-        target_event = next(
-            (e for e in case.timeline if e.event_id == completeness["trigger_event_id"]),
-            case.timeline[-1],
-        )
-        facts: dict[str, str | int | float | bool | None] = dict(completeness["recommended_facts"])
-        for missing_key in completeness["strict_missing"]:
-            if missing_key not in facts:
-                facts[missing_key] = True
-        if imaging["studies"]:
-            last_study = imaging["studies"][-1]
-            facts["imaging_qc_passed"] = last_study["qc_status"] == "passed"
-            facts["lesion_diameter_mm"] = last_study["radiomics"]["lesion_diameter_mm"]
-            facts["radiomics_suvmax"] = last_study["radiomics"]["suvmax"]
-        if not facts:
-            facts["observation_reviewed"] = True
-            facts["record_note"] = "自动化医疗流程质控与特征归档完成"
-        event_payload = {
-            "occurred_at": target_event.occurred_at.isoformat(),
-            "event_type": target_event.event_type,
-            "title": f"智能流程质控与影像/临床特征补齐（基于 {target_event.event_id} 合成扩展）",
-            "facts": facts,
-        }
-        return self.append_event(case_id, expected_version, event_payload)
+        if not completeness["can_auto_enrich"]:
+            raise APIError(422, "NO_SUPPORTED_ENRICHMENT", "此截点没有可凭已定位证据安全追加的研究标记。")
+        return self.append_event(case_id, expected_version, semantic_extension(case, completeness))
 
     def runs(self) -> list[dict]:
         return self.store.runs()

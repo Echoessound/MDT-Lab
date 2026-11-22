@@ -22,7 +22,7 @@ export function CaseSources({ item }: { item: ResearchCase }) {
     {item.data_notes.map(note => <p className="subtle-note" key={note}>{note}</p>)}
     {!!item.unplaced_records.length && <details open>
       <summary>未定位时间戳的关联临床资料（{item.unplaced_records.length} 组）</summary>
-      <p className="subtle-note">原表未提供精确采样日期，为防止历史时点信息泄漏，默认不直接混入历史截点提示词；可通过「智能流程与影像」页签一键锚定推导。</p>
+      <p className="subtle-note">这些资料缺少可核实的可用日期，仅供来源核查。历史审阅和自动补齐均使用截至触发事件已有日期的记录。</p>
       {item.unplaced_records.map(record => <div className="unplaced-record" key={record.record_id}>
         <h3>{record.title}</h3>
         <dl className="event-facts">{Object.entries(record.facts).map(([key, value]) => <div key={key}><dt>{factKeyLabel(key)}</dt><dd>{formatFactValue(value)}</dd></div>)}</dl>

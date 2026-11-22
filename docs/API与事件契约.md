@@ -19,6 +19,10 @@
 | GET | `/cases/{case_id}?version=1` | 指定版本完整病例；省略 version 返回最新 |
 | POST | `/cases/{case_id}/events` | 追加合成事件并返回新版本，201 |
 | GET | `/cases/{case_id}/routing?trigger_event_id=E002&version=1&routing_mode=event` | 所选事件与版本的路由预览 |
+| GET | `/cases/{case_id}/workflow-plan` | 依据可见证据生成审阅计划、建议分工及可追溯补齐建议。实际执行的角色由 routing 接口给出。 |
+| GET | `/cases/{case_id}/imaging` | 截点内的影像登记、来源列、证据编号及记录矛盾。仅有事件元数据时，像素质控状态为 `not_assessed`，DICOM、组学、分割与评分为 `null`。 |
+| GET | `/cases/{case_id}/ablation` | 执行 `mock-matrix-v2` 标准规则对照，返回 B0–B3、A1–A4 的方法条件、实际调用和标签。 |
+| POST | `/cases/{case_id}/auto-enrich` | 按 `expected_version` 和可选 `trigger_event_id` 生成有证据依据的合成扩展版本，成功返回 201。 |
 | POST | `/runs` | 创建运行并立即返回快照，202 |
 | GET | `/runs` | 最近 100 条运行快照 |
 | GET | `/runs/{run_id}` | 权威状态、角色、进度、门控与最后序号 |
@@ -33,6 +37,10 @@
 | POST | `/settings/llm/test` | 使用已保存配置发短请求验证连接，不含病例 |
 
 普通成功响应为 `{ "data": ... }`，审计分页的 data 为 `{ "events": [], "next_seq": 0 }`。错误至少包含 `{ "error": { "code": "...", "message": "..." } }`，部分共用错误处理还返回 `details`、`retryable`、`request_id`。文件下载与 SSE 不使用 data 外层。客户端应允许附加字段，且不能依赖模型错误返回原始异常或响应正文。
+
+### 截点分析与补齐
+
+工作流计划、影像登记和方法对照均接受 `version` 和 `trigger_event_id`。省略时使用最新版本或该版本末次事件，显式指定不存在的事件返回 404。补齐建议的 `source_evidence_id` 指向冻结事实，`rule_id` 标识映射规则。只有 `can_auto_enrich` 为真时才可写入。无可安全追加的事实返回 422 `NO_SUPPORTED_ENRICHMENT`，版本落后返回 409 `CASE_VERSION_CONFLICT`。当前支持从有日期的病理事件中明确且符合词表的组织学分型映射研究标记。仅有检查登记或无日期汇总时，缺件继续保留。有矛盾的分型须先复核，显式的缺失标记也会阻止自动补齐。
 
 ### 创建运行
 

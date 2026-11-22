@@ -3,6 +3,7 @@
 from datetime import date
 import re
 from typing import Annotated, Literal, Self
+from uuid import uuid4
 
 from pydantic import (
     BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr,
@@ -142,6 +143,26 @@ class ResearchCase(Model):
             if event.introduced_in_version > self.version:
                 raise ValueError("事件不能来自未来病例版本")
         return self
+
+
+def case_with_synthetic_event(case: dict, event: dict) -> tuple[dict, dict]:
+    """Build an immutable revision for persistence or an offline comparison."""
+    version = case["version"] + 1
+    created = {
+        **event, "event_id": event.get("event_id") or f"EVT_{uuid4().hex[:16]}",
+        "source": "research_scenario_generator", "source_record_id": None,
+        "synthetic_extension": True, "confidence": "synthetic", "introduced_in_version": version,
+    }
+    provenance = case["provenance"]
+    if not any(source["source_name"] == created["source"] for source in provenance):
+        provenance = [*provenance, {
+            "source_name": created["source"], "dataset_version": "research-extensions-v1",
+            "license": "项目自建合成扩展", "synthetic": True, "source_url": None,
+        }]
+    return {
+        **case, "version": version, "timeline": [*case["timeline"], created], "provenance": provenance,
+        "case_kind": "mixed" if case["case_kind"] == "public_research" else case["case_kind"],
+    }, created
 
 
 class RunRequest(Model):

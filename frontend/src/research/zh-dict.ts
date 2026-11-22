@@ -87,7 +87,7 @@ const valueTranslations: Record<string, string> = {
   former: '既往吸烟（已戒烟）',
   nonsmoker: '无吸烟史',
   'never smoker': '无吸烟史',
-  ct: '胸部 CT 断层扫描',
+  ct: 'CT 计算机断层扫描',
   pet: 'PET 正电子代谢显像',
   'pet-ct': 'PET-CT 融合显像',
   mri: '磁共振成像 (MRI)',

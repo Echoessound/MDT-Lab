@@ -2,29 +2,27 @@
 semantic completeness inference, and B0-B3 ablation experiment matrix.
 
 This module bridges external public datasets (Synthea, TCIA NSCLC-Radiogenomics)
-and synthetic cases with deterministic imaging feature extraction, automated
+and synthetic cases with traceable imaging metadata, automated
 workflow DAG generation, and controlled single-factor ablation comparisons.
 """
 
 from __future__ import annotations
 
-from copy import deepcopy
-import hashlib
-import math
+from collections import Counter
 
 from .engine import (
     REQUIRED,
     ROUTES,
-    detect_conflicts,
     evidence_registry,
     execute,
     freeze_context,
+    single_mock_review,
     source_conflicts,
 )
-from .schemas import ROLES, ResearchCase, RunRequest
+from .schemas import ROLES, ClinicalEvent, ResearchCase, RunRequest, case_with_synthetic_event
 
 WORKFLOW_DESIGNER_VERSION = "case-adaptive-workflow-v2"
-IMAGING_PIPELINE_VERSION = "medical-imaging-pipeline-v1"
+IMAGING_PIPELINE_VERSION = "imaging-records-v2"
 
 FACT_LABELS_ZH: dict[str, str] = {
     "imaging_complete": "影像资料齐备",
@@ -86,7 +84,7 @@ ROLE_LABELS_ZH: dict[str, str] = {
 
 PHASE_BY_EVENT: dict[str, str] = {
     "diagnosis": "初诊基线多学科综合评估",
-    "imaging": "多模态医学影像与病灶特征复核",
+    "imaging": "影像检查记录复核",
     "pathology": "组织病理学确诊与分型审阅",
     "molecular_test": "分子病理与驱动基因靶点会诊",
     "procedure": "胸外科手术与有创操作记录复核",
@@ -99,368 +97,193 @@ PHASE_BY_EVENT: dict[str, str] = {
     "observation": "常规临床观察指标审阅",
 }
 
-ANATOMICAL_LOBES = (
-    "右肺上叶尖后段 (RUL)",
-    "左肺上叶固有段 (LUL)",
-    "右肺下叶背段 (RLL)",
-    "右肺中叶外侧段 (RML)",
-    "左肺下叶基底段 (LLL)",
-)
-
-
-def _deterministic_seed(text: str) -> int:
-    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    return int(digest[:8], 16)
+# Only explicit, structured histology results in a dated pathology record are eligible.
+# Free text, diagnosis codes, a scan registration and unplaced cohort columns are insufficient.
+PATHOLOGY_HISTOLOGIES = {
+    "adenocarcinoma", "squamous cell carcinoma", "large cell carcinoma",
+    "肺腺癌", "腺癌", "肺鳞状细胞癌", "鳞状细胞癌", "肺大细胞癌", "大细胞癌",
+}
+HISTOLOGY_RULE = "dated_pathology_histology_v1"
+EVENT_ID_ALPHABET = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 
 def _resolve_trigger_id(case: ResearchCase, trigger_event_id: str | None) -> str:
-    if trigger_event_id and any(e.event_id == trigger_event_id for e in case.timeline):
-        return trigger_event_id
-    return case.timeline[-1].event_id
+    # freeze_context rejects an explicitly supplied unknown ID.
+    return case.timeline[-1].event_id if trigger_event_id is None else trigger_event_id
+
+
+def _adjacent_extension_id(case: ResearchCase, trigger: ClinicalEvent) -> str | None:
+    """Find an ID directly after the trigger without crossing any same-day event."""
+    by_id = {event.event_id: event for event in case.timeline}
+    candidate = trigger.event_id
+    while True:
+        if len(candidate) < 80:
+            candidate += EVENT_ID_ALPHABET[0]
+        else:
+            prefix = candidate.rstrip(EVENT_ID_ALPHABET[-1])
+            if not prefix:
+                return None
+            candidate = prefix[:-1] + EVENT_ID_ALPHABET[EVENT_ID_ALPHABET.index(prefix[-1]) + 1]
+        existing = by_id.get(candidate)
+        if existing is None:
+            return candidate
+        if existing.occurred_at == trigger.occurred_at:
+            return None
+
+
+def _dated_pathology_result(frozen: ResearchCase) -> ClinicalEvent | None:
+    source = next((event for event in reversed(frozen.timeline)
+                   if "histology" in event.facts or event.facts.get("histology_missing_reason")), None)
+    if source is None or source.event_type != "pathology" or source.facts.get("histology_missing_reason"):
+        return None
+    value = source.facts.get("histology")
+    if not isinstance(value, str) or value.strip().casefold() not in PATHOLOGY_HISTOLOGIES:
+        return None
+    if any(event.facts.get("supersedes_event_id") == source.event_id for event in frozen.timeline):
+        return None
+    if any(item["conflict_id"] == "source_histology" for item in source_conflicts(frozen, list(ROLES))):
+        return None
+    return source
 
 
 def infer_semantic_completeness(case: ResearchCase, trigger_event_id: str | None = None) -> dict:
-    """Analyze strict boolean completeness vs semantically derived completeness from clinical/imaging facts."""
-    target_id = _resolve_trigger_id(case, trigger_event_id)
-    frozen = freeze_context(case, target_id)
+    frozen = freeze_context(case, _resolve_trigger_id(case, trigger_event_id))
     trigger = frozen.timeline[-1]
-    registry = evidence_registry(frozen)
-    latest_facts: dict[str, dict] = {}
-    for item in registry:
-        latest_facts[item["fact_key"]] = item
-
     required = REQUIRED[trigger.event_type]
-    strict_missing = [
-        key for key in required
-        if key not in latest_facts or latest_facts[key]["value"] is not True
-    ]
-
-    inferred: list[dict] = []
-    derived_map: dict[str, bool] = {}
-
-    # 1. Check imaging completeness from raw imaging events (e.g. TCIA CT/PET or Synthea imaging_studies)
-    explicit_imaging = latest_facts.get("imaging_complete")
-    if explicit_imaging is None:
-        imaging_events = [
-            e for e in frozen.timeline
-            if e.event_type == "imaging" or e.facts.get("modality") in {"CT", "PET", "MR", "DX", "CR"}
-        ]
-        if imaging_events:
-            last_img = imaging_events[-1]
-            modality = last_img.facts.get("modality") or "胸部影像"
+    latest = {ref["fact_key"]: ref for ref in evidence_registry(frozen)}
+    strict_missing = [key for key in required if latest.get(key, {}).get("value") is not True]
+    inferred = []
+    if ("pathology_confirmed" in strict_missing and "pathology_confirmed" not in latest
+            and "pathology_confirmed_missing_reason" not in latest):
+        source = _dated_pathology_result(frozen)
+        if source is not None:
+            evidence_id = latest["histology"]["evidence_id"]
             inferred.append({
-                "fact_key": "imaging_complete",
-                "fact_label": FACT_LABELS_ZH.get("imaging_complete", "影像资料齐备"),
-                "inferred_value": True,
-                "source_event_id": last_img.event_id,
-                "confidence": "derived",
-                "reason": f"检测到已归档的 {modality} 影像检查事件（{last_img.event_id}，{last_img.occurred_at}），经影像质控管线推导影像记录完备。",
+                "fact_key": "pathology_confirmed", "fact_label": FACT_LABELS_ZH["pathology_confirmed"],
+                "inferred_value": True, "confidence": "derived", "rule_id": HISTOLOGY_RULE,
+                "source_event_id": source.event_id, "source_evidence_id": evidence_id,
+                "reason": f"{source.occurred_at} 的病理事件载有明确组织学分型，依据 {evidence_id} 映射研究资料标记。",
             })
-            derived_map["imaging_complete"] = True
 
-    # 2. Check pathology confirmation from diagnosis/pathology events or unplaced baseline records
-    explicit_pathology = latest_facts.get("pathology_confirmed")
-    if explicit_pathology is None:
-        path_events = [
-            e for e in frozen.timeline
-            if e.event_type in {"pathology", "diagnosis"} and (
-                e.facts.get("histology") or e.facts.get("code") or e.facts.get("description")
-            )
-        ]
-        unplaced_histology = next(
-            (r for r in case.unplaced_records if r.facts.get("histology")),
-            None,
-        )
-        if path_events:
-            last_path = path_events[-1]
-            desc = last_path.facts.get("histology") or last_path.facts.get("description") or last_path.title
-            inferred.append({
-                "fact_key": "pathology_confirmed",
-                "fact_label": FACT_LABELS_ZH.get("pathology_confirmed", "病理学已确诊"),
-                "inferred_value": True,
-                "source_event_id": last_path.event_id,
-                "confidence": "derived",
-                "reason": f"从病程事件 {last_path.event_id} 识别出结构化诊断/组织学记录（{desc}），推导病理基线已确认。",
-            })
-            derived_map["pathology_confirmed"] = True
-        elif unplaced_histology:
-            hist_val = unplaced_histology.facts.get("histology")
-            inferred.append({
-                "fact_key": "pathology_confirmed",
-                "fact_label": FACT_LABELS_ZH.get("pathology_confirmed", "病理学已确诊"),
-                "inferred_value": True,
-                "source_event_id": trigger.event_id,
-                "confidence": "derived",
-                "reason": f"公开数据集基线表含组织学分型（{hist_val}），因原表未附采样时间戳归入未定位资料；锚定至触发时点后可补齐病理确诊标记。",
-            })
-            derived_map["pathology_confirmed"] = True
-
-    # 3. Check molecular completeness from molecular events or unplaced molecular records
-    explicit_molecular = latest_facts.get("molecular_complete")
-    if explicit_molecular is None:
-        mol_events = [e for e in frozen.timeline if e.event_type == "molecular_test"]
-        unplaced_mol = next(
-            (
-                r for r in case.unplaced_records
-                if any(r.facts.get(k) is not None for k in ("egfr_status", "kras_status", "alk_status"))
-            ),
-            None,
-        )
-        if mol_events and mol_events[-1].facts.get("molecular_complete") is not False:
-            last_mol = mol_events[-1]
-            inferred.append({
-                "fact_key": "molecular_complete",
-                "fact_label": FACT_LABELS_ZH.get("molecular_complete", "分子检测齐备"),
-                "inferred_value": True,
-                "source_event_id": last_mol.event_id,
-                "confidence": "derived",
-                "reason": f"检测到分子检测事件 {last_mol.event_id}，推导分子分型资料已归档。",
-            })
-            derived_map["molecular_complete"] = True
-        elif unplaced_mol:
-            markers = [
-                f"{k.split('_')[0].upper()}={unplaced_mol.facts.get(k)}"
-                for k in ("egfr_status", "kras_status", "alk_status")
-                if unplaced_mol.facts.get(k) is not None
-            ]
-            inferred.append({
-                "fact_key": "molecular_complete",
-                "fact_label": FACT_LABELS_ZH.get("molecular_complete", "分子检测齐备"),
-                "inferred_value": True,
-                "source_event_id": trigger.event_id,
-                "confidence": "derived",
-                "reason": f"公开数据集分子表含有效检测结果（{', '.join(markers)}），锚定时间后可补齐分子完备标记。",
-            })
-            derived_map["molecular_complete"] = True
-
-    # 4. Check follow-up / procedure / treatment / observation completeness from corresponding events
-    for event_kind, req_key, label in [
-        ("follow_up", "follow_up_complete", "随访资料齐备"),
-        ("procedure", "procedure_record_complete", "手术与操作记录齐备"),
-        ("treatment", "treatment_record_complete", "治疗方案记录齐备"),
-        ("medication", "treatment_record_complete", "治疗方案记录齐备"),
-        ("observation", "observation_reviewed", "临床观察已审阅"),
-        ("recurrence", "progression_confirmed", "疾病进展已确认"),
-    ]:
-        if latest_facts.get(req_key) is None:
-            matched = [e for e in frozen.timeline if e.event_type == event_kind]
-            if matched:
-                last_ev = matched[-1]
-                inferred.append({
-                    "fact_key": req_key,
-                    "fact_label": label,
-                    "inferred_value": True,
-                    "source_event_id": last_ev.event_id,
-                    "confidence": "derived",
-                    "reason": f"检测到来源事件 {last_ev.event_id}（{last_ev.title}），自动映射对应阶段临床资料完备标记。",
-                })
-                derived_map[req_key] = True
-
-    post_missing = [
-        key for key in strict_missing
-        if not derived_map.get(key, False)
-    ]
-
-    total_req = max(1, len(required))
-    strict_score = round(((total_req - len(strict_missing)) / total_req) * 100)
-    semantic_score = round(((total_req - len(post_missing)) / total_req) * 100)
-
-    recommended_facts: dict[str, str | int | float | bool] = {}
-    for item in inferred:
-        recommended_facts[item["fact_key"]] = item["inferred_value"]
-    for r in case.unplaced_records:
-        if r.facts.get("histology") and "histology" not in latest_facts:
-            recommended_facts["histology"] = str(r.facts["histology"])
-        for mol_key in ("egfr_status", "kras_status", "alk_status"):
-            if r.facts.get(mol_key) is not None and mol_key not in latest_facts:
-                recommended_facts[mol_key] = str(r.facts[mol_key])
-
+    recommended = {item["fact_key"]: item["inferred_value"] for item in inferred}
+    post_missing = [key for key in strict_missing if key not in recommended]
+    generator = next((src for src in case.provenance if src.source_name == "research_scenario_generator"), None)
+    has_source_slot = generator.synthetic if generator is not None else len(case.provenance) < 100
+    extension_id = None
+    if recommended and len(case.timeline) < 1000 and has_source_slot:
+        extension_id = _adjacent_extension_id(case, trigger)
     return {
-        "trigger_event_id": target_id,
+        "trigger_event_id": trigger.event_id,
         "trigger_event_type": trigger.event_type,
         "required_fields": [
-            {
-                "fact_key": key,
-                "fact_label": FACT_LABELS_ZH.get(key, key),
-                "strict_satisfied": key not in strict_missing,
-                "semantic_satisfied": key not in post_missing,
-            }
+            {"fact_key": key, "fact_label": FACT_LABELS_ZH.get(key, key),
+             "strict_satisfied": key not in strict_missing, "semantic_satisfied": key not in post_missing}
             for key in required
         ],
         "strict_missing": strict_missing,
-        "strict_missing_labels": [FACT_LABELS_ZH.get(k, k) for k in strict_missing],
+        "strict_missing_labels": [FACT_LABELS_ZH.get(key, key) for key in strict_missing],
         "semantic_inferred": inferred,
         "post_inference_missing": post_missing,
-        "post_inference_missing_labels": [FACT_LABELS_ZH.get(k, k) for k in post_missing],
-        "strict_completeness_score": strict_score,
-        "semantic_completeness_score": semantic_score,
-        "can_auto_enrich": bool(recommended_facts) and (len(post_missing) < len(strict_missing) or bool(case.unplaced_records)),
-        "recommended_facts": recommended_facts,
+        "post_inference_missing_labels": [FACT_LABELS_ZH.get(key, key) for key in post_missing],
+        "strict_completeness_score": round(100 * (len(required) - len(strict_missing)) / len(required)),
+        "semantic_completeness_score": round(100 * (len(required) - len(post_missing)) / len(required)),
+        "can_auto_enrich": extension_id is not None,
+        "recommended_facts": recommended,
+        "extension_event_id": extension_id,
     }
 
 
+def semantic_extension(case: ResearchCase, completeness: dict) -> dict:
+    """Prepare an append-only event with a reproducible reference for each derived field."""
+    if not completeness["can_auto_enrich"]:
+        raise ValueError("No supported semantic extension is available")
+    trigger = next(event for event in case.timeline if event.event_id == completeness["trigger_event_id"])
+    return {
+        "event_id": completeness["extension_event_id"], "occurred_at": trigger.occurred_at.isoformat(),
+        "event_type": trigger.event_type, "title": f"基于 {trigger.event_id} 已有证据的研究标记补齐",
+        "facts": completeness["recommended_facts"],
+        "source_record_locator": f"{case.case_id}@v{case.version}/{trigger.event_id}",
+        "source_fields": {item["fact_key"]: item["source_evidence_id"] for item in completeness["semantic_inferred"]},
+        "time_note": f"按 {HISTOLOGY_RULE} 派生；与触发事件同日，技术排序紧随该截点。",
+    }
+
+
+def build_semantic_version(case: ResearchCase, completeness: dict) -> tuple[ResearchCase, str]:
+    """Build the same isolated revision used by the append-only enrichment endpoint."""
+    event = semantic_extension(case, completeness)
+    payload, created = case_with_synthetic_event(case.model_dump(mode="json"), event)
+    return ResearchCase.model_validate(payload), created["event_id"]
+
+
 def process_case_imaging(case: ResearchCase, trigger_event_id: str | None = None) -> dict:
-    """Process imaging events in the case timeline, extracting deterministic radiomics,
-    quality control status, and SVG cross-sectional slice descriptors for the workbench."""
+    """List source-backed imaging records visible at the cutoff. Inputs contain no pixels."""
     target_id = _resolve_trigger_id(case, trigger_event_id)
     frozen = freeze_context(case, target_id)
-    conflicts = source_conflicts(frozen, list(ROLES))
-    has_source_conflict = any(c["dimension"] == "source_fact_conflict" for c in conflicts)
+    sources = {source.source_name: source for source in frozen.provenance}
 
-    imaging_events = [
-        e for e in frozen.timeline
-        if e.event_type == "imaging"
-        or "modality" in e.facts
-        or "imaging_record" in e.facts
-    ]
+    # Associate each conflict with the records and fields actually named by the evidence.
+    conflict_refs: dict[str, list[str]] = {}
+    for conflict in source_conflicts(frozen, list(ROLES)):
+        refs = conflict["evidence_ids"]
+        for ref in refs:
+            event_id, key = ref.split(":", 1)
+            if key in {"imaging_complete", "progression_confirmed"}:
+                conflict_refs.setdefault(event_id, []).extend(refs)
 
     studies = []
-    for index, event in enumerate(imaging_events, 1):
-        seed = _deterministic_seed(f"{case.case_id}:{event.event_id}:{event.occurred_at}")
-        raw_modality = str(event.facts.get("modality") or ("PET" if "PET" in event.title.upper() else "CT")).upper()
-        modality = "PET-CT" if "PET" in raw_modality else "CT"
-        modality_label = "PET-CT 全身正电子代谢显像" if modality == "PET-CT" else "高分辨胸部增强 CT (HRCT)"
-        lobe = str(event.facts.get("body_site") or ANATOMICAL_LOBES[seed % len(ANATOMICAL_LOBES)])
-
-        explicit_complete = event.facts.get("imaging_complete")
-        is_missing_attachment = explicit_complete is False
-
-        # Deterministic radiomics & geometry parameters
-        diameter_mm = round(14.5 + (seed % 240) / 10.0, 1)
-        hu_mean = -55 + (seed % 95)
-        suvmax = round(3.2 + (seed % 85) / 10.0, 1) if modality == "PET-CT" or event.facts.get("progression_confirmed") else round(1.8 + (seed % 25) / 10.0, 1)
-        entropy = round(3.85 + (seed % 140) / 100.0, 2)
-        sphericity = round(0.62 + (seed % 28) / 100.0, 2)
-        lymph_mm = round(6.0 + (seed % 110) / 10.0, 1)
-
-        # SVG slice contour coordinates (center inside right or left lung field)
-        is_left = "左" in lobe
-        cx = 172 if is_left else 88
-        cy = 104 + ((seed >> 4) % 28) - 14
-        base_r = max(10, min(24, round(diameter_mm * 0.58)))
-        contour_points = []
-        num_pts = 12
-        for i in range(num_pts):
-            angle = (2 * math.pi * i) / num_pts
-            spike = 1.22 if i % 2 == 0 else 0.84
-            r = base_r * spike
-            px = round(cx + r * math.cos(angle), 1)
-            py = round(cy + r * math.sin(angle), 1)
-            contour_points.append(f"{px},{py}")
-
-        if is_missing_attachment:
-            qc_status = "incomplete"
-            qc_score = 42
-            qc_message = "影像序列附件尚未归档，仅存在检查登记占位记录，质控阻断。"
-        elif has_source_conflict and event.occurred_at == frozen.timeline[-1].occurred_at or (
-            has_source_conflict and "progression_confirmed" in event.facts
-        ):
-            qc_status = "conflict"
-            qc_score = 58
-            qc_message = "同日存在多源相反影像评估结论且无明确替代声明，需人工影像复核。"
+    for event in frozen.timeline:
+        if event.event_type != "imaging" and not any(key in event.facts for key in ("modality", "imaging_record")):
+            continue
+        source = sources[event.source]
+        refs = conflict_refs.get(event.event_id, [])
+        if refs:
+            record_status = "conflict"
+        elif event.facts.get("imaging_complete") is False:
+            record_status = "incomplete"
         else:
-            qc_status = "passed"
-            qc_score = 94
-            qc_message = "DICOM 序列层厚、对比度与解剖覆盖面完整，通过自动化影像质控。"
-
-        morphology = ["分叶征"]
-        if diameter_mm >= 20:
-            morphology.append("短毛刺征")
-        if hu_mean > -20:
-            morphology.append("实性高密度成分")
-        else:
-            morphology.append("混合磨玻璃密度 (mGGN)")
-        if suvmax >= 4.0:
-            morphology.append("FDG 高代谢浓聚")
-
-        pipeline_steps = [
-            {
-                "step_id": "dicom_normalization",
-                "title": "DICOM 序列校验与窗宽窗位归一化",
-                "status": "warning" if is_missing_attachment else "passed",
-                "detail": "层厚 1.25mm · 矩阵 512×512 · 肺窗(W1500/L-600) 与纵隔窗(W350/L40) 双通道对齐"
-                if not is_missing_attachment else "未检测到完整 DICOM 像素序列，仅读取登记元数据",
-            },
-            {
-                "step_id": "roi_segmentation",
-                "title": "肺实质与靶病灶 ROI 自动分割",
-                "status": "skipped" if is_missing_attachment else "passed",
-                "detail": f"定位于 {lobe} · 靶病灶长径 {diameter_mm} mm · 征象：{'、'.join(morphology)}"
-                if not is_missing_attachment else "因图像附件缺失跳过三维病灶分割",
-            },
-            {
-                "step_id": "radiomics_extraction",
-                "title": "影像组学与代谢定量特征提取",
-                "status": "skipped" if is_missing_attachment else "passed",
-                "detail": f"平均 CT 值 {hu_mean} HU · 纹理熵 {entropy} · 球形度 {sphericity} · SUVmax {suvmax}"
-                if not is_missing_attachment else "待补充图像序列后提取组学特征",
-            },
-            {
-                "step_id": "imaging_qc_verification",
-                "title": "影像质控与多源一致性门控",
-                "status": "passed" if qc_status == "passed" else "blocked" if qc_status == "conflict" else "warning",
-                "detail": qc_message,
-            },
-        ]
-
+            record_status = "documented"
+        # Research JSON can contain arbitrary scalar values. Only use strings as display labels.
+        modality = event.facts.get("modality")
+        site = event.facts.get("body_site")
         studies.append({
             "study_id": f"IMG_{event.event_id}",
             "event_id": event.event_id,
-            "occurred_at": str(event.occurred_at),
+            "occurred_at": event.occurred_at.isoformat(),
             "title": event.title,
-            "modality": modality,
-            "modality_label": modality_label,
-            "anatomical_site": lobe,
-            "qc_status": qc_status,
-            "qc_score": qc_score,
-            "qc_message": qc_message,
-            "dicom_metadata": {
-                "series_uid": f"1.2.840.113619.2.55.{seed % 9000 + 1000}.{index}",
-                "slice_thickness_mm": 3.0 if modality == "PET-CT" else 1.25,
-                "matrix_size": "512 × 512",
-                "window_presets": {
-                    "lung": {"label": "肺窗 (W:1500 / L:-600)", "width": 1500, "level": -600},
-                    "mediastinal": {"label": "纵隔窗 (W:350 / L:40)", "width": 350, "level": 40},
-                    "pet": {"label": "PET 代谢伪彩 (SUV 0-10)", "width": 10, "level": 5},
-                },
-            },
-            "radiomics": {
-                "lesion_diameter_mm": diameter_mm,
-                "hu_mean": hu_mean,
-                "suvmax": suvmax,
-                "glcm_entropy": entropy,
-                "sphericity": sphericity,
-                "lymph_node_mm": lymph_mm,
-                "morphology_tags": morphology,
-            },
-            "svg_slice": {
-                "lesion_cx": cx,
-                "lesion_cy": cy,
-                "lesion_radius": base_r,
-                "contour_polygon": " ".join(contour_points),
-                "is_left_lung": is_left,
-                "has_artifact_or_missing": is_missing_attachment,
-                "has_conflict_marker": qc_status == "conflict",
-            },
-            "pipeline_steps": pipeline_steps,
+            "modality": modality if isinstance(modality, str) and modality.strip() else None,
+            "anatomical_site": site if isinstance(site, str) and site.strip() else None,
+            "source_name": source.source_name,
+            "dataset_version": source.dataset_version,
+            "synthetic": source.synthetic,
+            "artifact_sha256": source.artifact_sha256,
+            "source_record_id": event.source_record_id,
+            "source_record_locator": event.source_record_locator,
+            "record_status": record_status,
+            "conflict_evidence_ids": list(dict.fromkeys(refs)),
+            "record_fields": [
+                {"fact_key": key, "value": event.facts[key], "evidence_id": f"{event.event_id}:{key}",
+                 "source_field": event.source_fields.get(key)}
+                for key in ("modality", "body_site", "recorded_date", "description", "imaging_record",
+                            "imaging_complete", "progression_confirmed") if key in event.facts
+            ],
+            "qc_status": "not_assessed",
+            "qc_score": None,
+            "dicom_metadata": None,
+            "radiomics": None,
+            "svg_slice": None,
         })
 
-    if not studies:
-        overall_qc = "no_imaging"
-    elif any(s["qc_status"] == "conflict" for s in studies):
-        overall_qc = "conflict"
-    elif any(s["qc_status"] == "incomplete" for s in studies):
-        overall_qc = "warning"
-    else:
-        overall_qc = "passed"
-
+    statuses = {study["record_status"] for study in studies}
+    overall = next((status for status in ("conflict", "incomplete", "documented") if status in statuses), "no_studies")
     return {
         "case_id": case.case_id,
         "case_version": case.version,
         "trigger_event_id": target_id,
         "pipeline_version": IMAGING_PIPELINE_VERSION,
+        "input_kind": "event_metadata",
         "study_count": len(studies),
-        "overall_qc_status": overall_qc,
+        "overall_record_status": overall,
+        "overall_qc_status": "not_assessed",
         "studies": studies,
     }
 
@@ -484,7 +307,7 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
     has_procedure = any(e.event_type == "procedure" for e in frozen.timeline)
 
     if has_imaging and "radiology" not in adaptive_selected and (
-        imaging["overall_qc_status"] in {"warning", "conflict"} or trigger.event_type in {"diagnosis", "progression", "recurrence", "follow_up"}
+        imaging["overall_record_status"] in {"incomplete", "conflict"} or trigger.event_type in {"diagnosis", "progression", "recurrence", "follow_up"}
     ):
         adaptive_selected.append("radiology")
     if has_pathology and "pathology" not in adaptive_selected and completeness["strict_missing"]:
@@ -505,11 +328,11 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
             ],
         },
         "radiology": {
-            "focus": "执行多模态影像质控、靶病灶解剖定位与影像组学定量评估",
+            "focus": "核对影像登记的日期、来源和资料缺口",
             "tasks": [
-                f"审阅 {imaging['study_count']} 份影像检查序列的层厚、造影与 ROI 分割特征",
-                "核查病灶大小变化、代谢活性 (SUVmax) 及同日影像记录一致性",
-                "确认影像报告与原始 DICOM 序列元数据是否齐备",
+                f"审阅 {imaging['study_count']} 条影像登记及其原始字段",
+                "核查同日影像记录之间的矛盾和证据编号",
+                "记录需要补充的检查报告或影像附件",
             ],
         },
         "pathology": {
@@ -524,7 +347,7 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
             "focus": "评估外科可切除性边界、围手术期操作记录与局部复发风险",
             "tasks": [
                 "核对手术/有创操作记录及病理切缘、TNM 分期一致性",
-                "结合影像科病灶解剖定位评估局部干预可行性",
+                "核对已有影像登记与围手术期资料的时间顺序",
             ],
         },
     }
@@ -537,9 +360,9 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
             "agent_id": role,
             "agent_label": ROLE_LABELS_ZH[role],
             "selected": in_adaptive,
-            "routing_type": "基础事件命中" if in_base else "案例特征动态增补" if in_adaptive else "按需跳过（节省调用）",
+            "routing_type": "基础事件命中" if in_base else "案例特征建议增补" if in_adaptive else "本计划未建议",
             "focus": info["focus"],
-            "clinical_tasks": info["tasks"] if in_adaptive else ["当前触发事件无需该专科介入，跳过调用以降低开销。"],
+            "clinical_tasks": info["tasks"] if in_adaptive else ["当前计划中未列出该专科的审阅任务。"],
         })
 
     if conflicts:
@@ -565,14 +388,14 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
         {
             "stage_id": "stage_imaging_pipeline",
             "step_number": 2,
-            "title": "多模态医学影像特征提取与质控",
+            "title": "影像检查登记与来源核对",
             "category": "imaging",
             "status": "active" if imaging["study_count"] > 0 else "skipped",
             "automated_operator": "process_case_imaging",
             "description": (
-                f"自动处理 {imaging['study_count']} 份 {imaging['studies'][-1]['modality']} 影像序列，完成病灶 ROI 分割、组学特征提取（长径 {imaging['studies'][-1]['radiomics']['lesion_diameter_mm']}mm）与质控校验。"
+                f"截至触发点共 {imaging['study_count']} 条影像登记，可核对来源及同日相反记录。当前输入仅包含事件元数据。"
                 if imaging["study_count"] > 0
-                else "当前截点前无影像检查事件，自动跳过影像特征算子。"
+                else "当前截点前没有影像检查登记。"
             ),
         },
         {
@@ -591,11 +414,11 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
         {
             "stage_id": "stage_specialist_dispatch",
             "step_number": 4,
-            "title": "案例自适应多专科序贯调度",
+            "title": "按病例资料建议参与专科",
             "category": "specialist",
             "status": "active",
-            "automated_operator": "route_case",
-            "description": f"针对「{PHASE_BY_EVENT.get(trigger.event_type, trigger.event_type)}」阶段，调度 {'、'.join(ROLE_LABELS_ZH[r] for r in adaptive_selected)}（共 {len(adaptive_selected)}/{len(ROLES)} 科），跳过无关专科以节省模型调用。",
+            "automated_operator": "design_medical_workflow",
+            "description": f"针对「{PHASE_BY_EVENT.get(trigger.event_type, trigger.event_type)}」阶段，建议 {'、'.join(ROLE_LABELS_ZH[r] for r in adaptive_selected)}（共 {len(adaptive_selected)}/{len(ROLES)} 科）参与。实际运行按事件路由或固定全员配置选取专科。",
         },
         {
             "stage_id": "stage_conflict_arbitration",
@@ -654,6 +477,7 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
         "imaging_summary": {
             "study_count": imaging["study_count"],
             "overall_qc_status": imaging["overall_qc_status"],
+            "overall_record_status": imaging["overall_record_status"],
         },
         "predicted_decisions": {
             "strict_rule_decision": strict_predicted,
@@ -662,172 +486,93 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
     }
 
 
+def _plurality(opinions: list[dict]) -> str | None:
+    """Plurality of valid opinions, deferral on ties, no output on an empty set."""
+    counts = Counter(opinion["decision"] for opinion in opinions).most_common(2)
+    if not counts:
+        return None
+    if len(counts) == 2 and counts[0][1] == counts[1][1]:
+        return "DEFER_DECISION"
+    return counts[0][0]
+
+
+def _mock_trajectory(case: ResearchCase, trigger_id: str, method_id: str, *,
+                     routing: str = "event", discussion: bool = True) -> dict:
+    request = RunRequest(case_id=case.case_id, case_version=case.version, trigger_event_id=trigger_id,
+                         mode="mock", routing_mode=routing)
+    report = execute(case, request, method_id, lambda *args: None, lambda: False, allow_discussion=discussion)
+    successful_calls = len(report["initial_opinions"]) + sum(
+        record["after"] is not None for record in report["discussion_records"]
+    )
+    return {
+        "trajectory_id": method_id,
+        "input_case_version": case.version, "input_trigger_event_id": trigger_id,
+        "visible_events": len(report["case_snapshot"]["timeline"]),
+        "selected_agents": report["routing"]["selected_agents"],
+        "agent_calls": report["metrics"]["agent_calls"], "discussion_rounds": report["discussion_rounds"],
+        "valid_opinions": len(report["final_opinions"]),
+        "failed_calls": report["metrics"]["agent_calls"] - successful_calls,
+        "pre_gate_decision": _plurality(report["final_opinions"]), "final_decision": report["final_decision"],
+        "missing_count": len(report["safety"]["missing_information"]),
+        "unresolved_conflicts": len(report["unresolved_conflicts"]),
+    }
+
+
+def _method_row(method_id: str, name: str, category: str, strategy: str, trace: dict,
+                note: str, *, gate: bool) -> dict:
+    return {
+        **trace, "method_id": method_id, "name": f"{method_id} · {name}", "category": category,
+        "routing_strategy": strategy, "key_finding": note, "gate_applied": gate,
+        "final_decision": trace["final_decision"] if gate else trace["pre_gate_decision"],
+    }
+
+
 def evaluate_ablation_matrix(case: ResearchCase, trigger_event_id: str | None = None) -> dict:
-    """Execute the §6.2 baseline (B0-B3) and single-factor ablation matrix on the selected case & trigger."""
+    """Paired deterministic process checks. No model endpoint or reference labels are used."""
     target_id = _resolve_trigger_id(case, trigger_event_id)
     frozen = freeze_context(case, target_id)
-    completeness = infer_semantic_completeness(case, target_id)
+    b0 = {
+        **single_mock_review(frozen), "trajectory_id": "B0", "input_case_version": frozen.version,
+        "input_trigger_event_id": target_id, "visible_events": len(frozen.timeline),
+    }
+    b1 = _mock_trajectory(frozen, target_id, "B1", routing="fixed", discussion=False)
+    shared = _mock_trajectory(frozen, target_id, "B3")
 
-    # Run B3 (Full event-routed workflow)
-    req_b3 = RunRequest(
-        case_id=case.case_id, case_version=case.version,
-        trigger_event_id=target_id, mode="mock", routing_mode="event",
-    )
-    rep_b3 = execute(case, req_b3, "ablation_b3", lambda *a: None, lambda: False)
+    trigger_only = frozen.model_copy(update={"timeline": [frozen.timeline[-1]]})
+    memory = _mock_trajectory(trigger_only, target_id, "A1")
+    fixed = _mock_trajectory(frozen, target_id, "A3", routing="fixed")
+    no_discussion = _mock_trajectory(frozen, target_id, "A4", discussion=False)
 
-    # Run Fixed All-Agents workflow (used to derive B1 and routing ablation)
-    req_fixed = RunRequest(
-        case_id=case.case_id, case_version=case.version,
-        trigger_event_id=target_id, mode="mock", routing_mode="fixed",
-    )
-    rep_fixed = execute(case, req_fixed, "ablation_fixed", lambda *a: None, lambda: False)
+    # Future event IDs and timeline capacity must not influence this offline extension.
+    completeness = infer_semantic_completeness(frozen, target_id)
+    semantic = shared
+    semantic_note = "当前截点无可写入的派生版本，沿用 B3 的输入和读数。"
+    if completeness["can_auto_enrich"]:
+        enriched, extension_id = build_semantic_version(frozen, completeness)
+        semantic = _mock_trajectory(enriched, extension_id, "A2")
+        semantic_note = f"在内存中追加有来源的派生事件 {extension_id}，按扩展截点复核资料。"
 
-    # Derive B0: Single general model reviewer (1 initial call, no multi-agent discussion)
-    b0_opinion = rep_b3["initial_opinions"][0]
-    b0_decision = b0_opinion["decision"]
-
-    # Derive B1: Fixed 4 agents, no discussion (initial opinions only, relative majority vote)
-    b1_initial_decisions = [op["decision"] for op in rep_fixed["initial_opinions"]]
-    counts: dict[str, int] = {}
-    for dec in b1_initial_decisions:
-        counts[dec] = counts.get(dec, 0) + 1
-    sorted_counts = sorted(counts.items(), key=lambda x: (-x[1], x[0]))
-    if len(sorted_counts) > 1 and sorted_counts[0][1] == sorted_counts[1][1]:
-        b1_decision = "DEFER_DECISION"
-    else:
-        b1_decision = sorted_counts[0][0]
-
-    # Derive B2: Event routing + targeted discussion, pre-gate aggregation
-    b2_final_decisions = [op["decision"] for op in rep_b3["final_opinions"]]
-    b2_counts: dict[str, int] = {}
-    for dec in b2_final_decisions:
-        b2_counts[dec] = b2_counts.get(dec, 0) + 1
-    b2_sorted = sorted(b2_counts.items(), key=lambda x: (-x[1], x[0]))
-    b2_pre_gate = "DEFER_DECISION" if (len(b2_sorted) > 1 and b2_sorted[0][1] == b2_sorted[1][1]) else b2_sorted[0][0]
-
-    # Derive A1: Event memory ablation (only current trigger event visible, stripping prior longitudinal history)
-    single_event_payload = frozen.model_dump(mode="json")
-    single_event_payload["timeline"] = [single_event_payload["timeline"][-1]]
-    single_event_case = ResearchCase.model_validate(single_event_payload)
-    rep_a1 = execute(
-        single_event_case,
-        RunRequest(case_id=case.case_id, case_version=case.version, trigger_event_id=target_id, mode="mock", routing_mode="event"),
-        "ablation_a1", lambda *a: None, lambda: False,
-    )
-
-    # Derive A2: Semantic completeness enriched workflow (applying derived facts from imaging/clinical records)
-    enriched_payload = frozen.model_dump(mode="json")
-    if completeness["recommended_facts"]:
-        enriched_payload["timeline"][-1]["facts"].update(completeness["recommended_facts"])
-    enriched_case = ResearchCase.model_validate(enriched_payload)
-    rep_a2 = execute(
-        enriched_case,
-        RunRequest(case_id=case.case_id, case_version=case.version, trigger_event_id=target_id, mode="mock", routing_mode="event"),
-        "ablation_a2", lambda *a: None, lambda: False,
-    )
-
-    fixed_calls = rep_fixed["metrics"]["agent_calls"]
-    b3_calls = rep_b3["metrics"]["agent_calls"]
-    saving_pct = round(((fixed_calls - b3_calls) / max(1, fixed_calls)) * 100)
-
-    rows = [
-        {
-            "method_id": "B0",
-            "name": "B0 · 单智能体基线",
-            "category": "基线对照",
-            "routing_strategy": "单通用审阅者",
-            "selected_agents": ["oncology"],
-            "agent_calls": 1,
-            "discussion_rounds": 0,
-            "pre_gate_decision": b0_decision,
-            "final_decision": b0_decision,
-            "missing_count": len(b0_opinion["missing_information"]),
-            "unresolved_conflicts": 0,
-            "key_finding": "缺乏多专科交叉核验与分歧检测，无法发现跨角色结构化事实矛盾。",
-        },
-        {
-            "method_id": "B1",
-            "name": "B1 · 固定全员无协商",
-            "category": "基线对照",
-            "routing_strategy": "固定四专科",
-            "selected_agents": list(ROLES),
-            "agent_calls": len(ROLES),
-            "discussion_rounds": 0,
-            "pre_gate_decision": b1_decision,
-            "final_decision": b1_decision,
-            "missing_count": len(rep_fixed["safety"]["missing_information"]),
-            "unresolved_conflicts": len(rep_fixed["conflicts"]),
-            "key_finding": f"每次固定调用全部 4 个专科；简单多数表决易掩盖初审分歧（初审分歧 {len(rep_fixed['conflicts'])} 项）。",
-        },
-        {
-            "method_id": "B2",
-            "name": "B2 · 事件路由 + 定向协商",
-            "category": "核心机制",
-            "routing_strategy": "按事件动态路由",
-            "selected_agents": rep_b3["routing"]["selected_agents"],
-            "agent_calls": b3_calls,
-            "discussion_rounds": rep_b3["discussion_rounds"],
-            "pre_gate_decision": b2_pre_gate,
-            "final_decision": b2_pre_gate,
-            "missing_count": len(rep_b3["safety"]["missing_information"]),
-            "unresolved_conflicts": len(rep_b3["unresolved_conflicts"]),
-            "key_finding": f"按事件裁剪无关专科，较固定全员完整流程节省 {saving_pct}% 角色调用，并通过 {rep_b3['discussion_rounds']} 轮协商收敛分歧。",
-        },
-        {
-            "method_id": "B3",
-            "name": "B3 · 完整门控工作流（本系统）",
-            "category": "核心机制",
-            "routing_strategy": "事件路由 + 安全门控",
-            "selected_agents": rep_b3["routing"]["selected_agents"],
-            "agent_calls": b3_calls,
-            "discussion_rounds": rep_b3["discussion_rounds"],
-            "pre_gate_decision": b2_pre_gate,
-            "final_decision": rep_b3["final_decision"],
-            "missing_count": len(rep_b3["safety"]["missing_information"]),
-            "unresolved_conflicts": len(rep_b3["unresolved_conflicts"]),
-            "key_finding": "在 B2 基础上增加证据一致性与同日冲突安全门控，杜绝带病错误放行。",
-        },
-        {
-            "method_id": "A1",
-            "name": "消融 A1 · 剥离纵向事件记忆",
-            "category": "单因素消融",
-            "routing_strategy": "仅当前触发事件",
-            "selected_agents": rep_a1["routing"]["selected_agents"],
-            "agent_calls": rep_a1["metrics"]["agent_calls"],
-            "discussion_rounds": rep_a1["discussion_rounds"],
-            "pre_gate_decision": rep_a1["final_decision"],
-            "final_decision": rep_a1["final_decision"],
-            "missing_count": len(rep_a1["safety"]["missing_information"]),
-            "unresolved_conflicts": len(rep_a1["unresolved_conflicts"]),
-            "key_finding": (
-                f"丢弃前序 {len(frozen.timeline) - 1} 条历史事件后，缺失字段变为 {len(rep_a1['safety']['missing_information'])} 项（完整记忆为 {len(rep_b3['safety']['missing_information'])} 项），验证纵向记忆的必要性。"
-            ),
-        },
-        {
-            "method_id": "A2",
-            "name": "扩展 A2 · 智能影像/语义推导增强",
-            "category": "算法优化扩展",
-            "routing_strategy": "语义归一化 + 事件路由",
-            "selected_agents": rep_a2["routing"]["selected_agents"],
-            "agent_calls": rep_a2["metrics"]["agent_calls"],
-            "discussion_rounds": rep_a2["discussion_rounds"],
-            "pre_gate_decision": rep_a2["final_decision"],
-            "final_decision": rep_a2["final_decision"],
-            "missing_count": len(rep_a2["safety"]["missing_information"]),
-            "unresolved_conflicts": len(rep_a2["unresolved_conflicts"]),
-            "key_finding": (
-                f"自动提取影像与公开临床表派生完备性标记后，待补缺口由 {len(rep_b3['safety']['missing_information'])} 项降至 {len(rep_a2['safety']['missing_information'])} 项，结论为 {rep_a2['final_decision']}。"
-            ),
-        },
+    methods = [
+        _method_row("B0", "单审阅者", "基线对照", "通用审阅", b0,
+                    "通用角色独立执行一次规则审阅，读取共同的冻结资料、缺件和来源冲突提示。", gate=False),
+        _method_row("B1", "固定全员无协商", "基线对照", "固定四专科", b1,
+                    "四科各完成一次初审，以有效意见的相对多数给出方法结论。", gate=False),
+        _method_row("B2", "事件路由与定向协商", "基线对照", "事件路由", shared,
+                    "与 B3 共享审阅轨迹，在门控前对最终有效意见取相对多数。", gate=False),
+        _method_row("B3", "完整工作流", "基线对照", "事件路由", shared,
+                    "对同一批意见核查角色覆盖、证据、缺件和未解分歧，记录门控标签。", gate=True),
+        _method_row("A1", "仅当前事件", "单因素消融", "事件路由", memory,
+                    f"相对 B3 移除 {len(frozen.timeline) - 1} 条更早事件，重新建立证据表。", gate=True),
+        _method_row("A2", "可溯源语义补齐", "扩展场景", "事件路由", semantic, semantic_note, gate=True),
+        _method_row("A3", "固定全员", "单因素消融", "固定四专科", fixed,
+                    "相对 B3 仅改变路由，保留冲突检测、定向协商和门控。", gate=True),
+        _method_row("A4", "关闭协商", "单因素消融", "事件路由", no_discussion,
+                    "相对 B3 仅关闭讨论轮次，保留初审分歧检测和最终门控。", gate=True),
     ]
-
     return {
-        "case_id": case.case_id,
-        "case_version": case.version,
-        "trigger_event_id": target_id,
-        "visible_events": len(frozen.timeline),
-        "call_saving_pct": saving_pct,
-        "fixed_total_calls": fixed_calls,
-        "routed_total_calls": b3_calls,
-        "methods": rows,
+        "protocol_version": "mock-matrix-v2", "execution_mode": "mock",
+        "case_id": case.case_id, "case_version": case.version, "trigger_event_id": target_id,
+        "visible_events": len(frozen.timeline), "methods": methods,
+        "fixed_total_calls": fixed["agent_calls"], "routed_total_calls": shared["agent_calls"],
+        "call_saving_pct": round(100 * (fixed["agent_calls"] - shared["agent_calls"]) / fixed["agent_calls"]),
     }

@@ -106,6 +106,41 @@ def test_mongo_versions_survive_restart_and_concurrent_append_has_one_winner(mon
         reopened.close()
 
 
+def test_mongo_persists_enriched_cutoff_and_original_evidence(mongo, tmp_path):
+    from fastapi.testclient import TestClient
+    from mdt_demo.api import create_app
+    from mdt_demo.research.persistence.config import StorageConfig
+    from test_research_api import finish, start
+
+    original = sample("MONGO-ENRICH")
+    pathology = {**original["timeline"][0], "event_type": "pathology", "facts": {"histology": "肺腺癌"}}
+    later = {**pathology, "event_id": "E002", "facts": {"histology": "肺鳞状细胞癌"}}
+    original["timeline"] = [pathology, later]
+    mongo.seed([original])
+    config = StorageConfig(uri=os.environ["MDT_TEST_MONGODB_URI"], database=mongo.database.name)
+    with TestClient(create_app(tmp_path, storage_config=config, event_delay=0)) as client:
+        saved = client.post("/api/v2/cases/MONGO-ENRICH/auto-enrich",
+                            json={"expected_version": 1, "trigger_event_id": "E001"})
+        assert saved.status_code == 201, saved.text
+        case = saved.json()["data"]
+        first, derived, last = case["timeline"]
+        assert first == pathology and last == later and case["version"] == 2
+        assert derived["source_fields"] == {"pathology_confirmed": "E001:histology"}
+        assert mongo.case("MONGO-ENRICH", 1) == original
+        assert mongo.case("MONGO-ENRICH", 2) == case
+        stored = mongo.database.clinical_events.find_one({"case_id": "MONGO-ENRICH", "event_id": derived["event_id"]})
+        assert stored["document"]["source_fields"] == derived["source_fields"]
+
+        run_id = start(client, case_id="MONGO-ENRICH", case_version=2, trigger_event_id=derived["event_id"])
+        assert finish(client, run_id)["report_ready"]
+        report = mongo.report(run_id)
+        assert report["final_decision"] == "READY_FOR_REVIEW"
+        assert report["case_snapshot"]["timeline"] == [first, derived]
+        refs = {ref["evidence_id"]: ref for ref in report["evidence_registry"]}
+        field = refs[f"{derived['event_id']}:pathology_confirmed"]["source_field"]
+        assert refs[field]["value"] == "肺腺癌"
+
+
 def test_mongo_batch_import_is_idempotent_and_conflict_rolls_back_all_records(mongo):
     case_b = sample("CASE-B")
     batch = mongo.import_cases([case_b], {"batch_id": "batch1"})

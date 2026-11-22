@@ -13,9 +13,9 @@ from pathlib import Path
 import sqlite3
 from threading import RLock
 from typing import Any, Callable
-from uuid import uuid4
 
 from ..api_schemas import APIError
+from .schemas import case_with_synthetic_event
 
 TERMINAL = {"completed", "incomplete", "failed", "cancelled"}
 
@@ -139,20 +139,8 @@ class ResearchStore:
             case = self.case(case_id)
             if case["version"] != expected_version:
                 raise APIError(409, "CASE_VERSION_CONFLICT", "病例已更新，请刷新后重新提交事件。")
-            new_version = expected_version + 1
-            created = {
-                **deepcopy(event), "event_id": f"EVT_{uuid4().hex[:16]}",
-                "source": "research_scenario_generator", "source_record_id": None,
-                "synthetic_extension": True, "confidence": "synthetic",
-                "introduced_in_version": new_version,
-            }
-            case["version"] = new_version
-            case["timeline"].append(created)
-            if not any(source["source_name"] == "research_scenario_generator" for source in case["provenance"]):
-                case["provenance"].append({"source_name": "research_scenario_generator", "source_url": None,
-                    "dataset_version": "research-extensions-v1", "license": "项目自建合成扩展", "synthetic": True})
-                if case["case_kind"] == "public_research":
-                    case["case_kind"] = "mixed"
+            case, created = case_with_synthetic_event(case, event)
+            new_version = case["version"]
             case = validate(case)
             self._db.execute("INSERT INTO clinical_events VALUES(?,?,?,?)", (
                 case_id, created["event_id"], new_version, dumps(created),

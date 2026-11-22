@@ -4,6 +4,7 @@ from copy import deepcopy
 from itertools import combinations
 import json
 import time
+from typing import Literal
 
 from pydantic import ValidationError
 
@@ -96,11 +97,18 @@ def evidence_registry(case: ResearchCase) -> list[dict]:
     ).model_dump(mode="json") for event in case.timeline for key, value in event.facts.items()]
 
 
-def _current_facts(case, registry):
-    latest = {}
-    for item in registry:
-        latest[item["fact_key"]] = item
-    return latest
+def _review_input(frozen: ResearchCase) -> dict:
+    registry = evidence_registry(frozen)
+    latest = {item["fact_key"]: item["value"] for item in registry}
+    trigger = frozen.timeline[-1]
+    required = REQUIRED[trigger.event_type]
+    return {
+        "case_id": frozen.case_id, "case_version": frozen.version,
+        "current_question": frozen.current_question, "trigger_event": trigger.model_dump(mode="json"),
+        "events": [event.model_dump(mode="json") for event in frozen.timeline],
+        "evidence_registry": registry, "current_facts": latest, "required_fields": required.copy(),
+        "missing_information": [key for key in required if latest.get(key) is not True],
+    }
 
 
 def source_conflicts(case: ResearchCase, selected: list[str]) -> list[dict]:
@@ -148,10 +156,7 @@ def detect_conflicts(opinions: list[dict], source: list[dict]) -> list[dict]:
     return [Conflict.model_validate(item).model_dump(mode="json") for item in result]
 
 
-def validate_output(raw: dict, role: str, registry: list[dict], opinion_id: str) -> dict:
-    payload = deepcopy(raw)
-    metadata = payload.pop("model_info", None)
-    output = AgentOutput.model_validate(payload)
+def _verified_references(output: AgentOutput, role: str, registry: list[dict]) -> list[dict]:
     index = {item["evidence_id"]: item for item in registry}
     if output.agent_id != role or not set(output.evidence_ids) <= set(index):
         raise WorkflowError("invalid_evidence")
@@ -159,8 +164,15 @@ def validate_output(raw: dict, role: str, registry: list[dict], opinion_id: str)
         item = index[claim.evidence_id]
         if claim.fact_key != item["fact_key"] or type(claim.value) is not type(item["value"]) or claim.value != item["value"]:
             raise WorkflowError("invalid_evidence")
+    return [index[key] for key in output.evidence_ids]
+
+
+def validate_output(raw: dict, role: str, registry: list[dict], opinion_id: str) -> dict:
+    payload = deepcopy(raw)
+    metadata = payload.pop("model_info", None)
+    output = AgentOutput.model_validate(payload)
     return Opinion(**output.model_dump(), opinion_id=opinion_id,
-                   evidence_refs=[index[key] for key in output.evidence_ids],
+                   evidence_refs=_verified_references(output, role, registry),
                    model_info=ModelInfo.model_validate(metadata)).model_dump(mode="json")
 
 
@@ -198,7 +210,36 @@ def _mock(context: dict, scenario: str, designated: str, selected: list[str]) ->
                            "prompt_tokens": None, "completion_tokens": None}}
 
 
-def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelled, llm=None) -> dict:
+class _GeneralReviewOutput(AgentOutput):
+    agent_id: Literal["general_reviewer"]
+
+
+def single_mock_review(frozen: ResearchCase) -> dict:
+    """Run one independent, non-specialist B0 review with the common evidence checks."""
+    role = "general_reviewer"
+    context = _review_input(frozen)
+    conflicts = source_conflicts(frozen, [])
+    context.update(agent_id=role, phase="initial", run_id="B0",
+                   prior_opinion=None, peer_opinions=[], conflicts=conflicts)
+    try:
+        raw = _mock(context, "standard", role, [role])
+        model_info = raw.pop("model_info", None)
+        opinion = _GeneralReviewOutput.model_validate(raw)
+        _verified_references(opinion, role, context["evidence_registry"])
+        ModelInfo.model_validate(model_info)
+    except (ValidationError, WorkflowError):
+        opinion = None
+    return {
+        "selected_agents": [role], "agent_calls": 1, "discussion_rounds": 0,
+        "valid_opinions": int(opinion is not None), "failed_calls": int(opinion is None),
+        "pre_gate_decision": opinion.decision if opinion else None,
+        "final_decision": opinion.decision if opinion else None,
+        "missing_count": len(context["missing_information"]), "unresolved_conflicts": len(conflicts),
+    }
+
+
+def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelled, llm=None,
+            *, allow_discussion: bool = True) -> dict:
     started = time.monotonic()
     if case.case_id != request.case_id or case.version != request.case_version:
         raise WorkflowError("case_version_mismatch")
@@ -245,10 +286,9 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
     emit("routing.completed", "ROUTING", routing)
     finish("routing", "ROUTING")
 
-    registry = evidence_registry(frozen)
-    facts = _current_facts(frozen, registry)
-    required = REQUIRED[trigger.event_type]
-    missing = [key for key in required if key not in facts or facts[key]["value"] is not True]
+    shared_input = _review_input(frozen)
+    registry = shared_input["evidence_registry"]
+    missing = shared_input["missing_information"]
     source = source_conflicts(frozen, selected)
     for tool, evidence_ids in [("case_timeline", []), ("evidence_lookup", [item["evidence_id"] for item in registry]), ("missing_fields", [])]:
         check()
@@ -262,11 +302,7 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
         emit("agent.started", stage, {"phase": phase}, role)
         check()
         metrics["agent_calls"] += 1
-        context = {"run_id": run_id, "case_id": frozen.case_id, "case_version": frozen.version,
-                   "agent_id": role, "phase": phase, "current_question": frozen.current_question,
-                   "trigger_event": trigger.model_dump(mode="json"), "events": [event.model_dump(mode="json") for event in frozen.timeline],
-                   "evidence_registry": deepcopy(registry), "current_facts": {key: item["value"] for key, item in facts.items()},
-                   "required_fields": required.copy(), "missing_information": missing.copy(),
+        context = {**deepcopy(shared_input), "run_id": run_id, "agent_id": role, "phase": phase,
                    "prior_opinion": deepcopy(final.get(role)), "peer_opinions": deepcopy(peers), "conflicts": deepcopy(conflicts)}
         try:
             raw = llm(context) if request.mode == "llm" else _mock(context, request.mock_scenario, selected[-1], selected)
@@ -296,7 +332,8 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
     conflicts = detect_conflicts(initial, source)
     emit("conflict.detected", "CONFLICT_CHECK", {"conflicts": conflicts})
     finish("conflict_detection", "CONFLICT_CHECK")
-    participants = [role for role in selected if role in final and any(role in conflict["agent_ids"] for conflict in conflicts)]
+    participants = [role for role in selected if allow_discussion and role in final
+                    and any(role in conflict["agent_ids"] for conflict in conflicts)]
     if participants:
         nodes.insert(nodes.index("safety_gate"), "targeted_discussion")
         begin("targeted_discussion", "DISCUSSION")

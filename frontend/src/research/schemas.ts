@@ -131,6 +131,8 @@ export const semanticCompletenessSchema = z.object({
     fact_label: z.string(),
     inferred_value: scalarSchema,
     source_event_id: z.string(),
+    source_evidence_id: z.string(),
+    rule_id: z.string(),
     confidence: z.string(),
     reason: z.string(),
   })),
@@ -141,6 +143,9 @@ export const semanticCompletenessSchema = z.object({
   can_auto_enrich: z.boolean(),
   recommended_facts: factsSchema,
 });
+
+const imagingRecordStatus = z.enum(['documented', 'incomplete', 'conflict']);
+const overallImagingRecordStatus = z.enum(['documented', 'incomplete', 'conflict', 'no_studies']);
 
 export const workflowPlanSchema = z.object({
   workflow_id: z.string(),
@@ -178,7 +183,8 @@ export const workflowPlanSchema = z.object({
   completeness: semanticCompletenessSchema,
   imaging_summary: z.object({
     study_count: z.number().int(),
-    overall_qc_status: z.string(),
+    overall_qc_status: z.literal('not_assessed'),
+    overall_record_status: overallImagingRecordStatus,
   }),
   predicted_decisions: z.object({
     strict_rule_decision: decisionSchema,
@@ -191,46 +197,24 @@ export const imagingStudySchema = z.object({
   event_id: z.string(),
   occurred_at: z.string(),
   title: z.string(),
-  modality: z.string(),
-  modality_label: z.string(),
-  anatomical_site: z.string(),
-  qc_status: z.enum(['passed', 'incomplete', 'conflict']),
-  qc_score: z.number(),
-  qc_message: z.string(),
-  dicom_metadata: z.object({
-    series_uid: z.string(),
-    slice_thickness_mm: z.number(),
-    matrix_size: z.string(),
-    window_presets: z.record(z.string(), z.object({
-      label: z.string(),
-      width: z.number(),
-      level: z.number(),
-    })),
-  }),
-  radiomics: z.object({
-    lesion_diameter_mm: z.number(),
-    hu_mean: z.number(),
-    suvmax: z.number(),
-    glcm_entropy: z.number(),
-    sphericity: z.number(),
-    lymph_node_mm: z.number(),
-    morphology_tags: z.array(z.string()),
-  }),
-  svg_slice: z.object({
-    lesion_cx: z.number(),
-    lesion_cy: z.number(),
-    lesion_radius: z.number(),
-    contour_polygon: z.string(),
-    is_left_lung: z.boolean(),
-    has_artifact_or_missing: z.boolean(),
-    has_conflict_marker: z.boolean(),
-  }),
-  pipeline_steps: z.array(z.object({
-    step_id: z.string(),
-    title: z.string(),
-    status: z.enum(['passed', 'warning', 'blocked', 'skipped']),
-    detail: z.string(),
+  modality: z.string().nullable(),
+  anatomical_site: z.string().nullable(),
+  source_name: z.string(),
+  dataset_version: z.string(),
+  synthetic: z.boolean(),
+  source_record_id: z.string().nullable(),
+  source_record_locator: z.string().nullable(),
+  artifact_sha256: z.string().nullable(),
+  record_status: imagingRecordStatus,
+  conflict_evidence_ids: z.array(z.string()),
+  record_fields: z.array(z.object({
+    fact_key: z.string(), value: scalarSchema, evidence_id: z.string(), source_field: z.string().nullable(),
   })),
+  qc_status: z.literal('not_assessed'),
+  qc_score: z.null(),
+  dicom_metadata: z.null(),
+  radiomics: z.null(),
+  svg_slice: z.null(),
 });
 
 export const imagingPipelineSchema = z.object({
@@ -239,11 +223,15 @@ export const imagingPipelineSchema = z.object({
   trigger_event_id: z.string(),
   pipeline_version: z.string(),
   study_count: z.number().int(),
-  overall_qc_status: z.string(),
+  input_kind: z.literal('event_metadata'),
+  overall_qc_status: z.literal('not_assessed'),
+  overall_record_status: overallImagingRecordStatus,
   studies: z.array(imagingStudySchema),
 });
 
 export const ablationMatrixSchema = z.object({
+  protocol_version: z.string(),
+  execution_mode: z.literal('mock'),
   case_id: z.string(),
   case_version: z.number().int(),
   trigger_event_id: z.string(),
@@ -253,14 +241,21 @@ export const ablationMatrixSchema = z.object({
   routed_total_calls: z.number().int(),
   methods: z.array(z.object({
     method_id: z.string(),
+    trajectory_id: z.string(),
+    input_case_version: z.number().int().positive(),
+    input_trigger_event_id: z.string(),
+    visible_events: z.number().int().positive(),
     name: z.string(),
     category: z.string(),
     routing_strategy: z.string(),
-    selected_agents: z.array(roleSchema),
+    selected_agents: z.array(z.union([roleSchema, z.literal('general_reviewer')])),
     agent_calls: z.number().int(),
     discussion_rounds: z.number().int(),
-    pre_gate_decision: decisionSchema,
-    final_decision: decisionSchema,
+    valid_opinions: z.number().int().nonnegative(),
+    failed_calls: z.number().int().nonnegative(),
+    gate_applied: z.boolean(),
+    pre_gate_decision: decisionSchema.nullable(),
+    final_decision: decisionSchema.nullable(),
     missing_count: z.number().int(),
     unresolved_conflicts: z.number().int(),
     key_finding: z.string(),
