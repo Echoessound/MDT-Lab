@@ -229,4 +229,17 @@ Agent 群页复用真实 `/cases`、`/runs`、`/audit` 和 `/events`，展示特
 
 评分与保存共用校验。材料指纹冲突返回 `409 ANNOTATION_INPUT_MISMATCH`，引用超出可见范围返回 `422 ANNOTATION_EVIDENCE_OUT_OF_SCOPE`，跨编号覆盖已有参考返回 `409 ANNOTATION_REVIEWER_CONFLICT`。无指纹的历史参考可继续评分，CLI 的统计摘要会单列有材料指纹的参考数。
 
-评测协议 `mdt-library-eval-v2` 返回八组方法及五项配对对比，门控对比是 B3/B2，语义补齐对比是 B3/A2。各对比提供 `metric_numerator`、`metric_denominator`、可评截点及病例族数。零分母时 `point_estimate` 为 null，少于两个可评病例族时区间上下界为 null。`mcnemar_status` 取 `ok`、`no_annotations` 或 `repeated_family`，并附两组中仅一方正确的配对数。错误放行和过度暂缓另有逐方法分子与分母。
+评测协议 `mdt-library-eval-v2` 返回八组方法及五项配对对比，门控对比是 B3/B2，语义补齐对比是 B3/A2。各对比提供 `metric_numerator`、`metric_denominator`、可评截点及病例族数。零分母时 `point_estimate` 为 null，少于两个可评病例族时区间上下界为 null。`mcnemar_status` 取 `ok`、`no_annotations` 或 `repeated_family`，并附两组中仅一方正确的配对数。错误放行和过度暂缓另有逐方法分子与分母；带参考标注时另返回 `macro_f1`、`confusion_matrix`、`missing_field_f1` 及逐例误差归因 `error_analysis` / `error_analysis_csv`。
+
+## 多人盲标仲裁与独立时间边界审计
+
+| 请求 | 响应与约束 |
+| --- | --- |
+| `GET /api/v2/review-panel/tasks?annotator_id=…` | 返回各截点提交人数、`own_submitted` 与 `adjudicated` 状态，不暴露同行标注内容。 |
+| `GET /api/v2/review-panel/own?scenario_id=…&annotator_id=…` | 仅返回当前标注人本人在该截点的独立初标；无记录返回 `data: null`。 |
+| `PUT / DELETE /api/v2/review-panel/submissions/{scenario_id}` | 按 `annotator_id` 独立保存或撤回初标；复用材料指纹与可见证据范围校验。 |
+| `GET /api/v2/review-panel/agreement` | 计算多标注人三分类原始一致率、Cohen's κ、3×3 混淆矩阵、必要专科平均 Jaccard 与逐专科 κ，并列出争议截点队列。 |
+| `GET / PUT / DELETE /api/v2/review-panel/adjudications/{scenario_id}` | 管理争议截点的共识仲裁定稿；评测接口支持按「仲裁共识 > 多人一致 > 单人标注」自动合并金标准（可通过 `reference_source=single_only` 切换）。 |
+| `GET /api/v2/review-panel/export/annotations.jsonl` | 导出计划书 §6.4 格式的独立初标 JSONL。 |
+| `GET /api/v2/review-panel/export/adjudication.jsonl` | 导出计划书 §6.4 格式的仲裁共识 JSONL（CLI `--annotations` 可直接读取）。 |
+| `GET /api/v2/runs/{run_id}/temporal-audit` | 绕过运行引擎直接从原病例版本重建截点白名单，核查快照时间线、`unplaced_records`、证据注册表、意见引用、同日事件及研究问题未来日期。 |
