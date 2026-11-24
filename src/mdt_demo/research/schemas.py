@@ -287,6 +287,8 @@ class DiscussionRecord(Model):
 class ModelConfigurationSnapshot(Model):
     agent_id: Role
     configuration_source: Literal["agent", "default"]
+    profile_id: Identifier | None = None
+    profile_name: Annotated[str, Field(min_length=1, max_length=80)] | None = None
     provider: str
     base_url: str
     model: str

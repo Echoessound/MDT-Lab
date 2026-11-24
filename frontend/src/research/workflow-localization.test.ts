@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ablationMatrixSchema, annotationSchema, attachmentSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, workflowPlanSchema } from './schemas';
+import { ablationMatrixSchema, agreementReportSchema, annotationSchema, blindMaterialSchema, attachmentSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, temporalAuditSchema, workflowPlanSchema } from './schemas';
 import { computeSlideDirection } from './workspace-controls';
 import {
   conflictDimensionLabel,
@@ -187,6 +187,21 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
     expect(ablationMatrixSchema.safeParse({ ...ablation, methods: [empty] }).success).toBe(true);
   });
 
+  it('requires version-bound blind material and keeps legacy references readable', () => {
+    const scenario = 'LUNG-SYN-003:v1:E002';
+    const material = { scenario_id: scenario, input_sha256: 'a'.repeat(64),
+      events: [{ event_id: 'E002', event_type: 'imaging', occurred_at: '2026-04-03',
+        title: '合成病程记录', facts: { progression_confirmed: false } }] };
+    expect(blindMaterialSchema.parse(material).events[0].facts.progression_confirmed).toBe(false);
+    expect(blindMaterialSchema.safeParse({ ...material, input_sha256: 'outdated' }).success).toBe(false);
+    const reference = { scenario_id: scenario, case_id: 'LUNG-SYN-003', case_version: 1,
+      trigger_event_id: 'E002', annotator_id: 'reviewer', required_agents: ['radiology'],
+      expected_decision: 'NEED_MORE_INFORMATION', missing_fields: ['histology'], rationale: '', updated_at: '2026-11-23' };
+    expect(annotationSchema.parse(reference).evidence_ids).toEqual([]);
+    const bound = { ...reference, input_sha256: material.input_sha256, evidence_ids: ['E002:progression_confirmed'] };
+    expect(annotationSchema.parse(bound)).toEqual(bound);
+  });
+
   it('validates real attachments, data capabilities, blind annotations and library evaluation payloads', () => {
     expect(sourceNameLabel('tcga_cbioportal_nsclc')).toBe('TCGA / cBioPortal 肺癌公开队列');
     expect(attachmentSchema.parse({
@@ -207,7 +222,7 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       updated_at: '2026-11-22T00:00:00+00:00',
     }).required_agents).toHaveLength(2);
     expect(libraryEvaluationSchema.parse({
-      protocol_version: 'mdt-library-eval-v1', execution_mode: 'mock', trigger_scope: 'all',
+      protocol_version: 'mdt-library-eval-v2', execution_mode: 'mock', trigger_scope: 'all',
       family_count: 3, scenario_count: 13, annotated_scenario_count: 1, memory_impact_scenarios: 4,
       methods: [{
         method_id: 'B3', name: 'B3 · 完整工作流', category: '基线对照', routing_strategy: '事件路由',
@@ -215,7 +230,8 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
         call_saving_vs_fixed_pct: 40.0,
         decisions: { READY_FOR_REVIEW: 4, NEED_MORE_INFORMATION: 6, DEFER_DECISION: 3, NO_OUTPUT: 0 },
         gate_interceptions: 1, annotated_count: 1, specialist_recall: 1.0,
-        false_pass_rate: 0.0, over_deferral_rate: null, accuracy: 1.0,
+        false_pass_rate: 0.0, false_pass_count: 0, false_pass_denominator: 1,
+        over_deferral_rate: null, over_deferral_count: 0, over_deferral_denominator: 0, accuracy: 1.0,
       }],
       scenarios: [{
         scenario_id: 'LUNG-SYN-001:v1:E002', case_family_id: 'LUNG-SYN-001', case_id: 'LUNG-SYN-001',
@@ -239,12 +255,72 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
           unit: '%',
           discordant_scenarios: 8,
           total_scenarios: 13,
-          mcnemar_exact_p: 1.0,
+          eligible_scenarios: 13, eligible_family_count: 3, metric_numerator: 12, metric_denominator: 30,
+          annotated_pairs: 1, b3_only_correct: 0, comparator_only_correct: 0,
+          mcnemar_status: 'ok', mcnemar_exact_p: 1.0,
           interpretation: '计算开销压缩幅度',
         }],
       },
       latex_table: '\\begin{table}\\end{table}',
       scores_csv: 'scenario_id,method_id\n',
     }).paired_statistics?.contrasts).toHaveLength(1);
+  });
+
+  it('validates multi-rater agreement report and independent temporal audit payloads', () => {
+    const agreement = agreementReportSchema.parse({
+      protocol_version: 'annotation-protocol-v1',
+      scenarios_with_submissions: 2,
+      multi_rated_scenarios: 2,
+      disputed_count: 1,
+      adjudicated_count: 1,
+      unadjudicated_disputes: 0,
+      annotator_counts: { rater_1: 2, rater_2: 2 },
+      decision_agreement: {
+        pair_count: 2,
+        raw_agreement: 0.5,
+        expected_agreement: 0.375,
+        cohens_kappa: 0.2,
+        confusion_matrix: {
+          READY_FOR_REVIEW: { READY_FOR_REVIEW: 1, NEED_MORE_INFORMATION: 0, DEFER_DECISION: 0 },
+          NEED_MORE_INFORMATION: { READY_FOR_REVIEW: 0, NEED_MORE_INFORMATION: 0, DEFER_DECISION: 1 },
+          DEFER_DECISION: { READY_FOR_REVIEW: 0, NEED_MORE_INFORMATION: 1, DEFER_DECISION: 0 },
+        },
+      },
+      specialist_agreement: {
+        pair_count: 2,
+        mean_jaccard: 0.6667,
+        exact_set_agreement: 0.5,
+        per_role: {
+          oncology: { pair_count: 2, raw_agreement: 1.0, expected_agreement: 1.0, cohens_kappa: null },
+        },
+      },
+      evidence_mean_jaccard: 1.0,
+      missing_fields_mean_jaccard: 0.0,
+      disputed_scenarios: [],
+      summary_note: '测试摘要',
+    });
+    expect(agreement.decision_agreement.cohens_kappa).toBe(0.2);
+
+    const audit = temporalAuditSchema.parse({
+      audit_version: 'temporal-boundary-audit-v1',
+      passed: true,
+      case_id: 'LUNG-SYN-001',
+      case_version: 1,
+      trigger_event_id: 'E002',
+      cutoff_date: '2026-01-12',
+      original_event_count: 6,
+      allowed_event_count: 2,
+      excluded_future_event_count: 4,
+      original_unplaced_count: 0,
+      audited_evidence_count: 5,
+      audited_opinion_citations: 4,
+      audited_claims: 4,
+      same_day_events_on_cutoff: ['E002'],
+      future_dates_in_question: [],
+      leaked_count: 0,
+      leaked_items: [],
+      checks: [{ code: 'snapshot_timeline_boundary', status: 'passed', message: '通过' }],
+    });
+    expect(audit.passed).toBe(true);
   });
 });

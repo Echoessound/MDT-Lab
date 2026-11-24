@@ -12,6 +12,8 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from ..api_schemas import APIError
+from .adjudication import AdjudicationInput, MultiRaterStore, MultiRaterSubmissionInput
+from .blind_review import review_material, validate_reference
 from .engine import execute, route_case, WorkflowCancelled, WorkflowError
 from .agent_settings import SettingsService
 from .import_service import ImportPreviews
@@ -21,6 +23,7 @@ from .store import ResearchStore, TERMINAL, utcnow
 from .persistence.contracts import ResearchRepository
 from .evaluation import AnnotationStore, BlindAnnotationInput, evaluate_library
 from .media_store import MediaAttachmentStore
+from .temporal_audit import audit_temporal_boundary
 from .workflow_designer import (
     design_medical_workflow,
     evaluate_ablation_matrix,
@@ -49,6 +52,7 @@ class ResearchService:
         self.imports = ImportPreviews(self.store)
         self.media = MediaAttachmentStore(output_dir / "media")
         self.annotations = AnnotationStore(output_dir / "annotations.json")
+        self.review_panel = MultiRaterStore(output_dir / "multi_rater_reviews.json")
         self.settings = settings if settings is not None else SettingsService()
         self.event_delay = max(0, min(event_delay, 2))
         self.run_timeout_seconds = max(0.01, min(run_timeout_seconds, 600))
@@ -137,31 +141,117 @@ class ResearchService:
     def list_annotations(self) -> list[dict]:
         return self.annotations.list_all()
 
-    def save_annotation(self, scenario_id: str, body: BlindAnnotationInput) -> dict:
-        case = ResearchCase.model_validate(self.store.case(body.case_id, body.case_version))
-        if body.trigger_event_id not in {event.event_id for event in case.timeline}:
-            raise APIError(404, "EVENT_NOT_FOUND", "该触发事件不属于所选病例版本。")
-        return self.annotations.upsert(scenario_id, body)
+    def annotation_tasks(self) -> list[dict]:
+        references = self.annotations.map_all()
+        tasks = []
+        for case in self.store.cases():
+            for event in case["timeline"]:
+                scenario_id = f"{case['case_id']}:v{case['version']}:{event['event_id']}"
+                tasks.append({
+                    "scenario_id": scenario_id,
+                    "case_id": case["case_id"],
+                    "case_version": case["version"],
+                    "trigger_event_id": event["event_id"],
+                    "annotated": scenario_id in references,
+                })
+        return tasks
 
-    def delete_annotation(self, scenario_id: str) -> dict:
-        return self.annotations.delete(scenario_id)
+    def annotation_material(self, case_id: str, version: int, trigger_event_id: str) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id, version))
+        return review_material(case, trigger_event_id)
+
+    def own_annotation(self, scenario_id: str, annotator_id: str) -> dict | None:
+        return self.annotations.own(scenario_id, annotator_id)
+
+    def save_annotation(self, scenario_id: str, body: BlindAnnotationInput) -> dict:
+        material = self.annotation_material(body.case_id, body.case_version, body.trigger_event_id)
+        validate_reference(material, body.model_dump(mode="json"))
+        return self.annotations.upsert(scenario_id, body.model_copy(update={"input_sha256": material["input_sha256"]}))
+
+    def delete_annotation(self, scenario_id: str, annotator_id: str | None = None) -> dict:
+        return self.annotations.delete(scenario_id, annotator_id)
+
+    def review_panel_tasks(self, annotator_id: str | None = None) -> list[dict]:
+        tasks = []
+        for case in self.store.cases():
+            for event in case["timeline"]:
+                scenario_id = f"{case['case_id']}:v{case['version']}:{event['event_id']}"
+                status = self.review_panel.scenario_rater_status(scenario_id, annotator_id)
+                tasks.append({
+                    "scenario_id": scenario_id,
+                    "case_id": case["case_id"],
+                    "case_version": case["version"],
+                    "trigger_event_id": event["event_id"],
+                    **status,
+                })
+        return tasks
+
+    def review_panel_own(self, scenario_id: str, annotator_id: str) -> dict | None:
+        return self.review_panel.own_submission(scenario_id, annotator_id)
+
+    def save_review_submission(self, scenario_id: str, body: MultiRaterSubmissionInput) -> dict:
+        material = self.annotation_material(body.case_id, body.case_version, body.trigger_event_id)
+        validate_reference(material, body.model_dump(mode="json"))
+        return self.review_panel.upsert_submission(
+            scenario_id,
+            body.model_copy(update={"input_sha256": material["input_sha256"]}),
+        )
+
+    def delete_review_submission(self, scenario_id: str, annotator_id: str) -> dict:
+        return self.review_panel.delete_submission(scenario_id, annotator_id)
+
+    def review_panel_agreement(self) -> dict:
+        return self.review_panel.agreement_report()
+
+    def list_adjudications(self) -> list[dict]:
+        return self.review_panel.list_adjudications()
+
+    def save_adjudication(self, scenario_id: str, body: AdjudicationInput) -> dict:
+        material = self.annotation_material(body.case_id, body.case_version, body.trigger_event_id)
+        validate_reference(material, body.model_dump(mode="json"))
+        return self.review_panel.upsert_adjudication(
+            scenario_id,
+            body.model_copy(update={"input_sha256": material["input_sha256"]}),
+        )
+
+    def delete_adjudication(self, scenario_id: str) -> dict:
+        return self.review_panel.delete_adjudication(scenario_id)
+
+    def export_panel_annotations_jsonl(self) -> str:
+        return self.review_panel.export_annotations_jsonl()
+
+    def export_panel_adjudication_jsonl(self) -> str:
+        return self.review_panel.export_adjudication_jsonl()
+
+    def temporal_audit_run(self, run_id: str) -> dict:
+        rep = self.report(run_id)
+        original = ResearchCase.model_validate(self.store.case(rep["case_id"], rep["case_version"]))
+        return audit_temporal_boundary(original, rep)
 
     def evaluate_experiments(self, *, case_ids: list[str] | None = None,
-                             trigger_scope: str = "all") -> dict:
-        all_cases = [ResearchCase.model_validate(item) for item in self.store.cases()]
-        if case_ids:
-            wanted = set(case_ids)
-            selected = [case for case in all_cases if case.case_id in wanted]
-            if not selected:
-                raise APIError(404, "CASE_NOT_FOUND", "未找到所选实验病例。")
+                             case_versions: dict[str, int] | None = None,
+                             trigger_scope: str = "all",
+                             reference_source: str = "merged") -> dict:
+        if case_versions is not None and (case_ids is None or set(case_ids) != case_versions.keys()):
+            raise APIError(422, "CASE_SELECTION_MISMATCH", "版本清单须为每个选中的病例各指定一个版本。")
+        if case_ids is None:
+            selected = self.store.cases()
         else:
-            selected = all_cases
+            if not case_ids or len(set(case_ids)) != len(case_ids):
+                raise APIError(422, "INVALID_CASE_SELECTION", "请选择至少一个病例，每个病例仅纳入一次。")
+            selected = [self.store.case(case_id, case_versions[case_id] if case_versions else None)
+                        for case_id in sorted(case_ids)]
         if not selected:
             raise APIError(422, "NO_CASES_AVAILABLE", "病例库为空，无法执行实验评测。")
+        refs = (
+            self.annotations.map_all()
+            if reference_source == "single_only"
+            else self.review_panel.resolve_gold_references(self.annotations.map_all())
+        )
         return evaluate_library(
-            selected,
+            [ResearchCase.model_validate(case) for case in selected],
             trigger_scope=trigger_scope,
-            annotations=self.annotations.map_all(),
+            annotations=refs,
         )
 
     def runs(self) -> list[dict]:

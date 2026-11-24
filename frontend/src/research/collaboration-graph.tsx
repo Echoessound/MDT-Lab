@@ -77,6 +77,7 @@ function SpecialistInspector({ run, role, onEvidence }: GraphProps & { role: Rol
     {config && <details><summary>本次冻结模型配置 · {config.model}</summary>
       <dl className="inspector-values">
         <div><dt>配置来源</dt><dd>{config.configuration_source === 'agent' ? '专科独立连接' : '继承共享默认'} · {providerLabelZh(config.provider, config.model)}</dd></div>
+        {config.profile_name && <div><dt>运行采用的方案</dt><dd>{config.profile_name}</dd></div>}
         <div><dt>服务地址</dt><dd><code>{config.base_url}</code></dd></div>
         <div><dt>生成参数</dt><dd>超时 {config.timeout_seconds} 秒 · 采样温度 {config.temperature} · 最大输出 {config.max_output_tokens} 字词</dd></div>
       </dl>

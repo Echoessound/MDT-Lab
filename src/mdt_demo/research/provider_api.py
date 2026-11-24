@@ -1,12 +1,32 @@
 """Model configuration endpoints; responses never contain credentials."""
 
+from typing import Literal
+
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 
 from .provider_config import LLMConfigInput, ProviderError
+from .schemas import Role
 
 router = APIRouter(prefix="/api/v2/settings/llm", tags=["Shared model configuration"])
 agents_router = APIRouter(prefix="/api/v2/settings/agents", tags=["Per-agent model configuration"])
+
+
+class ProfileInput(LLMConfigInput):
+    name: str = Field(min_length=1, max_length=80)
+
+    def connection(self) -> LLMConfigInput:
+        return LLMConfigInput.model_validate(self.model_dump(exclude={"name"}))
+
+
+class ProfileScope(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    scope: Literal["default"] | Role
+
+
+class ProfileFromScope(ProfileScope):
+    name: str = Field(min_length=1, max_length=80)
 
 
 def provider_error(exc: ProviderError) -> JSONResponse:
@@ -31,6 +51,41 @@ def clear(request: Request):
 @router.post("/test")
 def test(request: Request):
     return {"data": request.app.state.research.settings.test()}
+
+
+@router.get("/profiles")
+def profiles(request: Request):
+    return {"data": request.app.state.research.settings.profiles()}
+
+
+@router.post("/profiles", status_code=201)
+def create_profile(body: ProfileInput, request: Request):
+    return {"data": request.app.state.research.settings.save_profile(body.name, body.connection())}
+
+
+@router.post("/profiles/from-scope", status_code=201)
+def profile_from_scope(body: ProfileFromScope, request: Request):
+    return {"data": request.app.state.research.settings.profile_from_scope(body.scope, body.name)}
+
+
+@router.put("/profiles/{profile_id}")
+def update_profile(profile_id: str, body: ProfileInput, request: Request):
+    return {"data": request.app.state.research.settings.save_profile(body.name, body.connection(), profile_id=profile_id)}
+
+
+@router.delete("/profiles/{profile_id}")
+def delete_profile(profile_id: str, request: Request):
+    return {"data": request.app.state.research.settings.delete_profile(profile_id)}
+
+
+@router.post("/profiles/{profile_id}/activate")
+def activate_profile(profile_id: str, body: ProfileScope, request: Request):
+    return {"data": request.app.state.research.settings.activate_profile(profile_id, body.scope)}
+
+
+@router.post("/profiles/{profile_id}/test")
+def test_profile(profile_id: str, request: Request):
+    return {"data": request.app.state.research.settings.test_profile(profile_id)}
 
 
 @agents_router.get("")

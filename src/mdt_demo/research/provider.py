@@ -46,12 +46,67 @@ def _count(value) -> int | None:
 class RunLLM:
     """A frozen configuration per run. Never expose raw HTTP bodies or exception strings."""
 
-    def __init__(self, config: LLMConfigInput, *, transport=None, resolver=resolve_addresses):
+    def __init__(self, config: LLMConfigInput, *, transport=None, resolver=resolve_addresses,
+                 response_format_mode: str = "json_schema"):
         self._config = config.model_copy(deep=True)
         self._transport, self._resolver = transport, resolver
+        if response_format_mode not in {"json_schema", "json_object"}:
+            raise ValueError("response_format_mode must be 'json_schema' or 'json_object'")
+        self._response_format_mode = response_format_mode
         self.metrics = {"llm_calls": 0, "retry_count": 0, "prompt_tokens": None, "completion_tokens": None}
+        self.validation_telemetry = {
+            "first_attempt_calls": 0,
+            "first_attempt_valid": 0,
+            "first_attempt_schema_failures": 0,
+            "first_attempt_evidence_failures": 0,
+            "first_attempt_http_or_refusal_failures": 0,
+            "first_attempt_candidate_citations": 0,
+            "first_attempt_valid_citations": 0,
+            "first_attempt_candidate_claims": 0,
+            "first_attempt_valid_claims": 0,
+            "retry_recovered": 0,
+            "final_valid_calls": 0,
+            "final_failed_calls": 0,
+        }
         self._tokens = [0, 0]
         self._usage_complete = True
+
+    def validation_summary(self) -> dict:
+        """Sanitized first-attempt validation and citation integrity rates (Plan §6.3)."""
+        t = self.validation_telemetry
+        calls = t["first_attempt_calls"]
+        cites = t["first_attempt_candidate_citations"]
+        claims = t["first_attempt_candidate_claims"]
+        return {
+            **t,
+            "response_format_mode": self._response_format_mode,
+            "first_attempt_valid_rate": round(t["first_attempt_valid"] / calls, 4) if calls else None,
+            "first_attempt_schema_failure_rate": round(t["first_attempt_schema_failures"] / calls, 4) if calls else None,
+            "first_attempt_citation_valid_rate": round(t["first_attempt_valid_citations"] / cites, 4) if cites else None,
+            "first_attempt_claim_valid_rate": round(t["first_attempt_valid_claims"] / claims, 4) if claims else None,
+        }
+
+    def _record_first_attempt_candidates(self, raw: object, registry: dict[str, dict]) -> None:
+        if not isinstance(raw, dict):
+            return
+        raw_ids = raw.get("evidence_ids")
+        if isinstance(raw_ids, list):
+            for eid in raw_ids:
+                self.validation_telemetry["first_attempt_candidate_citations"] += 1
+                if isinstance(eid, str) and eid in registry:
+                    self.validation_telemetry["first_attempt_valid_citations"] += 1
+        raw_claims = raw.get("claims")
+        if isinstance(raw_claims, list):
+            for claim in raw_claims:
+                self.validation_telemetry["first_attempt_candidate_claims"] += 1
+                if not isinstance(claim, dict):
+                    continue
+                eid = claim.get("evidence_id")
+                source = registry.get(eid) if isinstance(eid, str) else None
+                if (source is not None and claim.get("fact_key") == source["fact_key"]
+                        and type(claim.get("value")) is type(source["value"])
+                        and claim.get("value") == source["value"]):
+                    self.validation_telemetry["first_attempt_valid_claims"] += 1
 
     def _usage(self, usage: dict | None) -> tuple[int | None, int | None]:
         usage = usage if isinstance(usage, dict) else {}
@@ -65,7 +120,8 @@ class RunLLM:
         self.metrics["completion_tokens"] = self._tokens[1] if self._usage_complete else None
         return counts
 
-    def _request(self, messages: list[dict], schema: dict, name: str, validate: Callable) -> tuple[dict, dict]:
+    def _request(self, messages: list[dict], schema: dict, name: str, validate: Callable,
+                 *, track_telemetry: bool = False, registry: dict[str, dict] | None = None) -> tuple[dict, dict]:
         config = self._config
         validate_destination(config.base_url, self._resolver)
         if not config.api_key or not config.api_key.get_secret_value():
@@ -74,83 +130,116 @@ class RunLLM:
         local_complete = True
         final_error = ProviderError("LLM_PROVIDER_ERROR", "模型服务未返回可用结果。")
         request_messages = deepcopy(messages)
-        for attempt in range(2):
-            self.metrics["llm_calls"] += 1
-            if attempt:
-                self.metrics["retry_count"] += 1
-                time.sleep(0.1)
-            payload = {
-                "model": config.model, "messages": request_messages,
-                "temperature": config.temperature, "max_tokens": config.max_output_tokens,
-                "response_format": {"type": "json_schema", "json_schema": {
-                    "name": name, "strict": True, "schema": schema,
-                }},
-            }
-            try:
-                with httpx.Client(timeout=config.timeout_seconds, transport=self._transport,
-                                  follow_redirects=False, trust_env=False) as client:
-                    response = client.post(
-                        config.base_url + "/chat/completions", json=payload,
-                        headers={"Authorization": "Bearer " + config.api_key.get_secret_value()},
-                    )
-                if response.status_code != 200:
-                    self._usage(None)
-                    local_complete = False
-                    if response.status_code in {401, 403}:
-                        raise ProviderError("LLM_AUTHENTICATION_ERROR", "模型服务拒绝认证，请检查密钥和模型访问权限。", attempts=attempt + 1)
-                    if response.status_code == 429:
-                        final_error = ProviderError("LLM_RATE_LIMIT", "模型服务限流，有限重试后仍未完成。", attempts=attempt + 1)
-                    elif response.status_code >= 500:
-                        final_error = ProviderError("LLM_PROVIDER_ERROR", "模型服务暂时不可用，有限重试后仍未完成。", attempts=attempt + 1)
-                    else:
-                        raise ProviderError("LLM_REQUEST_REJECTED", "模型服务拒绝请求，请确认模型支持 JSON Schema、temperature 和 max_tokens 参数。", attempts=attempt + 1)
-                    continue
-                try:
-                    outer = response.json()
-                    if not isinstance(outer, dict):
-                        raise ValueError("invalid envelope")
-                except ValueError:
-                    self._usage(None)
-                    local_complete = False
-                    final_error = ProviderError("LLM_INVALID_OUTPUT", "模型服务响应不是有效 JSON。", attempts=attempt + 1)
-                    continue
-                usage = self._usage(outer.get("usage"))
-                if None in usage:
-                    local_complete = False
-                else:
-                    local_tokens[0] += usage[0]
-                    local_tokens[1] += usage[1]
-                try:
-                    choice = outer["choices"][0]
-                    message = choice["message"]
-                    if message.get("refusal"):
-                        raise ProviderError("LLM_REFUSED", "模型拒绝了本次资料审阅请求，已保留失败状态。", attempts=attempt + 1)
-                    if choice.get("finish_reason") not in {None, "stop"}:
-                        raise ValueError("incomplete output")
-                    raw = json.loads(message["content"])
-                    result = validate(raw)
-                except (ValueError, KeyError, TypeError, IndexError, ValidationError):
-                    final_error = ProviderError("LLM_INVALID_OUTPUT", "模型输出未通过结构或证据校验，已达到一次修正重试上限。", attempts=attempt + 1)
-                    request_messages = messages + [{"role": "user", "content": (
-                        "The previous response failed schema or evidence validation. Return the required JSON. "
-                        "Use the assigned agent_id, only registered evidence_ids, and copy cited fact keys and values exactly."
-                    )}]
-                    continue
-                return result, {
-                    "provider": config.provider, "model": config.model, "prompt_version": PROMPT_VERSION,
-                    "attempts": attempt + 1,
-                    "prompt_tokens": local_tokens[0] if local_complete else None,
-                    "completion_tokens": local_tokens[1] if local_complete else None,
+        if track_telemetry:
+            self.validation_telemetry["first_attempt_calls"] += 1
+        response_format = (
+            {"type": "json_schema", "json_schema": {"name": name, "strict": True, "schema": schema}}
+            if self._response_format_mode == "json_schema"
+            else {"type": "json_object"}
+        )
+        try:
+            for attempt in range(2):
+                self.metrics["llm_calls"] += 1
+                if attempt:
+                    self.metrics["retry_count"] += 1
+                    time.sleep(0.1)
+                payload = {
+                    "model": config.model, "messages": request_messages,
+                    "temperature": config.temperature, "max_tokens": config.max_output_tokens,
+                    "response_format": response_format,
                 }
-            except httpx.TimeoutException:
-                self._usage(None)
-                local_complete = False
-                final_error = ProviderError("LLM_TIMEOUT", "模型请求超时，有限重试后仍未完成。", attempts=attempt + 1)
-            except httpx.HTTPError:
-                self._usage(None)
-                local_complete = False
-                final_error = ProviderError("LLM_NETWORK_ERROR", "无法连接模型服务，请检查网络与服务地址。", attempts=attempt + 1)
-        raise final_error
+                try:
+                    with httpx.Client(timeout=config.timeout_seconds, transport=self._transport,
+                                      follow_redirects=False, trust_env=False) as client:
+                        response = client.post(
+                            config.base_url + "/chat/completions", json=payload,
+                            headers={"Authorization": "Bearer " + config.api_key.get_secret_value()},
+                        )
+                    if response.status_code != 200:
+                        self._usage(None)
+                        local_complete = False
+                        if track_telemetry and attempt == 0:
+                            self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
+                        if response.status_code in {401, 403}:
+                            raise ProviderError("LLM_AUTHENTICATION_ERROR", "模型服务拒绝认证，请检查密钥和模型访问权限。", attempts=attempt + 1)
+                        if response.status_code == 429:
+                            final_error = ProviderError("LLM_RATE_LIMIT", "模型服务限流，有限重试后仍未完成。", attempts=attempt + 1)
+                        elif response.status_code >= 500:
+                            final_error = ProviderError("LLM_PROVIDER_ERROR", "模型服务暂时不可用，有限重试后仍未完成。", attempts=attempt + 1)
+                        else:
+                            raise ProviderError("LLM_REQUEST_REJECTED", "模型服务拒绝请求，请确认模型支持 JSON Schema、temperature 和 max_tokens 参数。", attempts=attempt + 1)
+                        continue
+                    try:
+                        outer = response.json()
+                        if not isinstance(outer, dict):
+                            raise ValueError("invalid envelope")
+                    except ValueError:
+                        self._usage(None)
+                        local_complete = False
+                        if track_telemetry and attempt == 0:
+                            self.validation_telemetry["first_attempt_schema_failures"] += 1
+                        final_error = ProviderError("LLM_INVALID_OUTPUT", "模型服务响应不是有效 JSON。", attempts=attempt + 1)
+                        continue
+                    usage = self._usage(outer.get("usage"))
+                    if None in usage:
+                        local_complete = False
+                    else:
+                        local_tokens[0] += usage[0]
+                        local_tokens[1] += usage[1]
+                    try:
+                        choice = outer["choices"][0]
+                        message = choice["message"]
+                        if message.get("refusal"):
+                            if track_telemetry and attempt == 0:
+                                self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
+                            raise ProviderError("LLM_REFUSED", "模型拒绝了本次资料审阅请求，已保留失败状态。", attempts=attempt + 1)
+                        if choice.get("finish_reason") not in {None, "stop"}:
+                            raise ValueError("incomplete output")
+                        raw = json.loads(message["content"])
+                        if track_telemetry and attempt == 0 and registry is not None:
+                            self._record_first_attempt_candidates(raw, registry)
+                        result = validate(raw)
+                    except (ValueError, KeyError, TypeError, IndexError, ValidationError) as exc:
+                        if track_telemetry and attempt == 0:
+                            if isinstance(exc, ValueError) and str(exc) in {"invalid role or evidence", "unsupported claim"}:
+                                self.validation_telemetry["first_attempt_evidence_failures"] += 1
+                            else:
+                                self.validation_telemetry["first_attempt_schema_failures"] += 1
+                        final_error = ProviderError("LLM_INVALID_OUTPUT", "模型输出未通过结构或证据校验，已达到一次修正重试上限。", attempts=attempt + 1)
+                        request_messages = messages + [{"role": "user", "content": (
+                            "The previous response failed schema or evidence validation. Return the required JSON. "
+                            "Use the assigned agent_id, only registered evidence_ids, and copy cited fact keys and values exactly."
+                        )}]
+                        continue
+                    if track_telemetry:
+                        self.validation_telemetry["final_valid_calls"] += 1
+                        if attempt == 0:
+                            self.validation_telemetry["first_attempt_valid"] += 1
+                        else:
+                            self.validation_telemetry["retry_recovered"] += 1
+                    return result, {
+                        "provider": config.provider, "model": config.model, "prompt_version": PROMPT_VERSION,
+                        "attempts": attempt + 1,
+                        "prompt_tokens": local_tokens[0] if local_complete else None,
+                        "completion_tokens": local_tokens[1] if local_complete else None,
+                    }
+                except httpx.TimeoutException:
+                    self._usage(None)
+                    local_complete = False
+                    if track_telemetry and attempt == 0:
+                        self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
+                    final_error = ProviderError("LLM_TIMEOUT", "模型请求超时，有限重试后仍未完成。", attempts=attempt + 1)
+                except httpx.HTTPError:
+                    self._usage(None)
+                    local_complete = False
+                    if track_telemetry and attempt == 0:
+                        self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
+                    final_error = ProviderError("LLM_NETWORK_ERROR", "无法连接模型服务，请检查网络与服务地址。", attempts=attempt + 1)
+            raise final_error
+        except ProviderError:
+            if track_telemetry:
+                self.validation_telemetry["final_failed_calls"] += 1
+            raise
 
     def __call__(self, context: dict) -> dict:
         registry = {item["evidence_id"]: item for item in context["evidence_registry"]}
@@ -170,6 +259,7 @@ class RunLLM:
             [{"role": "system", "content": SYSTEM_PROMPT},
              {"role": "user", "content": json.dumps(context, ensure_ascii=False, allow_nan=False)}],
             AgentOutput.model_json_schema(), "mdt_process_opinion", validate,
+            track_telemetry=True, registry=registry,
         )
         return {**result, "model_info": metadata}
 

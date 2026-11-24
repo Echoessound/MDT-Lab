@@ -201,6 +201,11 @@ export function ResearchReportPage() {
   const [jsonOpen, setJsonOpen] = useState(false);
   const query = useQuery({ queryKey: ['research-report', runId], queryFn: () => researchApi.report(runId) });
   const report = query.data;
+  const temporalAuditQuery = useQuery({
+    queryKey: ['research-temporal-audit', runId],
+    queryFn: () => researchApi.temporalAudit(runId),
+    enabled: !!report && view === 'summary',
+  });
   const ablationQuery = useQuery({
     queryKey: ['research-ablation', report?.case_id, report?.case_version, report?.trigger_event_id],
     queryFn: () => researchApi.ablationMatrix(report!.case_id, report!.case_version, report!.trigger_event_id),
@@ -261,6 +266,39 @@ export function ResearchReportPage() {
           </section>
         )}
         <SafetyPanel safety={report.safety} evidence={report.evidence_registry} onEvidence={setEvidence} />
+        {temporalAuditQuery.data && (
+          <section className="panel">
+            <div className="workspace-section-heading">
+              <div>
+                <h2>时间边界防泄漏独立审计</h2>
+                <p className="muted">绕过运行引擎直接从原病例版本重建截点白名单，逐项核查时间线、无日期记录、证据注册表与意见引用。</p>
+              </div>
+              <span className={`pill ${temporalAuditQuery.data.passed ? 'status-completed' : 'status-failed'}`}>
+                {temporalAuditQuery.data.passed ? '独立核验通过 · 0 泄漏' : `发现 ${temporalAuditQuery.data.leaked_count} 项越界`}
+              </span>
+            </div>
+            <div className="workspace-table-scroll">
+              <table className="workspace-table">
+                <thead>
+                  <tr><th>审计维度</th><th>状态</th><th>核验结论</th></tr>
+                </thead>
+                <tbody>
+                  {temporalAuditQuery.data.checks.map(chk => (
+                    <tr key={chk.code}>
+                      <td><code>{chk.code}</code></td>
+                      <td>
+                        <span className={`pill ${chk.status === 'passed' ? 'status-completed' : chk.status === 'warning' ? 'status-warning' : 'status-failed'}`}>
+                          {chk.status === 'passed' ? '通过' : chk.status === 'warning' ? '提示' : '越界'}
+                        </span>
+                      </td>
+                      <td>{chk.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
         <MetricsPanel metrics={report.metrics} mode={report.mode} />
       </>}
       {view === 'opinions' && <><ReportOpinions report={report} onEvidence={setEvidence} /><RoutingPanel routing={report.routing} /></>}

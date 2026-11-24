@@ -184,7 +184,7 @@ def test_library_evaluation_blind_annotations_and_thesis_exports(client):
     assert stats["cluster_unit"] == "case_family_id"
     assert stats["family_count"] == 3
     contrasts = {c["contrast_id"]: c for c in stats["contrasts"]}
-    assert set(contrasts.keys()) == {"B3_vs_A3", "B3_vs_A2", "B3_vs_A1", "B3_vs_B0"}
+    assert set(contrasts.keys()) == {"B3_vs_A3", "B3_vs_B2", "B3_vs_A2", "B3_vs_A1", "B3_vs_B0"}
     assert contrasts["B3_vs_A3"]["ci_low"] <= contrasts["B3_vs_A3"]["point_estimate"] <= contrasts["B3_vs_A3"]["ci_high"]
     assert contrasts["B3_vs_A3"]["point_estimate"] > 0
 

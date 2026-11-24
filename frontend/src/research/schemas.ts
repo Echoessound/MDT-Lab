@@ -53,7 +53,8 @@ export const modeSchema = z.enum(['mock', 'llm']);
 export const scenarioSchema = z.enum(['standard', 'partial_failure', 'persistent_disagreement', 'invalid_evidence']);
 export const routingModeSchema = z.enum(['event', 'fixed']);
 export const runRequestSchema = z.object({ case_id: z.string(), case_version: z.number().int(), trigger_event_id: z.string(), mode: modeSchema, mock_scenario: scenarioSchema, routing_mode: routingModeSchema });
-export const modelSnapshotSchema = z.object({ agent_id: roleSchema, configuration_source: z.enum(['agent', 'default']), provider: z.string(), base_url: z.string(), model: z.string(), timeout_seconds: z.number(), temperature: z.number(), max_output_tokens: z.number() });
+const profileReference = { profile_id: z.string().nullish(), profile_name: z.string().nullish() };
+export const modelSnapshotSchema = z.object({ ...profileReference, agent_id: roleSchema, configuration_source: z.enum(['agent', 'default']), provider: z.string(), base_url: z.string(), model: z.string(), timeout_seconds: z.number(), temperature: z.number(), max_output_tokens: z.number() });
 export const runSchema = z.object({
   run_id: z.string(), case_id: z.string(), case_version: z.number().int(), trigger_event_id: z.string(), mode: modeSchema,
   mock_scenario: scenarioSchema, routing_mode: routingModeSchema, status: z.string(), stage: z.string(),
@@ -74,9 +75,14 @@ export const reportSchema = z.object({
   model_configuration: z.array(modelSnapshotSchema).default([]),
 });
 export const modelStatusSchema = z.object({
+  ...profileReference,
   provider: z.string(), base_url: z.string(), model: z.string(), has_api_key: z.boolean(),
   configured: z.boolean().optional(), timeout_seconds: z.number(), temperature: z.number(), max_output_tokens: z.number(),
 });
+export const modelProfileSchema = modelStatusSchema.omit({ profile_name: true }).extend({
+  profile_id: z.string().min(1), name: z.string().min(1),
+});
+export type ModelProfile = z.infer<typeof modelProfileSchema>;
 export const modelTestSchema = z.object({ ok: z.boolean(), message: z.string(), model: z.string().optional() });
 export const agentModelSchema = modelStatusSchema.extend({ agent_id: roleSchema, configuration_source: z.enum(['agent', 'default', 'unconfigured']), overridden: z.boolean(), configured: z.boolean() });
 export const storageSchema = z.object({ backend: z.enum(['mongodb', 'sqlite']), database: z.string(), status: z.literal('connected'), connected: z.literal(true), transactions: z.boolean(), schema_version: z.number() });
@@ -298,9 +304,24 @@ export const annotationSchema = z.object({
   required_agents: z.array(roleSchema),
   expected_decision: decisionSchema,
   missing_fields: z.array(z.string()),
+  input_sha256: z.string().regex(/^[a-f0-9]{64}$/).nullish(),
+  evidence_ids: z.array(z.string()).default([]),
   rationale: z.string(),
   updated_at: z.string(),
 });
+
+export const annotationTaskSchema = z.object({
+  scenario_id: z.string(), case_id: z.string(), case_version: z.number().int().positive(),
+  trigger_event_id: z.string(), annotated: z.boolean(),
+});
+export const blindMaterialSchema = z.object({
+  scenario_id: z.string(), input_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  events: z.array(clinicalEventSchema.pick({
+    event_id: true, occurred_at: true, event_type: true, title: true, facts: true,
+  })).min(1),
+});
+export type AnnotationTask = z.infer<typeof annotationTaskSchema>;
+export type BlindMaterial = z.infer<typeof blindMaterialSchema>;
 
 export const libraryEvaluationSchema = z.object({
   protocol_version: z.string(),
@@ -325,8 +346,17 @@ export const libraryEvaluationSchema = z.object({
     annotated_count: z.number().int(),
     specialist_recall: z.number().nullable(),
     false_pass_rate: z.number().nullable(),
+    false_pass_count: z.number().int(),
+    false_pass_denominator: z.number().int(),
     over_deferral_rate: z.number().nullable(),
+    over_deferral_count: z.number().int(),
+    over_deferral_denominator: z.number().int(),
     accuracy: z.number().nullable(),
+    macro_f1: z.number().nullable().optional(),
+    confusion_matrix: z.record(z.string(), z.record(z.string(), z.number().int())).nullable().optional(),
+    missing_field_precision: z.number().nullable().optional(),
+    missing_field_recall: z.number().nullable().optional(),
+    missing_field_f1: z.number().nullable().optional(),
   })),
   scenarios: z.array(z.object({
     scenario_id: z.string(),
@@ -355,21 +385,168 @@ export const libraryEvaluationSchema = z.object({
       contrast_id: z.string(),
       label: z.string(),
       metric_name: z.string(),
-      point_estimate: z.number(),
-      ci_low: z.number(),
-      ci_high: z.number(),
+      point_estimate: z.number().nullable(),
+      ci_low: z.number().nullable(),
+      ci_high: z.number().nullable(),
       unit: z.string(),
       discordant_scenarios: z.number().int(),
       total_scenarios: z.number().int(),
+      eligible_scenarios: z.number().int(),
+      eligible_family_count: z.number().int(),
+      metric_numerator: z.number(),
+      metric_denominator: z.number(),
+      mcnemar_status: z.enum(['ok', 'no_annotations', 'repeated_family']),
+      annotated_pairs: z.number().int(),
+      b3_only_correct: z.number().int(),
+      comparator_only_correct: z.number().int(),
       mcnemar_exact_p: z.number().nullable(),
       interpretation: z.string(),
     })),
   }).optional(),
+  error_analysis: z.array(z.object({
+    scenario_id: z.string(),
+    case_family_id: z.string(),
+    trigger_event_type: eventTypeSchema,
+    method_id: z.string(),
+    error_types: z.array(z.string()),
+    expected_decision: decisionSchema,
+    predicted_decision: decisionSchema.nullable(),
+    required_agents: z.array(z.string()),
+    selected_agents: z.array(z.string()),
+    missed_agents: z.array(z.string()),
+    missing_count: z.number().int(),
+    unresolved_conflicts: z.number().int(),
+    root_cause_hint: z.string(),
+  })).optional().default([]),
+  error_analysis_csv: z.string().optional().default(''),
   latex_table: z.string(),
   scores_csv: z.string(),
+});
+
+export const reviewPanelTaskSchema = z.object({
+  scenario_id: z.string(),
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  submission_count: z.number().int(),
+  own_submitted: z.boolean(),
+  adjudicated: z.boolean(),
+});
+
+export const multiRaterSubmissionSchema = z.object({
+  scenario_id: z.string(),
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  annotator_id: z.string(),
+  protocol_version: z.string(),
+  required_agents: z.array(roleSchema),
+  expected_decision: decisionSchema,
+  input_sha256: z.string().regex(/^[a-f0-9]{64}$/).nullable().optional(),
+  evidence_ids: z.array(z.string()).default([]),
+  missing_fields: z.array(z.string()).default([]),
+  expected_conflicts: z.array(z.string()).default([]),
+  rationale: z.string(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const adjudicationSchema = z.object({
+  scenario_id: z.string(),
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  adjudicator_id: z.string(),
+  protocol_version: z.string(),
+  required_agents: z.array(roleSchema),
+  expected_decision: decisionSchema,
+  input_sha256: z.string().regex(/^[a-f0-9]{64}$/).nullable().optional(),
+  evidence_ids: z.array(z.string()).default([]),
+  missing_fields: z.array(z.string()).default([]),
+  expected_conflicts: z.array(z.string()).default([]),
+  adjudication_rationale: z.string(),
+  resolved_from_annotators: z.array(z.string()),
+  source_disagreement_types: z.array(z.string()),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+const kappaStatsSchema = z.object({
+  pair_count: z.number().int(),
+  raw_agreement: z.number().nullable(),
+  expected_agreement: z.number().nullable(),
+  cohens_kappa: z.number().nullable(),
+});
+
+export const agreementReportSchema = z.object({
+  protocol_version: z.string(),
+  scenarios_with_submissions: z.number().int(),
+  multi_rated_scenarios: z.number().int(),
+  disputed_count: z.number().int(),
+  adjudicated_count: z.number().int(),
+  unadjudicated_disputes: z.number().int(),
+  annotator_counts: z.record(z.string(), z.number().int()),
+  decision_agreement: kappaStatsSchema.extend({
+    confusion_matrix: z.record(z.string(), z.record(z.string(), z.number().int())),
+  }),
+  specialist_agreement: z.object({
+    pair_count: z.number().int(),
+    mean_jaccard: z.number().nullable(),
+    exact_set_agreement: z.number().nullable(),
+    per_role: z.record(z.string(), kappaStatsSchema),
+  }),
+  evidence_mean_jaccard: z.number().nullable(),
+  missing_fields_mean_jaccard: z.number().nullable(),
+  disputed_scenarios: z.array(z.object({
+    scenario_id: z.string(),
+    case_id: z.string(),
+    case_version: z.number().int(),
+    trigger_event_id: z.string(),
+    annotators: z.array(z.string()),
+    disagreement_types: z.array(z.string()),
+    adjudicated: z.boolean(),
+    submissions: z.array(multiRaterSubmissionSchema),
+    adjudication: adjudicationSchema.nullable().optional(),
+  })),
+  summary_note: z.string(),
+});
+
+export const temporalAuditSchema = z.object({
+  audit_version: z.string(),
+  passed: z.boolean(),
+  case_id: z.string(),
+  case_version: z.number().int(),
+  trigger_event_id: z.string(),
+  cutoff_date: z.string(),
+  original_event_count: z.number().int(),
+  allowed_event_count: z.number().int(),
+  excluded_future_event_count: z.number().int(),
+  original_unplaced_count: z.number().int(),
+  audited_evidence_count: z.number().int(),
+  audited_opinion_citations: z.number().int(),
+  audited_claims: z.number().int(),
+  same_day_events_on_cutoff: z.array(z.string()),
+  future_dates_in_question: z.array(z.string()),
+  leaked_count: z.number().int(),
+  leaked_items: z.array(z.object({
+    check_code: z.string(),
+    location: z.string(),
+    item_id: z.string(),
+    detail: z.string(),
+  })),
+  checks: z.array(z.object({
+    code: z.string(),
+    status: z.enum(['passed', 'warning', 'failed']),
+    message: z.string(),
+  })),
 });
 
 export type CaseAttachment = z.infer<typeof attachmentSchema>;
 export type DataCapability = z.infer<typeof dataCapabilitySchema>;
 export type BlindAnnotation = z.infer<typeof annotationSchema>;
 export type LibraryEvaluation = z.infer<typeof libraryEvaluationSchema>;
+export type ReviewPanelTask = z.infer<typeof reviewPanelTaskSchema>;
+export type MultiRaterSubmission = z.infer<typeof multiRaterSubmissionSchema>;
+export type AdjudicationRecord = z.infer<typeof adjudicationSchema>;
+export type AgreementReport = z.infer<typeof agreementReportSchema>;
+export type TemporalAudit = z.infer<typeof temporalAuditSchema>;

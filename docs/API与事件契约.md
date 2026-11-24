@@ -35,6 +35,15 @@
 | GET | `/runs/{run_id}/events?after_seq=0` | SSE 重放与实时事件 |
 | GET / PUT / DELETE | `/settings/llm` | 查看、保存、清除持久共享默认模型设置 |
 | POST | `/settings/llm/test` | 使用已保存配置发短请求验证连接，不含病例 |
+| GET / POST | `/settings/llm/profiles` | 列出和新建命名连接方案 |
+| POST | `/settings/llm/profiles/from-scope` | 从当前范围的有效配置生成独立方案 |
+| PUT / DELETE | `/settings/llm/profiles/{profile_id}` | 编辑和删除命名方案 |
+| POST | `/settings/llm/profiles/{profile_id}/activate` | 启用到共享默认或指定专科 |
+| POST | `/settings/llm/profiles/{profile_id}/test` | 测试指定方案，包括尚未启用的方案 |
+
+新建及编辑接收 `name` 和原模型配置的平铺字段。归档接收 `{scope, name}`，启用接收 `{scope}`。`scope` 可取 `default` 或四个注册专科。列表和保存响应包含 `profile_id`、`name` 和公开连接参数。启用返回所选范围的有效状态。有效状态和运行模型快照在采用方案时附有 `profile_id` 与 `profile_name`。旧范围的直配和历史快照仍可读取。
+
+直接保存共享默认或专科配置会改用该范围自己的连接。归档在服务端复制保存当前参数及密钥，调用者无需重发密钥。在用方案返回 `409 LLM_PROFILE_IN_USE`，重名返回 `409 LLM_PROFILE_NAME_CONFLICT`。更新同一方案且服务地址相同可留空密钥。采用方案的范围转为直接配置时需提供密钥。
 
 普通成功响应为 `{ "data": ... }`，审计分页的 data 为 `{ "events": [], "next_seq": 0 }`。错误至少包含 `{ "error": { "code": "...", "message": "..." } }`，部分共用错误处理还返回 `details`、`retryable`、`request_id`。文件下载与 SSE 不使用 data 外层。客户端应允许附加字段，且不能依赖模型错误返回原始异常或响应正文。
 
@@ -203,3 +212,21 @@ data: {"event_id":"evt_000001","run_id":"run_...","seq":1,...}
 Agent 群页复用真实 `/cases`、`/runs`、`/audit` 和 `/events`，展示特定运行的版本、截止事件、参与角色、意见、审计与报告链接，不生成前端伪状态。
 
 常见错误：`DATASET_SIZE_LIMIT` (413)，格式/契约错误 (422)，`IMPORT_PREVIEW_EXPIRED` / `IMPORT_CASE_CONFLICT` (409)，官方下载失败或不允许的跳转 (502)。失败批次不会部分写入。
+
+## 冻结盲标与配对评测
+
+| 请求 | 响应与约束 |
+| --- | --- |
+| `GET /api/v2/annotations/tasks` | 当前各病例最新版本的任务队列，每项含场景、病例、版本、触发事件编号和是否已标。 |
+| `GET /api/v2/annotations/material?case_id=…&version=1&trigger_event_id=…` | 返回 `scenario_id`、`events` 和 `input_sha256`。各事件只含编号、发生日期、类型、标题与事实。指纹取规范化 UTF-8 JSON 对象 `{scenario_id, events}` 的 SHA-256。 |
+| `GET /api/v2/annotations/own?scenario_id=…&annotator_id=…` | 该编号已保存的单份参考。无匹配时返回 `data: null`。 |
+| `PUT /api/v2/annotations/{scenario_id}` | 保存流程标签、必要专科、缺失字段、依据及 `evidence_ids`。可提交材料指纹，服务器为新记录写入校验后的指纹。引用范围为可见材料中的 `事件ID:事实键`。 |
+| `DELETE /api/v2/annotations/{scenario_id}?annotator_id=…` | 按所给编号校验参考归属后删除。 |
+| `GET /api/v2/annotations` | 本地评估者导出包含历史版本的全部参考。标注页只请求任务队列、当前材料和本人的记录。 |
+| `POST /api/v2/experiments/evaluate` | 请求可含 `case_ids`、`case_versions`、`trigger_scope`（`all` 或 `latest`）。版本表与选集逐一对应，指定版本后可以复算历史截点。仅指定编号时读取所选病例最新版，两个字段均省略时读取全库。 |
+
+材料截取沿用事件日期和同日事件编号的排序。材料投影去除全程摘要、未定位资料、已知系统结论字段及内置病例的作者提示。导入者自定义的标题和临床事实仍需在建立盲标队列时核查。标注人编号服务于本地单参考归属，系统保留评估者的全量导出接口。
+
+评分与保存共用校验。材料指纹冲突返回 `409 ANNOTATION_INPUT_MISMATCH`，引用超出可见范围返回 `422 ANNOTATION_EVIDENCE_OUT_OF_SCOPE`，跨编号覆盖已有参考返回 `409 ANNOTATION_REVIEWER_CONFLICT`。无指纹的历史参考可继续评分，CLI 的统计摘要会单列有材料指纹的参考数。
+
+评测协议 `mdt-library-eval-v2` 返回八组方法及五项配对对比，门控对比是 B3/B2，语义补齐对比是 B3/A2。各对比提供 `metric_numerator`、`metric_denominator`、可评截点及病例族数。零分母时 `point_estimate` 为 null，少于两个可评病例族时区间上下界为 null。`mcnemar_status` 取 `ok`、`no_annotations` 或 `repeated_family`，并附两组中仅一方正确的配对数。错误放行和过度暂缓另有逐方法分子与分母。

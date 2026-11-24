@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { APIError } from '../api';
-import { agentModelSchema, annotationSchema, attachmentSchema, storageSchema, auditPageSchema, caseSchema, dataCapabilitySchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, libraryEvaluationSchema, modelStatusSchema, modelTestSchema, reportSchema, routingSchema, runSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type Role } from './schemas';
+import { adjudicationSchema, agentModelSchema, agreementReportSchema, annotationSchema, annotationTaskSchema, blindMaterialSchema, attachmentSchema, storageSchema, auditPageSchema, caseSchema, dataCapabilitySchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, libraryEvaluationSchema, modelProfileSchema, modelStatusSchema, modelTestSchema, multiRaterSubmissionSchema, reportSchema, reviewPanelTaskSchema, routingSchema, runSchema, temporalAuditSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type BlindAnnotation, type AnnotationTask, type Role } from './schemas';
 
 async function request<S extends z.ZodType>(path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
   let response: Response;
@@ -41,10 +41,20 @@ export const researchApi = {
   listAttachments: (caseId: string, eventId?: string) => request(`/cases/${id(caseId)}/attachments${eventId ? `?event_id=${id(eventId)}` : ''}`, z.array(attachmentSchema)),
   uploadAttachment: (caseId: string, eventId: string, file: File) => request(`/cases/${id(caseId)}/events/${id(eventId)}/attachments?filename=${id(file.name)}`, attachmentSchema, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file }),
   deleteAttachment: (caseId: string, attachmentId: string) => request(`/cases/${id(caseId)}/attachments/${id(attachmentId)}`, z.object({ deleted: z.boolean(), attachment_id: z.string() }), { method: 'DELETE' }),
-  evaluateExperiments: (value: { case_ids?: string[]; trigger_scope: 'all' | 'latest' }) => request('/experiments/evaluate', libraryEvaluationSchema, body(value)),
+  evaluateExperiments: (value: { case_ids?: string[]; case_versions?: Record<string, number>; trigger_scope: 'all' | 'latest'; reference_source?: 'merged' | 'single_only' }) => request('/experiments/evaluate', libraryEvaluationSchema, body(value)),
   annotations: () => request('/annotations', z.array(annotationSchema)),
-  saveAnnotation: (scenarioId: string, value: { case_id: string; case_version: number; trigger_event_id: string; annotator_id: string; required_agents: Role[]; expected_decision: 'READY_FOR_REVIEW' | 'NEED_MORE_INFORMATION' | 'DEFER_DECISION'; missing_fields: string[]; rationale: string }) => request(`/annotations/${encodeURIComponent(scenarioId)}`, annotationSchema, body(value, 'PUT')),
-  deleteAnnotation: (scenarioId: string) => request(`/annotations/${encodeURIComponent(scenarioId)}`, z.object({ deleted: z.boolean(), scenario_id: z.string() }), { method: 'DELETE' }),
+  annotationTasks: () => request('/annotations/tasks', z.array(annotationTaskSchema)),
+  blindMaterial: (task: Pick<AnnotationTask, 'case_id' | 'case_version' | 'trigger_event_id'>) => request(`/annotations/material?case_id=${id(task.case_id)}&version=${task.case_version}&trigger_event_id=${id(task.trigger_event_id)}`, blindMaterialSchema),
+  ownAnnotation: (scenario: string, reviewer: string) => request(`/annotations/own?scenario_id=${id(scenario)}&annotator_id=${id(reviewer)}`, annotationSchema.nullable()),
+  saveAnnotation: (scenario: string, value: Omit<BlindAnnotation, 'scenario_id' | 'updated_at'>) => request(`/annotations/${id(scenario)}`, annotationSchema, body(value, 'PUT')),
+  deleteAnnotation: (scenario: string, reviewer: string) => request(`/annotations/${id(scenario)}?annotator_id=${id(reviewer)}`, z.object({ deleted: z.boolean(), scenario_id: z.string() }), { method: 'DELETE' }),
+  reviewPanelTasks: (annotatorId?: string) => request(`/review-panel/tasks${annotatorId ? `?annotator_id=${id(annotatorId)}` : ''}`, z.array(reviewPanelTaskSchema)),
+  reviewPanelOwn: (scenario: string, reviewer: string) => request(`/review-panel/own?scenario_id=${id(scenario)}&annotator_id=${id(reviewer)}`, multiRaterSubmissionSchema.nullable()),
+  saveReviewSubmission: (scenario: string, value: { case_id: string; case_version: number; trigger_event_id: string; annotator_id: string; required_agents: Role[]; expected_decision: BlindAnnotation['expected_decision']; input_sha256?: string | null; evidence_ids: string[]; missing_fields: string[]; rationale: string }) => request(`/review-panel/submissions/${id(scenario)}`, multiRaterSubmissionSchema, body(value, 'PUT')),
+  deleteReviewSubmission: (scenario: string, reviewer: string) => request(`/review-panel/submissions/${id(scenario)}?annotator_id=${id(reviewer)}`, z.object({ deleted: z.boolean(), scenario_id: z.string(), annotator_id: z.string() }), { method: 'DELETE' }),
+  reviewPanelAgreement: () => request('/review-panel/agreement', agreementReportSchema),
+  saveAdjudication: (scenario: string, value: { case_id: string; case_version: number; trigger_event_id: string; adjudicator_id: string; required_agents: Role[]; expected_decision: BlindAnnotation['expected_decision']; input_sha256?: string | null; evidence_ids: string[]; missing_fields: string[]; adjudication_rationale: string }) => request(`/review-panel/adjudications/${id(scenario)}`, adjudicationSchema, body(value, 'PUT')),
+  deleteAdjudication: (scenario: string) => request(`/review-panel/adjudications/${id(scenario)}`, z.object({ deleted: z.boolean(), scenario_id: z.string() }), { method: 'DELETE' }),
   runs: () => request('/runs', z.array(runSchema)),
   run: (runId: string) => request(`/runs/${id(runId)}`, runSchema),
   start: (value: RunRequest) => request('/runs', runSchema, body(value)),
@@ -52,9 +62,20 @@ export const researchApi = {
   rerun: (runId: string) => request(`/runs/${id(runId)}/rerun`, runSchema, body({})),
   events: (runId: string, after = 0) => request(`/runs/${id(runId)}/audit?after_seq=${after}&limit=500`, auditPageSchema),
   report: (runId: string) => request(`/runs/${id(runId)}/report`, reportSchema),
+  temporalAudit: (runId: string) => request(`/runs/${id(runId)}/temporal-audit`, temporalAuditSchema),
+  modelProfiles: () => request('/settings/llm/profiles', z.array(modelProfileSchema)),
+  createModelProfile: (value: ModelProfileInput) => request('/settings/llm/profiles', modelProfileSchema, body(value)),
+  saveScopeAsModelProfile: (scope: 'default' | Role, name: string) => request('/settings/llm/profiles/from-scope',
+    modelProfileSchema, body({ scope, name })),
+  updateModelProfile: (profileId: string, value: ModelProfileInput) => request(`/settings/llm/profiles/${id(profileId)}`, modelProfileSchema, body(value, 'PUT')),
+  deleteModelProfile: (profileId: string) => request(`/settings/llm/profiles/${id(profileId)}`, z.object({ deleted: z.boolean(), profile_id: z.string() }), { method: 'DELETE' }),
+  activateModelProfile: (profileId: string, scope: 'default' | Role) => request(`/settings/llm/profiles/${id(profileId)}/activate`,
+    scope === 'default' ? modelStatusSchema : agentModelSchema, body({ scope })),
+  testModelProfile: (profileId: string) => request(`/settings/llm/profiles/${id(profileId)}/test`, modelTestSchema, body({})),
   modelStatus: () => request('/settings/llm', modelStatusSchema),
   configureModel: (value: ModelConfiguration) => request('/settings/llm', modelStatusSchema, body(value, 'PUT')),
   clearModel: () => request('/settings/llm', modelStatusSchema, { method: 'DELETE' }),
   testModel: () => request('/settings/llm/test', modelTestSchema, body({})),
 };
 export type ModelConfiguration = { provider: string; base_url: string; model: string; api_key: string; timeout_seconds: number; temperature: number; max_output_tokens: number };
+export type ModelProfileInput = ModelConfiguration & { name: string };

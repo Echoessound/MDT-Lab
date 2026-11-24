@@ -4,15 +4,19 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sys
 from tempfile import NamedTemporaryFile
 
-from pydantic import __version__ as pydantic_version
+from pydantic import ValidationError, __version__ as pydantic_version
 
 from mdt_demo import schemas as base_schemas
 from mdt_demo.api_schemas import APIError
-from mdt_demo.research import datasets, engine, schemas, seeds, workflow_designer
+from mdt_demo.research import blind_review, datasets, engine, evaluation, schemas, seeds, workflow_designer
 from mdt_demo.research.schemas import ResearchCase
+
+
+SCENARIO_ID = re.compile(r"([A-Za-z0-9_-]{1,80}):v([1-9][0-9]*):([A-Za-z0-9_-]{1,80})")
 
 
 def encoded(value):
@@ -131,18 +135,70 @@ def export_results(db, plan, output_dir):
     return summary
 
 
+def _unique_json_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("标注 JSON 含有重复键，请核对导出文件。")
+        result[key] = value
+    return result
+
+
 def load_annotations_file(path: Path | None) -> dict[str, dict]:
-    """Load blind annotations exported from either AnnotationStore (dict) or Web UI (list)."""
+    """Validate keyed JSON, list JSON, and JSONL (adjudication.jsonl) annotation exports."""
     if path is None:
         return {}
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    text = path.read_text(encoding="utf-8")
+    if path.suffix.lower() == ".jsonl":
+        raw = [
+            json.loads(line, object_pairs_hook=_unique_json_keys)
+            for line in text.splitlines()
+            if line.strip()
+        ]
+    else:
+        raw = json.loads(text, object_pairs_hook=_unique_json_keys)
+    if isinstance(raw, dict) and "items" in raw:
+        raw = raw["items"]
+        if not isinstance(raw, list):
+            raise ValueError("标注文件的 items 必须是数组。")
     if isinstance(raw, dict):
-        if "items" in raw and isinstance(raw["items"], list):
-            return {item["scenario_id"]: item for item in raw["items"] if isinstance(item, dict) and "scenario_id" in item}
-        return {k: v for k, v in raw.items() if isinstance(v, dict)}
-    if isinstance(raw, list):
-        return {item["scenario_id"]: item for item in raw if isinstance(item, dict) and "scenario_id" in item}
-    raise ValueError("标注文件格式无效，应为 JSON 对象或数组。")
+        entries = raw.items()
+    elif isinstance(raw, list):
+        entries = ((None, item) for item in raw)
+    else:
+        raise ValueError("标注文件格式无效，应为 JSON 对象、数组或 JSONL。")
+
+    annotations = {}
+    ignored_extra = {
+        "scenario_id", "updated_at", "created_at", "protocol_version",
+        "expected_conflicts", "resolved_from_annotators", "source_disagreement_types",
+        "reference_source", "adjudicator_id", "adjudication_rationale",
+    }
+    for index, (key, item) in enumerate(entries, 1):
+        if not isinstance(item, dict):
+            raise ValueError(f"第 {index} 条标注必须是对象。")
+        sid = item.get("scenario_id", key)
+        match = SCENARIO_ID.fullmatch(sid) if isinstance(sid, str) else None
+        if not match or (key is not None and key != sid):
+            raise ValueError(f"第 {index} 条标注缺少有效的场景编号或与对象键不一致。")
+        if sid in annotations:
+            raise ValueError(f"第 {index} 条标注重复使用了同一场景编号。")
+        # Early keyed exports kept only the scoring fields and encoded identity in the key.
+        case_id, version, event_id = match.groups()
+        identity = {"case_id": case_id, "case_version": int(version), "trigger_event_id": event_id}
+        payload = {**identity, **{k: v for k, v in item.items() if k not in ignored_extra}}
+        if "adjudicator_id" in item and "annotator_id" not in payload:
+            payload["annotator_id"] = item["adjudicator_id"]
+        if "adjudication_rationale" in item and "rationale" not in payload:
+            payload["rationale"] = item["adjudication_rationale"]
+        try:
+            validated = evaluation.BlindAnnotationInput.model_validate(payload).model_dump(mode="json")
+        except ValidationError:
+            raise ValueError(f"第 {index} 条标注不符合独立标注契约，请核对字段、专科和流程标签。") from None
+        if any(validated[k] != value for k, value in identity.items()):
+            raise ValueError(f"第 {index} 条标注的病例版本或触发事件与场景编号不一致。")
+        annotations[sid] = {**validated, "scenario_id": sid}
+    return annotations
 
 
 def _atomic_write_text(target: Path, text: str) -> None:
@@ -157,14 +213,48 @@ def _atomic_write_text(target: Path, text: str) -> None:
             temporary.unlink(missing_ok=True)
 
 
-def export_paper_artifacts(output_dir: Path, evaluation: dict) -> dict[str, str]:
-    """Write thesis-ready CSV, LaTeX booktabs table, and family-clustered statistics JSON."""
+def export_checkpoint_paper(db, plan, cases, annotations, output_dir: Path) -> dict[str, str]:
+    """Score the recorded matrices and serialize concurrent exports to the same directory."""
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        matrices = {sid: json.loads(result) for sid, result in db.execute(
+            "SELECT scenario_id, result FROM attempts WHERE status='completed'")}
+        if matrices.keys() != {row["scenario_id"] for row in plan["scenarios"]}:
+            raise ValueError("计划截点仍有失败或尚未执行，请先续跑，完成后再导出论文产物。")
+        selected_annotations = {sid: item for sid, item in annotations.items() if sid in matrices}
+        scores = evaluation.evaluate_library(cases, trigger_scope=plan["trigger_scope"],
+                                             annotations=selected_annotations, matrices=matrices)
+        with (output_dir / "results.json").open("rb") as result_file:
+            results_hash = hashlib.file_digest(result_file, "sha256").hexdigest()
+        provenance = {
+            "manifest_sha256": digest(plan),
+            "results_sha256": results_hash,
+            "evaluator_sha256": hashlib.sha256(Path(evaluation.__file__).read_bytes()).hexdigest(),
+            "reference_validation_sha256": hashlib.sha256(Path(blind_review.__file__).read_bytes()).hexdigest(),
+            "scored_annotations_sha256": digest(selected_annotations),
+            "annotations_with_input_sha256": sum(
+                item.get("input_sha256") is not None for item in selected_annotations.values()),
+            "annotations_outside_scope": len(annotations) - len(selected_annotations),
+        }
+        return export_paper_artifacts(output_dir, scores, provenance)
+
+
+def export_paper_artifacts(output_dir: Path, evaluation: dict, provenance: dict | None = None) -> dict[str, str]:
+    """Write data first and publish their fingerprints in the statistics file last."""
     scores_path = output_dir / "scores.csv"
     latex_path = output_dir / "ablation_table.tex"
+    error_path = output_dir / "error_analysis.csv"
     stats_path = output_dir / "statistics_summary.json"
     _atomic_write_text(scores_path, evaluation["scores_csv"])
     _atomic_write_text(latex_path, evaluation["latex_table"] + "\n")
+    _atomic_write_text(error_path, evaluation.get("error_analysis_csv", ""))
     summary_payload = {
+        "provenance": {
+            **(provenance or {}),
+            "scores_csv_sha256": hashlib.sha256(scores_path.read_bytes()).hexdigest(),
+            "latex_table_sha256": hashlib.sha256(latex_path.read_bytes()).hexdigest(),
+            "error_analysis_csv_sha256": hashlib.sha256(error_path.read_bytes()).hexdigest(),
+        },
         "protocol_version": evaluation["protocol_version"],
         "execution_mode": evaluation["execution_mode"],
         "trigger_scope": evaluation["trigger_scope"],
@@ -174,6 +264,7 @@ def export_paper_artifacts(output_dir: Path, evaluation: dict) -> dict[str, str]
         "memory_impact_scenarios": evaluation["memory_impact_scenarios"],
         "methods": evaluation["methods"],
         "paired_statistics": evaluation["paired_statistics"],
+        "error_analysis_count": len(evaluation.get("error_analysis", [])),
     }
     _atomic_write_text(
         stats_path,
@@ -182,5 +273,6 @@ def export_paper_artifacts(output_dir: Path, evaluation: dict) -> dict[str, str]
     return {
         "scores_csv": str(scores_path),
         "latex_table": str(latex_path),
+        "error_analysis_csv": str(error_path),
         "statistics_summary": str(stats_path),
     }

@@ -11,9 +11,10 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, field_validator
 
 from ..api_schemas import APIError
+from .adjudication import AdjudicationInput, MultiRaterSubmissionInput
 from .evaluation import BlindAnnotationInput
 from .media_store import MAX_ATTACHMENT_BYTES
-from .schemas import RunRequest
+from .schemas import Identifier, RunRequest
 from .store import TERMINAL
 
 router = APIRouter(prefix="/api/v2", tags=["纵向 MDT 研究"])
@@ -50,8 +51,10 @@ class AutoEnrichInput(BaseModel):
 
 class EvaluateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    case_ids: list[str] | None = Field(default=None, max_length=50)
+    case_ids: list[Identifier] | None = Field(default=None, max_length=50)
+    case_versions: dict[Identifier, Annotated[int, Field(ge=1, strict=True)]] | None = Field(default=None, max_length=50)
     trigger_scope: Literal["all", "latest"] = "all"
+    reference_source: Literal["merged", "single_only"] = "merged"
 
 
 @router.get("/health")
@@ -150,7 +153,8 @@ def delete_attachment(case_id: str, attachment_id: str, request: Request):
 @router.post("/experiments/evaluate")
 def evaluate_experiments(body: EvaluateRequest, request: Request):
     return {"data": request.app.state.research.evaluate_experiments(
-        case_ids=body.case_ids, trigger_scope=body.trigger_scope
+        case_ids=body.case_ids, case_versions=body.case_versions,
+        trigger_scope=body.trigger_scope, reference_source=body.reference_source,
     )}
 
 
@@ -159,14 +163,88 @@ def list_annotations(request: Request):
     return {"data": request.app.state.research.list_annotations()}
 
 
+@router.get("/annotations/tasks")
+def annotation_tasks(request: Request):
+    return {"data": request.app.state.research.annotation_tasks()}
+
+
+@router.get("/annotations/material")
+def annotation_material(request: Request, case_id: str = Query(min_length=1, max_length=80),
+                        version: int = Query(ge=1), trigger_event_id: str = Query(min_length=1, max_length=80)):
+    return {"data": request.app.state.research.annotation_material(case_id, version, trigger_event_id)}
+
+
+@router.get("/annotations/own")
+def own_annotation(request: Request, scenario_id: str = Query(min_length=1),
+                   annotator_id: str = Query(min_length=1, max_length=80)):
+    return {"data": request.app.state.research.own_annotation(scenario_id, annotator_id)}
+
+
 @router.put("/annotations/{scenario_id:path}")
 def save_annotation(scenario_id: str, body: BlindAnnotationInput, request: Request):
     return {"data": request.app.state.research.save_annotation(scenario_id, body)}
 
 
 @router.delete("/annotations/{scenario_id:path}")
-def delete_annotation(scenario_id: str, request: Request):
-    return {"data": request.app.state.research.delete_annotation(scenario_id)}
+def delete_annotation(scenario_id: str, request: Request,
+                      annotator_id: str | None = Query(default=None, min_length=1, max_length=80)):
+    return {"data": request.app.state.research.delete_annotation(scenario_id, annotator_id)}
+
+
+@router.get("/review-panel/tasks")
+def review_panel_tasks(request: Request, annotator_id: str | None = Query(default=None, min_length=1, max_length=80)):
+    return {"data": request.app.state.research.review_panel_tasks(annotator_id)}
+
+
+@router.get("/review-panel/own")
+def review_panel_own(request: Request, scenario_id: str = Query(min_length=1),
+                     annotator_id: str = Query(min_length=1, max_length=80)):
+    return {"data": request.app.state.research.review_panel_own(scenario_id, annotator_id)}
+
+
+@router.put("/review-panel/submissions/{scenario_id:path}")
+def save_review_submission(scenario_id: str, body: MultiRaterSubmissionInput, request: Request):
+    return {"data": request.app.state.research.save_review_submission(scenario_id, body)}
+
+
+@router.delete("/review-panel/submissions/{scenario_id:path}")
+def delete_review_submission(scenario_id: str, request: Request,
+                             annotator_id: str = Query(min_length=1, max_length=80)):
+    return {"data": request.app.state.research.delete_review_submission(scenario_id, annotator_id)}
+
+
+@router.get("/review-panel/agreement")
+def review_panel_agreement(request: Request):
+    return {"data": request.app.state.research.review_panel_agreement()}
+
+
+@router.get("/review-panel/adjudications")
+def list_adjudications(request: Request):
+    return {"data": request.app.state.research.list_adjudications()}
+
+
+@router.put("/review-panel/adjudications/{scenario_id:path}")
+def save_adjudication(scenario_id: str, body: AdjudicationInput, request: Request):
+    return {"data": request.app.state.research.save_adjudication(scenario_id, body)}
+
+
+@router.delete("/review-panel/adjudications/{scenario_id:path}")
+def delete_adjudication(scenario_id: str, request: Request):
+    return {"data": request.app.state.research.delete_adjudication(scenario_id)}
+
+
+@router.get("/review-panel/export/annotations.jsonl")
+def export_panel_annotations(request: Request):
+    content = request.app.state.research.export_panel_annotations_jsonl()
+    return Response(content, media_type="application/x-ndjson",
+                    headers={"Content-Disposition": 'attachment; filename="annotations.jsonl"'})
+
+
+@router.get("/review-panel/export/adjudication.jsonl")
+def export_panel_adjudications(request: Request):
+    content = request.app.state.research.export_panel_adjudication_jsonl()
+    return Response(content, media_type="application/x-ndjson",
+                    headers={"Content-Disposition": 'attachment; filename="adjudication.jsonl"'})
 
 
 @router.post("/runs", status_code=202)
@@ -197,6 +275,11 @@ def rerun(run_id: str, request: Request):
 @router.get("/runs/{run_id}/report")
 def report(run_id: str, request: Request):
     return {"data": request.app.state.research.report(run_id)}
+
+
+@router.get("/runs/{run_id}/temporal-audit")
+def temporal_audit(run_id: str, request: Request):
+    return {"data": request.app.state.research.temporal_audit_run(run_id)}
 
 
 @router.get("/runs/{run_id}/report/download")

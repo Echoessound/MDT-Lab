@@ -4,7 +4,7 @@
 
 已经形成浏览器内的完整链路：**版本化合成病例 → 触发病程事件 → 调度相关专科 → 独立审阅与最多一轮定向讨论 → 证据与资料完整性检查 → 可追溯报告和审计**。页面展示后端实际执行结果，支持追加病程、历史版本、停止、重跑和刷新恢复。
 
-提供 3 个手工编写的肺癌合成场景，并支持 Synthea、TCIA 临床表与结构化研究 JSON 导入，全部明确标注来源。Mock 是确定性流程脚本，不是医学推理；资料审阅标签不构成诊断、治疗或处方建议。
+项目提供 3 个手工编写的肺癌合成场景，可导入 Synthea CSV ZIP、TCIA NSCLC 临床 CSV、TCGA/cBioPortal 临床 TSV 与结构化研究 JSON，并保留来源和映射记录。Mock 以确定性规则模拟资料审阅，流程标签仅供科研核对。
 
 - [技术方案与开发计划](docs/技术方案与开发计划.md)：当前实现、差距与后续验收标准。
 - [API 与事件契约](docs/API与事件契约.md)：V0.3 `/api/v2` 与旧版兼容接口。
@@ -55,7 +55,7 @@ cd ..
 | `/research/agents?run={run_id}` | 固定监视一项运行，选择协作图中的专科核对意见与证据，或切换到实时审计 |
 | `/research/runs/{run_id}` | 查看协作、运行输入和执行记录，停止进行中的运行或重跑已结束的任务 |
 | `/research/runs/{run_id}/report` | 查看资料缺口、未解决分歧、初始与最终意见，下载报告或完整审计 |
-| `/settings/models` | 管理共享连接与各专科覆盖，测试已保存的连接，查看数据库状态 |
+| `/settings/models` | 管理命名连接方案，切换共享默认和专科连接，测试已保存的连接 |
 | `/roadmap` | 使用说明，包含常用操作、输入范围及审阅结果解释 |
 | `/legacy` | V0.2 三角色病例库与原有运行记录 |
 
@@ -113,15 +113,15 @@ Mock 场景包括 `standard`、`partial_failure`、`persistent_disagreement`、`
 
 ## 离线批量对照
 
-从仓库根目录运行以下命令。每个截点按病例编号、版本和触发事件配对，记录冻结输入的 SHA-256、可见事件数和事实数。脚本从本地来源文件或内置病例读取数据，使用标准 Mock。
+各方法按相同的基础病例、版本和触发事件配对，A1 与 A2 对输入的调整见下表。下列命令在 `mdt-demo` 仓库根目录执行。脚本记录冻结输入的 SHA-256、可见事件数和事实数，运行标准 Mock。
 
 ```bash
-.venv/bin/python scripts/run_mock_experiments.py --output-dir outputs/experiments/seed
+.venv/bin/python scripts/run_mock_experiments.py --output-dir outputs/experiments/seed --export-paper
 .venv/bin/python scripts/run_mock_experiments.py --source tcia_nsclc_csv --input data/raw/external/tcia_nsclc_clinical.csv --max-cases 50 --output-dir outputs/experiments/tcia
 .venv/bin/python scripts/run_mock_experiments.py --source synthea_csv --input data/raw/external/synthea_sample_csv.zip --max-cases 3 --triggers latest --output-dir outputs/experiments/synthea
 ```
 
-`--triggers all` 为默认值，按日期及同日事件编号逐个截取。`latest` 只取每个病例的末次事件。外部来源沿用导入器的纳排和排序规则。输出目录中的 `results.json` 包含来源和许可、病例族、场景清单、实现指纹、失败尝试及逐方法结果。`checkpoint.sqlite3` 记录每个场景的进度。重跑同一命令会复用成功场景，重试失败场景并保留上次失败记录。改变来源、代码、运行环境或截点范围后，应使用新的目录。
+`--triggers all` 为默认值，按日期及同日事件编号逐个截取。`latest` 只取每个病例的末次事件。外部来源沿用导入器的纳排和排序规则，TCGA/cBioPortal 和研究 JSON 分别使用 `--source tcga_cbioportal_tsv` 与 `--source research_json`，通过 `--input` 指定文件。`results.json` 保留来源和许可、病例族、场景清单、实现指纹、失败尝试及逐方法结果。用同一命令续跑时，脚本复用 SQLite 检查点的成功记录，只重试失败截点。改变输入、截点范围、执行实现或运行环境后，使用新的输出目录。
 
 | 方法 | 实际比较条件 |
 | --- | --- |
@@ -130,15 +130,27 @@ Mock 场景包括 `standard`、`partial_failure`、`persistent_disagreement`、`
 | A1 / A3 / A4 | 分别在 B3 上单独移除前序事件、改为固定全员、关闭讨论。调用节省率的分母为 A3 的角色调用数，含讨论轮次。 |
 | A2 | 在冻结副本中尝试按证据生成扩展事件。无支持证据时使用 B3 轨迹。结果中记录实际使用的输入版本、触发事件和轨迹编号。 |
 
+**单人盲标与重评分。** 启动网页后，标注人可直接进入单人盲标页，填写编号，按截点材料选择必要专科、流程标签和引用事实。每个截点保存一份参考判断，材料指纹和引用范围在保存及评分时校验。研究者可在「8 组配对实验与导出」选择「导出全库盲标 JSON」，再对同一批次重评分。以浏览器将文件保存到下载目录为例。[打开单人盲标页](http://127.0.0.1:8000/research/experiments?view=annotate)
+
+```bash
+.venv/bin/python scripts/run_mock_experiments.py --output-dir outputs/experiments/seed --annotations "$HOME/Downloads/mdt_blind_annotations.json"
+```
+
+**统计口径。** B3 与 B2 的门控拦截率以 B2 拟放行的截点为分母，分子为其中 B3 改判补件或暂缓的数量。带独立参考时，错误放行率以参考要求补件或暂缓的截点为分母，专科召回率按可评分截点的必要专科覆盖比例取平均。95% 区间以病例族为单位重抽样 1,000 次，种子为 2026。可评病例族少于两个时省略区间，分母为零时省略点估计。仅在每个有标注病例族贡献一个标注截点时，对两种方法判断正确与否做精确 McNemar 检验。
+
+**核验导出。** `--export-paper` 或 `--annotations` 会在全部截点完成后，从检查点的实际方法记录生成 `scores.csv`、`ablation_table.tex` 和 `statistics_summary.json`。摘要的 `provenance` 保存批次清单、评分代码和参与评分的标注指纹，并计数批次外标注及带材料指纹的标注。可在输出目录执行 `shasum -a 256 results.json scores.csv ablation_table.tex`，逐项对照 `results_sha256`、`scores_csv_sha256` 和 `latex_table_sha256`。
+
 工作台「智能流程与影像」可查看同截点的建议分工、影像检查登记和方法对照。「专科调度依据」显示实际运行的路由。若曾使用 `f8f6bc6` 的自动补齐生成过合成版本，请从补齐前的原始版本重算，再引用研究结果。本轮复算的样本量、标签分布及复核记录见[验收记录](docs/验收记录.md)。
 
 ## 真实模型适配器
 
 V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只用模拟 HTTP 上游测试，尚未使用真实凭据验证任何模型服务，也没有发起付费调用**。
 
-在「模型设置」的连接列表中选择「共享默认」或具体专科，填写服务地址、模型标识与密钥，点击「保存设置」。同一页面内切换专科会保留草稿，刷新或离开页面会丢弃未保存修改。可用 `/settings/models?agent=radiology` 直接打开影像科。具有独立连接的专科可选择「恢复共享默认设置」移除覆盖。服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数。「测试已保存连接」会发送一条不含病例的短请求，可能产生费用。
+在「模型设置」先选择「共享默认」或具体专科。点击「新建方案」，填写名称、服务地址、模型标识和密钥，再从卡片启用到当前范围。卡片显示直接使用或继承使用状态，也可先测试未启用的方案。首次切离已保存的直接配置时，可以「先存为方案」，之后从列表切回。具有独立连接的专科可选择「恢复共享默认设置」。浏览、创建和测试均为独立动作，通过卡片上的启用按钮切换当前连接。[CC Switch 切换设计](https://github.com/farion1231/cc-switch/blob/main/docs/user-manual/zh/2-providers/2.2-switch.md)
 
-每个 Agent 可独立设置 URL、API Key、模型、超时、温度与输出上限；未覆盖时继承共享默认配置。只要求本次参与的角色配置齐全。密钥经 Fernet 加密后写入 `model_settings` 集合，不回传页面、报告或审计；浏览器保存成功后清空密码框。加密主密钥在 `outputs/.model-settings.key`（0600 权限），也可由 `MDT_SECRET_KEY` 环境变量提供。重启后恢复配置；丢失主密钥会明确报错并保留原密文，不能自动恢复密钥。每次运行冻结角色配置，并保存不含密钥的参数快照。更换 URL 必须重新输入密钥。
+共享默认会应用于所有继承该配置的专科。直接绑定到专科的方案通过该专科单独切换。编辑命名方案会更新所有使用它的范围，参数在新建运行时冻结。运行详情保留当时的方案名称、编号和模型参数。正在使用的方案需先解除绑定或切换后才可删除。也可继续在具体范围填写直接配置。切换范围会保留页面内的未保存草稿。
+
+服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数。连接测试向所选服务发送一条不含病例的短请求，可能产生费用。密钥通过 Fernet 加密写入 `model_settings`，网页、运行、报告和审计只读公开配置。加密主密钥位于 `outputs/.model-settings.key`，权限为 0600，也可由 `MDT_SECRET_KEY` 提供。使用同一密钥重启可恢复方案和绑定。更换服务地址，或从方案切回直接配置时，请填写该连接的密钥。
 
 模型连接只接受公开 HTTPS 目标，拒绝本机/内网地址和重定向。单次请求最多重试一次，验证失败按失败处理；未配置 LLM 时拒绝启动，不自动替换为 Mock。上游未提供 Token 用量时记录为 `null`。
 
@@ -240,6 +252,6 @@ mdt-demo/
 
 ## 当前边界与下一阶段
 
-已接入 Synthea CSV ZIP、TCIA/NSCLC-Radiogenomics 临床 CSV 与研究 JSON；TCGA/cBioPortal 尚未接入。当前没有真实影像推理、指南检索、临床推荐、认证或公网部署能力。`case_kind="synthetic"` 和来源标记不能自动证明用户填写的自由文本确实不含真实信息。
+当前可在本地复算五类来源（含内置病例）的八组 Mock 对照。TCIA 和 TCGA/cBioPortal 提供临床表，日期可定位的资料进入时间线，缺少可用时点的字段保留在来源资料中。影像模块支持检查登记与附件复核。真实影像像素推理、指南检索、临床推荐、身份认证和公网部署仍属后续范围。录入者负责确认自由文本适用于科研共享，`case_kind` 只记录声明的病例来源类别。
 
-后续依次完成：**真实模型小样本验证 → 扩展数据映射与独立场景标注 → 基线/消融实验 → 依据实际结果撰写论文**。现有固定全员模式可用于观察调用差异，但还不是完整的实验平台。
+正式论文实验仍需冻结测试队列，由独立人员完成参考标注和争议仲裁，使用真实模型先做小样本联调，再按同一协议留存调用、失败、耗时和 Token 记录。现有单人盲标流程每个截点仅保存一份参考，多人独立初标与一致性评价尚待实现。当前回归结果用于核对流程与复算能力。

@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { DecisionBadge, ErrorState, Icon, Loading } from '../ui';
 import { researchApi } from './api';
-import { InlineError, eventNames, roleNames, roleOrder } from './components';
-import { inputThroughTrigger } from './run-input';
-import type { BlindAnnotation, LibraryEvaluation, ResearchCase, Role } from './schemas';
+import { InlineError, roleNames } from './components';
+import { BlindReviewWorkbench } from './blind-review-workbench';
+import { MultiRaterPanel } from './multi-rater-panel';
+import type { LibraryEvaluation, ResearchCase, Role } from './schemas';
 import { TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
-import { factKeyLabel, formatFactValue } from './zh-dict';
+
+const maxBatchCases = 50;
 
 const expTabs = [
   { key: 'batch', label: '8 组配对实验与导出' },
-  { key: 'annotate', label: '独立盲标工作台 (G03)' },
+  { key: 'annotate', label: '独立盲标工作台' },
   { key: 'pipeline', label: '多模态数据接入架构' },
 ] as const;
-
-type Decision = 'READY_FOR_REVIEW' | 'NEED_MORE_INFORMATION' | 'DEFER_DECISION';
 
 function downloadText(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -49,6 +49,13 @@ function BatchEvaluationView({
   onRun: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const exportReferences = useMutation({
+    mutationFn: researchApi.annotations,
+    onSuccess: records => {
+      const payload = Object.fromEntries(records.map(item => [item.scenario_id, item]));
+      downloadText('mdt_blind_annotations.json', JSON.stringify(payload, null, 2) + '\n', 'application/json;charset=utf-8');
+    },
+  });
   const [scenarioFilter, setScenarioFilter] = useState<'all' | 'memory' | 'annotated' | 'unannotated'>('all');
 
   async function copyLatex() {
@@ -79,10 +86,14 @@ function BatchEvaluationView({
       <section className="panel exp-control-panel">
         <div className="workspace-section-heading">
           <div>
-            <h2>批量配对实验配置（§6.2 B0–B3 基线与 A1–A4 单因素消融）</h2>
-            <p className="muted">对所选病例的冻结截点同步执行 8 组确定性规则对照，按病例族汇总调用开销、门控拦截与盲标指标。</p>
+            <h2>配对实验的病例与截点范围</h2>
+            <p className="muted">对所选病例的冻结截点同步执行 8 组确定性规则对照，每批最多选择 {maxBatchCases} 个病例。</p>
           </div>
           <div className="button-group">
+            <button type="button" className="button secondary" disabled={exportReferences.isPending}
+              onClick={() => exportReferences.mutate()}>
+              <Icon name="download" size={15} />导出全库盲标 JSON
+            </button>
             <select aria-label="截点范围" value={scope} onChange={e => onScopeChange(e.target.value as 'all' | 'latest')}>
               <option value="all">全部历史截点（完整纵向评估）</option>
               <option value="latest">仅各病例最新截点</option>
@@ -99,14 +110,14 @@ function BatchEvaluationView({
             const active = selectedIds.includes(item.case_id);
             return (
               <label key={item.case_id} className={`fact-toggle-chip ${active ? 'is-active' : ''}`}>
-                <input type="checkbox" checked={active} onChange={() => onToggleCase(item.case_id)} />
+                <input type="checkbox" disabled={!active && selectedIds.length >= maxBatchCases} checked={active} onChange={() => onToggleCase(item.case_id)} />
                 <span>{item.case_id}</span>
-                <small>({item.timeline.length} 截点)</small>
+                <small>v{item.version} · {item.timeline.length} 截点</small>
               </label>
             );
           })}
         </div>
-        <InlineError error={error} />
+        <InlineError error={error || exportReferences.error} />
       </section>
 
       {evaluation && (
@@ -125,7 +136,7 @@ function BatchEvaluationView({
             <div className="telemetry-card stagger-item" style={{ '--stagger-i': 2 } as React.CSSProperties}>
               <span>纵向记忆影响截点（A1 vs B3）</span>
               <strong>{evaluation.memory_impact_scenarios} <small>/ {evaluation.scenario_count}</small></strong>
-              <p>剥离前序历史后结论或缺失项发生变化的截点数</p>
+              <p>移除前序记录后，流程结论或缺失字段数发生变化的截点数</p>
             </div>
             <div className="telemetry-card stagger-item" style={{ '--stagger-i': 3 } as React.CSSProperties}>
               <span>独立盲标参考覆盖</span>
@@ -138,7 +149,7 @@ function BatchEvaluationView({
             <div className="workspace-section-heading">
               <div>
                 <h2>方法组横向对比与论文图表导出</h2>
-                <p className="muted">固定使用标准确定性规则引擎（零外部付费调用）；已盲标场景自动输出必要专科召回率与错误放行率。</p>
+                <p className="muted">八组方法均使用确定性规则。错误放行和过度暂缓按各自的参考标签统计分母。</p>
               </div>
               <div className="button-group">
                 <button type="button" className="button secondary" onClick={() => void copyLatex()}>
@@ -152,6 +163,15 @@ function BatchEvaluationView({
                 >
                   <Icon name="download" size={15} />导出 scores.csv
                 </button>
+                {evaluation.error_analysis && evaluation.error_analysis.length > 0 && (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => downloadText('mdt_error_analysis.csv', evaluation.error_analysis_csv ?? '', 'text/csv;charset=utf-8')}
+                  >
+                    <Icon name="download" size={15} />导出误差归因 CSV
+                  </button>
+                )}
               </div>
             </div>
 
@@ -167,7 +187,10 @@ function BatchEvaluationView({
                     {evaluation.annotated_scenario_count > 0 && <>
                       <th>必要专科召回</th>
                       <th>错误放行率</th>
+                      <th>过度暂缓或补件率</th>
                       <th>三分类准确率</th>
+                      <th>宏 F1</th>
+                      <th>缺件 F1</th>
                     </>}
                   </tr>
                 </thead>
@@ -183,6 +206,8 @@ function BatchEvaluationView({
                         <td>
                           <strong>{row.name}</strong>
                           <small>{row.category} · {row.routing_strategy}</small>
+                          {row.method_id === 'A2' && evaluation.annotated_scenario_count > 0 &&
+                            <small>一致性评分使用补齐前的截点参考。</small>}
                         </td>
                         <td className="exp-bar-cell">
                           <div className="exp-metric-bar-row">
@@ -210,8 +235,13 @@ function BatchEvaluationView({
                         <td className="workspace-number">{row.gate_interceptions} 次</td>
                         {evaluation.annotated_scenario_count > 0 && <>
                           <td className="workspace-number">{row.specialist_recall !== null ? `${(row.specialist_recall * 100).toFixed(1)}%` : '—'}</td>
-                          <td className="workspace-number">{row.false_pass_rate !== null ? `${(row.false_pass_rate * 100).toFixed(1)}%` : '—'}</td>
+                          <td className="workspace-number">{row.false_pass_rate !== null ? `${(row.false_pass_rate * 100).toFixed(1)}%` : '—'}
+                            <small>{row.false_pass_count} / {row.false_pass_denominator}</small></td>
+                          <td className="workspace-number">{row.over_deferral_rate !== null ? `${(row.over_deferral_rate * 100).toFixed(1)}%` : '—'}
+                            <small>{row.over_deferral_count} / {row.over_deferral_denominator}</small></td>
                           <td className="workspace-number">{row.accuracy !== null ? `${(row.accuracy * 100).toFixed(1)}%` : '—'}</td>
+                          <td className="workspace-number">{row.macro_f1 !== null && row.macro_f1 !== undefined ? `${(row.macro_f1 * 100).toFixed(1)}%` : '—'}</td>
+                          <td className="workspace-number">{row.missing_field_f1 !== null && row.missing_field_f1 !== undefined ? `${(row.missing_field_f1 * 100).toFixed(1)}%` : '—'}</td>
                         </>}
                       </tr>
                     );
@@ -244,23 +274,28 @@ function BatchEvaluationView({
                   <article key={item.contrast_id} className="contrast-card stagger-item" style={{ '--stagger-i': idx } as React.CSSProperties}>
                     <div className="contrast-head">
                       <strong>{item.label}</strong>
-                      <span className="pill outline">{item.discordant_scenarios} / {item.total_scenarios} 截点</span>
+                      <span className="pill outline">可评 {item.eligible_scenarios} / {item.total_scenarios} 截点</span>
                     </div>
                     <div className="contrast-metric-row">
                       <span className="contrast-metric-label">{item.metric_name}</span>
-                      <strong className="contrast-point workspace-number">{item.point_estimate.toFixed(1)}{item.unit}</strong>
+                      <strong className="contrast-point workspace-number">{item.point_estimate === null ? '无可评分母' : `${item.point_estimate.toFixed(1)}${item.unit}`}</strong>
                     </div>
+                    <small className="muted">分子 / 分母 · {item.metric_numerator} / {item.metric_denominator}{item.contrast_id === 'B3_vs_A3' ? ' 次调用' : ' 个截点'}</small>
                     <div className="contrast-ci-row">
                       <span className="ci-badge workspace-number">
-                        95% CI [{item.ci_low.toFixed(1)}{item.unit}, {item.ci_high.toFixed(1)}{item.unit}]
+                        {item.ci_low === null || item.ci_high === null
+                          ? `可评病例族 ${item.eligible_family_count} 个，区间不可估计`
+                          : `95% CI [${item.ci_low.toFixed(1)}${item.unit}, ${item.ci_high.toFixed(1)}${item.unit}]`}
                       </span>
                       {item.mcnemar_exact_p !== null && (
                         <span className={`pill ${item.mcnemar_exact_p < 0.05 ? 'status-completed' : 'outline'} workspace-number`}>
-                          McNemar p = {item.mcnemar_exact_p.toFixed(4)}
+                          盲标正确性 McNemar p = {item.mcnemar_exact_p.toFixed(4)}
                         </span>
                       )}
                     </div>
                     <p className="muted">{item.interpretation}</p>
+                    {item.mcnemar_status === 'repeated_family' && <small className="muted">盲标配对含同一病例族的多个截点，未计算独立配对检验。</small>}
+                    {item.annotated_pairs > 0 && <small className="muted">盲标配对 {item.annotated_pairs} 个 · 仅 B3 判对 {item.b3_only_correct} 个 · 仅对照组判对 {item.comparator_only_correct} 个</small>}
                   </article>
                 ))}
               </div>
@@ -269,6 +304,55 @@ function BatchEvaluationView({
                 <Icon name="info" size={16} />
                 <span>{evaluation.paired_statistics.sample_size_note}</span>
               </p>
+            </section>
+          )}
+
+          {evaluation.error_analysis && evaluation.error_analysis.length > 0 && (
+            <section className="panel workflow-card">
+              <div className="workspace-section-heading">
+                <div>
+                  <h2>逐例误差归因分析（S7 计划交付物）</h2>
+                  <p className="muted">自动归类带参考标注截点中的错误放行、过度保守、遗漏必要专科与标签差异，便于论文误差分析与反例复核。</p>
+                </div>
+                <span className="pill outline">共 {evaluation.error_analysis.length} 条误差记录</span>
+              </div>
+              <div className="workspace-table-scroll">
+                <table className="workspace-table">
+                  <thead>
+                    <tr>
+                      <th>截点 / 方法</th>
+                      <th>误差类型</th>
+                      <th>参考 vs 预测</th>
+                      <th>遗漏专科</th>
+                      <th>归因说明</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {evaluation.error_analysis.slice(0, 40).map((err, i) => (
+                      <tr key={`${err.scenario_id}-${err.method_id}-${i}`}>
+                        <td>
+                          <strong>{err.scenario_id}</strong>
+                          <small>{err.method_id}</small>
+                        </td>
+                        <td>
+                          <div className="badge-row">
+                            {err.error_types.map(t => (
+                              <span key={t} className={`pill ${t === 'false_pass' || t === 'no_output' ? 'status-failed' : 'outline'}`}>{t}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td>
+                          <DecisionBadge decision={err.expected_decision} />
+                          <span className="muted"> → </span>
+                          {err.predicted_decision ? <DecisionBadge decision={err.predicted_decision} /> : <span className="pill outline">无输出</span>}
+                        </td>
+                        <td>{err.missed_agents.length > 0 ? err.missed_agents.map(r => roleNames[r as Role] ?? r).join('、') : '—'}</td>
+                        <td>{err.root_cause_hint}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           )}
 
@@ -313,7 +397,7 @@ function BatchEvaluationView({
                   {filteredScenarios.map(item => (
                     <tr key={item.scenario_id}>
                       <td>
-                        <strong>{item.case_id} · {item.trigger_event_id}</strong>
+                        <strong>{item.case_id} · v{item.case_version} · {item.trigger_event_id}</strong>
                         <small>{item.occurred_at} · {item.trigger_event_title}</small>
                       </td>
                       <td className="workspace-number">{item.visible_events} 条</td>
@@ -332,7 +416,7 @@ function BatchEvaluationView({
                       <td>
                         <Link
                           className="text-link"
-                          to={`/research/cases/${encodeURIComponent(item.case_id)}?event=${encodeURIComponent(item.trigger_event_id)}&view=workflow`}
+                          to={`/research/cases/${encodeURIComponent(item.case_id)}?version=${item.case_version}&trigger=${encodeURIComponent(item.trigger_event_id)}&view=workflow`}
                         >
                           查看工作流 <Icon name="arrow" size={13} />
                         </Link>
@@ -348,241 +432,6 @@ function BatchEvaluationView({
           </section>
         </>
       )}
-    </div>
-  );
-}
-
-function BlindAnnotationWorkbench({
-  cases,
-  annotations,
-  onChanged,
-}: {
-  cases: ResearchCase[];
-  annotations: BlindAnnotation[];
-  onChanged: () => void;
-}) {
-  const scenarios = useMemo(() => {
-    return cases.flatMap(c =>
-      c.timeline.map(ev => ({
-        scenario_id: `${c.case_id}:v${c.version}:${ev.event_id}`,
-        case_item: c,
-        event: ev,
-      }))
-    );
-  }, [cases]);
-
-  const [selectedScenarioId, setSelectedScenarioId] = useState(scenarios[0]?.scenario_id ?? '');
-  const active = scenarios.find(s => s.scenario_id === selectedScenarioId) ?? scenarios[0];
-  const existing = annotations.find(a => a.scenario_id === active?.scenario_id);
-
-  const [annotatorId, setAnnotatorId] = useState('reviewer_01');
-  const [requiredAgents, setRequiredAgents] = useState<Role[]>(['oncology']);
-  const [expectedDecision, setExpectedDecision] = useState<Decision>('NEED_MORE_INFORMATION');
-  const [rationale, setRationale] = useState('');
-  const [feedback, setFeedback] = useState('');
-
-  useEffect(() => {
-    if (!active) return;
-    if (existing) {
-      setAnnotatorId(existing.annotator_id);
-      setRequiredAgents(existing.required_agents);
-      setExpectedDecision(existing.expected_decision);
-      setRationale(existing.rationale);
-    } else {
-      setRequiredAgents(['oncology']);
-      setExpectedDecision('NEED_MORE_INFORMATION');
-      setRationale('');
-    }
-    setFeedback('');
-  }, [active?.scenario_id, existing?.updated_at]);
-
-  const save = useMutation({
-    mutationFn: () => researchApi.saveAnnotation(active!.scenario_id, {
-      case_id: active!.case_item.case_id,
-      case_version: active!.case_item.version,
-      trigger_event_id: active!.event.event_id,
-      annotator_id: annotatorId.trim() || 'reviewer_01',
-      required_agents: requiredAgents,
-      expected_decision: expectedDecision,
-      missing_fields: [],
-      rationale: rationale.trim(),
-    }),
-    onSuccess: () => {
-      setFeedback('独立参考标注已保存，实验评测表将自动重算召回率与错误放行率。');
-      onChanged();
-    },
-  });
-
-  const remove = useMutation({
-    mutationFn: () => researchApi.deleteAnnotation(active!.scenario_id),
-    onSuccess: () => {
-      setFeedback('已移除该截点的独立标注。');
-      onChanged();
-    },
-  });
-
-  if (!active) return <p className="workspace-empty">病例库为空，无法开展盲标。</p>;
-  const frozen = inputThroughTrigger(active.case_item, active.event.event_id);
-  const annotatedSet = new Set(annotations.map(a => a.scenario_id));
-  const progressPct = scenarios.length > 0 ? Math.round((annotatedSet.size / scenarios.length) * 100) : 0;
-  const nextUnannotated = scenarios.find(s => !annotatedSet.has(s.scenario_id) && s.scenario_id !== active.scenario_id)
-    ?? scenarios.find(s => !annotatedSet.has(s.scenario_id));
-
-  function exportAnnotationsJson() {
-    const payload = Object.fromEntries(annotations.map(a => [a.scenario_id, a]));
-    downloadText('mdt_blind_annotations.json', JSON.stringify(payload, null, 2) + '\n', 'application/json;charset=utf-8');
-  }
-
-  function toggleRole(role: Role) {
-    setRequiredAgents(prev => {
-      if (prev.includes(role)) {
-        return prev.length > 1 ? prev.filter(r => r !== role) : prev;
-      }
-      return [...prev, role];
-    });
-  }
-
-  return (
-    <div className="blind-annotation-layout">
-      <aside className="panel blind-scenario-list" aria-label="待盲标场景队列">
-        <div className="workspace-section-heading">
-          <h2>待标注截点队列</h2>
-          <span className="pill soft workspace-number">{annotatedSet.size} / {scenarios.length} ({progressPct}%)</span>
-        </div>
-        <div className="blind-progress-wrap" aria-label={`盲标进度 ${progressPct}%`}>
-          <div className="blind-progress-track">
-            <div className="blind-progress-fill" style={{ width: `${progressPct}%` }} />
-          </div>
-          <div className="blind-toolbar-actions">
-            {nextUnannotated && (
-              <button
-                type="button"
-                className="button secondary"
-                style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
-                onClick={() => setSelectedScenarioId(nextUnannotated.scenario_id)}
-              >
-                跳至下一待标
-              </button>
-            )}
-            <button
-              type="button"
-              className="button secondary"
-              style={{ minHeight: 32, padding: '0 10px', fontSize: 12 }}
-              disabled={annotations.length === 0}
-              onClick={exportAnnotationsJson}
-            >
-              <Icon name="download" size={13} />导出盲标 JSON
-            </button>
-          </div>
-        </div>
-        <div className="blind-list-scroll">
-          {scenarios.map(item => {
-            const done = annotations.some(a => a.scenario_id === item.scenario_id);
-            return (
-              <button
-                key={item.scenario_id}
-                type="button"
-                className={`blind-scenario-btn ${item.scenario_id === active.scenario_id ? 'is-selected' : ''}`}
-                onClick={() => setSelectedScenarioId(item.scenario_id)}
-              >
-                <div>
-                  <strong>{item.case_item.case_id} · {item.event.event_id}</strong>
-                  <small>{item.event.occurred_at} · {eventNames[item.event.event_type]}</small>
-                </div>
-                <span className={`pill ${done ? 'status-completed' : 'outline'}`}>{done ? '已标注' : '待标'}</span>
-              </button>
-            );
-          })}
-        </div>
-      </aside>
-
-      <div className="workspace-column">
-        <section className="panel blind-material-panel">
-          <div className="workspace-section-heading">
-            <div>
-              <h2>盲标冻结材料 · {active.case_item.title}</h2>
-              <p className="muted">盲标防偏置协议：已隐藏系统路由规则、规则仿真标签与截点后未来事件，仅呈现截至 {active.event.occurred_at} 的可见事实。</p>
-            </div>
-            <span className="pill outline">隐藏系统输出</span>
-          </div>
-
-          <div className="blind-frozen-events">
-            {frozen?.timeline.map(ev => (
-              <div key={ev.event_id} className={`blind-event-card ${ev.event_id === active.event.event_id ? 'is-cutoff' : ''}`}>
-                <div className="blind-event-head">
-                  <strong>{ev.occurred_at} · {ev.title}</strong>
-                  <span className="pill soft">{eventNames[ev.event_type]} · {ev.event_id}</span>
-                </div>
-                <dl className="event-facts">
-                  {Object.entries(ev.facts).map(([k, v]) => (
-                    <div key={k}><dt>{factKeyLabel(k)}</dt><dd>{formatFactValue(v)}</dd></div>
-                  ))}
-                </dl>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="workspace-section-heading">
-            <h2>独立参考判断表单</h2>
-            {existing && <DecisionBadge decision={existing.expected_decision} />}
-          </div>
-          <form className="research-form" onSubmit={e => { e.preventDefault(); save.mutate(); }}>
-            <div className="research-form-row">
-              <label>
-                标注人编号
-                <input value={annotatorId} onChange={e => setAnnotatorId(e.target.value)} maxLength={60} required />
-              </label>
-              <label>
-                预期流程结论（参考金标准）
-                <select value={expectedDecision} onChange={e => setExpectedDecision(e.target.value as Decision)}>
-                  <option value="READY_FOR_REVIEW">可进入人工资料复核 (READY_FOR_REVIEW)</option>
-                  <option value="NEED_MORE_INFORMATION">需要补充临床资料 (NEED_MORE_INFORMATION)</option>
-                  <option value="DEFER_DECISION">存在矛盾或风险，暂缓判断 (DEFER_DECISION)</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="visual-facts-builder">
-              <span className="builder-label">必要参与专科集合（至少选择 1 科，用于计算必要专科召回率）</span>
-              <div className="fact-toggle-grid">
-                {roleOrder.map(role => (
-                  <label key={role} className={`fact-toggle-chip ${requiredAgents.includes(role) ? 'is-active' : ''}`}>
-                    <input type="checkbox" checked={requiredAgents.includes(role)} onChange={() => toggleRole(role)} />
-                    <span>{roleNames[role]}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <label>
-              标注依据与缺口/矛盾说明
-              <textarea
-                rows={3}
-                value={rationale}
-                onChange={e => setRationale(e.target.value)}
-                placeholder="记录作出该独立参考判断的依据（如缺少病理分型、存在同日影像矛盾等）…"
-              />
-            </label>
-
-            <InlineError error={save.error || remove.error} />
-            {feedback && <p className="model-feedback" role="status"><Icon name="check" size={15} />{feedback}</p>}
-
-            <div className="button-group">
-              <button type="submit" className="button primary" disabled={save.isPending}>
-                <Icon name="check" size={15} />
-                {save.isPending ? '正在保存标注…' : '保存独立参考标注'}
-              </button>
-              {existing && (
-                <button type="button" className="button secondary" disabled={remove.isPending} onClick={() => remove.mutate()}>
-                  删除此条标注
-                </button>
-              )}
-            </div>
-          </form>
-        </section>
-      </div>
     </div>
   );
 }
@@ -624,53 +473,43 @@ function DataCapabilitiesView() {
 }
 
 export function ExperimentsPage() {
-  const client = useQueryClient();
   const { params, update } = useWorkspaceParams();
   const view = currentView(expTabs, params.get('view'));
-  const casesQuery = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases });
-  const annotationsQuery = useQuery({ queryKey: ['research-annotations'], queryFn: researchApi.annotations });
+  const casesQuery = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases, enabled: view === 'batch' });
 
   const [scope, setScope] = useState<'all' | 'latest'>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
+  const [reviewMode, setReviewMode] = useState<'multi' | 'single'>('multi');
 
   const evaluate = useMutation({
-    mutationFn: (opts: { case_ids?: string[]; trigger_scope: 'all' | 'latest' }) => researchApi.evaluateExperiments(opts),
+    mutationFn: researchApi.evaluateExperiments,
   });
 
   useEffect(() => {
     if (casesQuery.data && !initialized) {
       const compact = casesQuery.data.filter(c => c.timeline.length <= 30);
-      const defaultCases = compact.length > 0 ? compact : casesQuery.data;
+      const defaultCases = (compact.length > 0 ? compact : casesQuery.data).slice(0, maxBatchCases);
       const totalCutoffs = defaultCases.reduce((sum, c) => sum + c.timeline.length, 0);
       const initialScope: 'all' | 'latest' = totalCutoffs <= 80 ? 'all' : 'latest';
       const ids = defaultCases.map(c => c.case_id);
       setScope(initialScope);
       setSelectedIds(ids);
       setInitialized(true);
-      if (ids.length > 0) {
-        evaluate.mutate({ case_ids: ids, trigger_scope: initialScope });
-      }
     }
   }, [casesQuery.data, initialized]);
 
-  if (casesQuery.isPending) return <Loading />;
-  if (casesQuery.isError) return <ErrorState error={casesQuery.error} retry={() => void casesQuery.refetch()} />;
+  if (view === 'batch' && casesQuery.isPending) return <Loading />;
+  if (view === 'batch' && casesQuery.isError) return <ErrorState error={casesQuery.error} retry={() => void casesQuery.refetch()} />;
 
   function toggleCase(id: string) {
+    evaluate.reset();
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  }
-
-  function refreshAll() {
-    void client.invalidateQueries({ queryKey: ['research-annotations'] });
-    if (selectedIds.length > 0) {
-      evaluate.mutate({ case_ids: selectedIds, trigger_scope: scope });
-    }
   }
 
   const tabsWithBadges = [
     { key: 'batch' as const, label: '8 组配对实验与导出', badge: evaluate.data ? `${evaluate.data.scenario_count} 截点` : undefined },
-    { key: 'annotate' as const, label: '独立盲标工作台 (G03)', badge: annotationsQuery.data?.length ?? 0 },
+    { key: 'annotate' as const, label: '独立盲标工作台' },
     { key: 'pipeline' as const, label: '多模态数据接入架构', badge: '5 类模态' },
   ];
 
@@ -679,7 +518,7 @@ export function ExperimentsPage() {
       <header className="workspace-heading">
         <div>
           <h1>科研实验、独立盲标与论文导出</h1>
-          <p>一站式完成计划 §6.2 的 B0–B3 基线与单因素消融批量评测、G03 盲标金标准核验以及论文 LaTeX / CSV 数据导出</p>
+          <p>按冻结截点记录独立参考，比较八组方法的调用开销与流程判断。</p>
         </div>
       </header>
 
@@ -691,7 +530,7 @@ export function ExperimentsPage() {
       />
 
       <TabPanelTransition tabs={expTabs} activeKey={view}>
-        {view === 'batch' && (
+        {view === 'batch' && casesQuery.data && (
           <BatchEvaluationView
             cases={casesQuery.data}
             evaluation={evaluate.data}
@@ -699,17 +538,27 @@ export function ExperimentsPage() {
             selectedIds={selectedIds}
             busy={evaluate.isPending}
             error={evaluate.error}
-            onScopeChange={setScope}
+            onScopeChange={value => { evaluate.reset(); setScope(value); }}
             onToggleCase={toggleCase}
-            onRun={() => evaluate.mutate({ case_ids: selectedIds, trigger_scope: scope })}
+            onRun={() => evaluate.mutate({
+              case_ids: selectedIds, trigger_scope: scope,
+              case_versions: Object.fromEntries(casesQuery.data.filter(item => selectedIds.includes(item.case_id))
+                .map(item => [item.case_id, item.version])),
+            })}
           />
         )}
         {view === 'annotate' && (
-          <BlindAnnotationWorkbench
-            cases={casesQuery.data}
-            annotations={annotationsQuery.data ?? []}
-            onChanged={refreshAll}
-          />
+          <div className="workspace-column">
+            <div className="scenario-filter-bar" role="group" aria-label="盲标模式切换">
+              <button type="button" className={`filter-chip ${reviewMode === 'multi' ? 'is-active' : ''}`}
+                onClick={() => setReviewMode('multi')}>多人独立盲标与仲裁 (G03)</button>
+              <button type="button" className={`filter-chip ${reviewMode === 'single' ? 'is-active' : ''}`}
+                onClick={() => setReviewMode('single')}>单人快速参考标注</button>
+            </div>
+            {reviewMode === 'multi'
+              ? <MultiRaterPanel onChanged={evaluate.reset} />
+              : <BlindReviewWorkbench onChanged={evaluate.reset} />}
+          </div>
         )}
         {view === 'pipeline' && <DataCapabilitiesView />}
       </TabPanelTransition>
