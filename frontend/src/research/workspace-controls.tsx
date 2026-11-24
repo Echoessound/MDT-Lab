@@ -156,7 +156,7 @@ export function RunProgressStrip({ run }: { run: Run }) {
       <div className="run-progress-track">
         <div
           className={`run-progress-fill ${tone} ${isActive ? 'is-shimmering' : ''}`}
-          style={{ width: `${Math.max(isActive ? 8 : 0, pct)}%` }}
+          style={{ '--bar-scale': Math.max(isActive ? 0.08 : 0, pct / 100) } as CSSProperties}
         />
       </div>
     </div>

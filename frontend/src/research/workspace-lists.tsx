@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ErrorState, Icon, Loading, Status, dateTime, shortId } from '../ui';
 import { researchApi } from './api';
 import { InlineError, eventNames } from './components';
+import { researchKeys } from './query-keys';
 import { terminal } from './realtime';
 import type { ResearchCase, Run } from './schemas';
 import { PageLinks, pageSlice, useWorkspaceParams } from './workspace-controls';
@@ -30,6 +31,14 @@ function RegistryRows({ items }: { items: ResearchCase[] }) {
           <div className="table-quick-links">
             <Link className="text-link" to={casePath(item.case_id)} state={{ librarySearch: search }}>审阅病程</Link>
             <Link className="text-link" to={`${casePath(item.case_id)}?view=workflow`} state={{ librarySearch: search }}>流程与影像</Link>
+            {last && (
+              <Link
+                className="text-link"
+                to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(`${item.case_id}:v${item.version}:${last.event_id}`)}`}
+              >
+                盲标末次截点
+              </Link>
+            )}
           </div>
         </td>
       </tr>;
@@ -38,7 +47,7 @@ function RegistryRows({ items }: { items: ResearchCase[] }) {
 }
 
 function RecentRuns() {
-  const runs = useQuery({ queryKey: ['research-runs'], queryFn: researchApi.runs, refetchInterval: 5000 });
+  const runs = useQuery({ queryKey: researchKeys.runs, queryFn: researchApi.runs, refetchInterval: 5000 });
   return <section className="panel workspace-recent" aria-labelledby="recent-runs-title">
     <div className="workspace-section-heading"><h2 id="recent-runs-title">最近协同运行</h2><Link className="text-link" to="/research/runs">全部记录 <Icon name="arrow" size={14} /></Link></div>
     {runs.isPending ? <Loading /> : runs.isError ? <InlineError error={runs.error} /> : runs.data.length === 0 ?
@@ -53,9 +62,101 @@ function RecentRuns() {
   </section>;
 }
 
+function ResearchPipelineStrip({
+  caseCount,
+  publicCount,
+  runCount,
+  firstCaseId,
+}: {
+  caseCount: number;
+  publicCount: number;
+  runCount: number;
+  firstCaseId?: string;
+}) {
+  const agreement = useQuery({
+    queryKey: researchKeys.reviewPanelAgreement,
+    queryFn: researchApi.reviewPanelAgreement,
+    staleTime: 15000,
+  });
+  const submittedCount = agreement.data?.scenarios_with_submissions ?? 0;
+  const disputes = agreement.data?.unadjudicated_disputes ?? 0;
+
+  const recommendedStep = publicCount === 0 && caseCount <= 3
+    ? 1
+    : runCount === 0
+      ? 2
+      : submittedCount === 0 || disputes > 0
+        ? 3
+        : 4;
+
+  const steps = [
+    {
+      num: '01',
+      title: '队列构建与导入',
+      badge: `${caseCount} 份病例`,
+      desc: publicCount > 0 ? `已接入 ${publicCount} 份公开/混合队列病例` : '当前为内置合成病例，可导入 TCIA / TCGA / Synthea 队列',
+      cta: '导入公开队列',
+      to: '/research/datasets',
+      isNext: recommendedStep === 1,
+    },
+    {
+      num: '02',
+      title: '纵向截点协同审阅',
+      badge: `${runCount} 次运行`,
+      desc: '锁定历史触发事件截点，验证按事件路由、有界协商与安全门控',
+      cta: firstCaseId ? `审阅 ${firstCaseId}` : '选择病例审阅',
+      to: firstCaseId ? casePath(firstCaseId) : '/',
+      isNext: recommendedStep === 2,
+    },
+    {
+      num: '03',
+      title: '多人盲标与仲裁',
+      badge: disputes > 0 ? `${disputes} 项待仲裁` : `${submittedCount} 截点已标`,
+      desc: '隐藏系统预测独立录入参考标签，计算 Cohen’s κ 并定稿争议共识',
+      cta: disputes > 0 ? '前往争议仲裁' : '进入盲标工作台',
+      to: '/research/experiments?view=annotate',
+      isNext: recommendedStep === 3,
+    },
+    {
+      num: '04',
+      title: '8 组消融与论文导出',
+      badge: 'B0–B3 · A1–A4',
+      desc: '一键复算聚类 Bootstrap 置信区间、McNemar 检验、误差归因与 LaTeX 表',
+      cta: '进入配对评测',
+      to: '/research/experiments',
+      isNext: recommendedStep === 4,
+    },
+  ];
+
+  return (
+    <section className="panel research-pipeline-panel" aria-label="四步闭环科研操作向导">
+      <div className="workspace-section-heading heading-flush">
+        <div>
+          <h2>四步科研操作闭环</h2>
+          <p className="muted">按推荐流程依次推进：队列准备 → 截点会诊 → 独立盲标仲裁 → 配对统计出表（高亮项为当前建议下一步）</p>
+        </div>
+        <Link className="text-link" to="/roadmap">完整指南与进度排期 <Icon name="arrow" size={13} /></Link>
+      </div>
+      <div className="research-pipeline-strip">
+        {steps.map(step => (
+          <Link key={step.num} to={step.to} className={`pipeline-step-card ${step.isNext ? 'is-next' : ''}`}>
+            <div className="pipeline-step-top">
+              <span className="dag-step-num">{step.num}</span>
+              <span className={`pill ${step.isNext ? 'soft' : 'outline'}`}>{step.badge}</span>
+            </div>
+            <strong>{step.title}</strong>
+            <p>{step.desc}</p>
+            <span className="pipeline-step-cta">{step.cta} <Icon name="arrow" size={12} /></span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function ResearchHome() {
-  const cases = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases });
-  const runs = useQuery({ queryKey: ['research-runs'], queryFn: researchApi.runs, refetchInterval: 5000 });
+  const cases = useQuery({ queryKey: researchKeys.cases, queryFn: researchApi.cases });
+  const runs = useQuery({ queryKey: researchKeys.runs, queryFn: researchApi.runs, refetchInterval: 5000 });
   const { params, update } = useWorkspaceParams();
   const keyword = params.get('q') ?? '';
   const queryText = keyword.trim().toLowerCase();
@@ -108,6 +209,12 @@ export function ResearchHome() {
         <p>一键执行 8 组配对评测并导出 LaTeX / CSV</p>
       </Link>
     </div>
+    <ResearchPipelineStrip
+      caseCount={cases.data.length}
+      publicCount={publicCount}
+      runCount={totalRuns}
+      firstCaseId={cases.data[0]?.case_id}
+    />
     <div className="workspace-library-layout"><section className="panel workspace-registry" aria-labelledby="registry-title">
       <div className="workspace-section-heading"><h2 id="registry-title">纵向病例名录</h2><button type="button" className="workspace-tool" disabled={cases.isFetching} onClick={() => void cases.refetch()}><Icon name="refresh" size={14} />{cases.isFetching ? '正在刷新…' : '刷新列表'}</button></div>
       <div className="workspace-toolbar">

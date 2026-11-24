@@ -6,6 +6,7 @@ import { researchApi } from './api';
 import { InlineError, roleNames } from './components';
 import { BlindReviewWorkbench } from './blind-review-workbench';
 import { MultiRaterPanel } from './multi-rater-panel';
+import { researchKeys } from './query-keys';
 import type { LibraryEvaluation, ResearchCase, Role } from './schemas';
 import { TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
 
@@ -196,11 +197,12 @@ function BatchEvaluationView({
                 </thead>
                 <tbody>
                   {evaluation.methods.map(row => {
-                    const widthPct = Math.round((row.avg_calls / maxAvgCalls) * 100);
-                    const totalDec = Math.max(1, row.scenario_count);
-                    const readyW = (row.decisions.READY_FOR_REVIEW / totalDec) * 100;
-                    const needW = (row.decisions.NEED_MORE_INFORMATION / totalDec) * 100;
-                    const deferW = (row.decisions.DEFER_DECISION / totalDec) * 100;
+                    const barScale = Math.max(0.03, row.avg_calls / maxAvgCalls);
+                    const stackedVars = {
+                      '--ready-fr': `${row.decisions.READY_FOR_REVIEW}fr`,
+                      '--need-fr': `${row.decisions.NEED_MORE_INFORMATION}fr`,
+                      '--defer-fr': `${row.decisions.DEFER_DECISION}fr`,
+                    } as React.CSSProperties;
                     return (
                       <tr key={row.method_id} className={row.method_id === 'B3' ? 'ablation-highlight-row' : ''}>
                         <td>
@@ -212,7 +214,10 @@ function BatchEvaluationView({
                         <td className="exp-bar-cell">
                           <div className="exp-metric-bar-row">
                             <div className="exp-metric-track">
-                              <div className={`exp-metric-fill ${row.method_id === 'B3' ? 'is-primary' : ''}`} style={{ width: `${widthPct}%` }} />
+                              <div
+                                className={`exp-metric-fill ${row.method_id === 'B3' ? 'is-primary' : ''}`}
+                                style={{ '--bar-scale': barScale } as React.CSSProperties}
+                              />
                             </div>
                             <strong className="workspace-number">{row.avg_calls.toFixed(2)} 次</strong>
                           </div>
@@ -223,10 +228,14 @@ function BatchEvaluationView({
                           </span>
                         </td>
                         <td>
-                          <div className="exp-stacked-bar" title={`可复核 ${row.decisions.READY_FOR_REVIEW} / 需补件 ${row.decisions.NEED_MORE_INFORMATION} / 暂缓 ${row.decisions.DEFER_DECISION}`}>
-                            <span className="seg-ready" style={{ width: `${readyW}%` }} />
-                            <span className="seg-need" style={{ width: `${needW}%` }} />
-                            <span className="seg-defer" style={{ width: `${deferW}%` }} />
+                          <div
+                            className="exp-stacked-bar"
+                            style={stackedVars}
+                            title={`可复核 ${row.decisions.READY_FOR_REVIEW} / 需补件 ${row.decisions.NEED_MORE_INFORMATION} / 暂缓 ${row.decisions.DEFER_DECISION}`}
+                          >
+                            <span className="seg-ready" />
+                            <span className="seg-need" />
+                            <span className="seg-defer" />
                           </div>
                           <small className="workspace-number">
                             {row.decisions.READY_FOR_REVIEW} / {row.decisions.NEED_MORE_INFORMATION} / {row.decisions.DEFER_DECISION}
@@ -300,7 +309,7 @@ function BatchEvaluationView({
                 ))}
               </div>
 
-              <p className="notice neutral" style={{ marginTop: 14, marginBottom: 0 }}>
+              <p className="notice neutral notice-spaced">
                 <Icon name="info" size={16} />
                 <span>{evaluation.paired_statistics.sample_size_note}</span>
               </p>
@@ -414,17 +423,25 @@ function BatchEvaluationView({
                         </div>
                       </td>
                       <td>
-                        <Link
-                          className="text-link"
-                          to={`/research/cases/${encodeURIComponent(item.case_id)}?version=${item.case_version}&trigger=${encodeURIComponent(item.trigger_event_id)}&view=workflow`}
-                        >
-                          查看工作流 <Icon name="arrow" size={13} />
-                        </Link>
+                        <div className="table-quick-links">
+                          <Link
+                            className="text-link"
+                            to={`/research/cases/${encodeURIComponent(item.case_id)}?version=${item.case_version}&trigger=${encodeURIComponent(item.trigger_event_id)}&view=workflow`}
+                          >
+                            查看工作流 <Icon name="arrow" size={13} />
+                          </Link>
+                          <Link
+                            className="text-link"
+                            to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(item.scenario_id)}`}
+                          >
+                            {item.annotated ? '复核盲标' : '去盲标'}
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {filteredScenarios.length === 0 && (
-                    <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: '18px' }}>当前筛选条件下无匹配截点。</td></tr>
+                    <tr><td colSpan={6} className="muted table-empty-cell">当前筛选条件下无匹配截点。</td></tr>
                   )}
                 </tbody>
               </table>
@@ -437,7 +454,7 @@ function BatchEvaluationView({
 }
 
 function DataCapabilitiesView() {
-  const query = useQuery({ queryKey: ['research-data-capabilities'], queryFn: researchApi.dataCapabilities });
+  const query = useQuery({ queryKey: researchKeys.dataCapabilities, queryFn: researchApi.dataCapabilities });
   if (query.isPending) return <Loading />;
   if (query.isError) return <InlineError error={query.error} />;
 
@@ -475,7 +492,9 @@ function DataCapabilitiesView() {
 export function ExperimentsPage() {
   const { params, update } = useWorkspaceParams();
   const view = currentView(expTabs, params.get('view'));
-  const casesQuery = useQuery({ queryKey: ['research-cases'], queryFn: researchApi.cases, enabled: view === 'batch' });
+  const requestedCase = params.get('case') ?? '';
+  const requestedScenario = params.get('scenario') ?? '';
+  const casesQuery = useQuery({ queryKey: researchKeys.cases, queryFn: researchApi.cases, enabled: view === 'batch' });
 
   const [scope, setScope] = useState<'all' | 'latest'>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -488,6 +507,13 @@ export function ExperimentsPage() {
 
   useEffect(() => {
     if (casesQuery.data && !initialized) {
+      const requested = requestedCase ? casesQuery.data.filter(c => c.case_id === requestedCase) : [];
+      if (requested.length > 0) {
+        setScope(requested[0].timeline.length <= 80 ? 'all' : 'latest');
+        setSelectedIds([requested[0].case_id]);
+        setInitialized(true);
+        return;
+      }
       const compact = casesQuery.data.filter(c => c.timeline.length <= 30);
       const defaultCases = (compact.length > 0 ? compact : casesQuery.data).slice(0, maxBatchCases);
       const totalCutoffs = defaultCases.reduce((sum, c) => sum + c.timeline.length, 0);
@@ -497,7 +523,7 @@ export function ExperimentsPage() {
       setSelectedIds(ids);
       setInitialized(true);
     }
-  }, [casesQuery.data, initialized]);
+  }, [casesQuery.data, initialized, requestedCase]);
 
   if (view === 'batch' && casesQuery.isPending) return <Loading />;
   if (view === 'batch' && casesQuery.isError) return <ErrorState error={casesQuery.error} retry={() => void casesQuery.refetch()} />;
@@ -556,8 +582,8 @@ export function ExperimentsPage() {
                 onClick={() => setReviewMode('single')}>单人快速参考标注</button>
             </div>
             {reviewMode === 'multi'
-              ? <MultiRaterPanel onChanged={evaluate.reset} />
-              : <BlindReviewWorkbench onChanged={evaluate.reset} />}
+              ? <MultiRaterPanel requestedScenario={requestedScenario} onChanged={evaluate.reset} />
+              : <BlindReviewWorkbench requestedScenario={requestedScenario} onChanged={evaluate.reset} />}
           </div>
         )}
         {view === 'pipeline' && <DataCapabilitiesView />}

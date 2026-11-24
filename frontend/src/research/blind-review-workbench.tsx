@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ErrorState, Icon, Loading } from '../ui';
 import { researchApi } from './api';
 import { eventNames, InlineError, roleNames, roleOrder } from './components';
+import { researchKeys } from './query-keys';
 import type { AnnotationTask, BlindAnnotation, BlindMaterial, Role } from './schemas';
 import { PageLinks, pageSlice } from './workspace-controls';
 import { factKeyLabel } from './zh-dict';
@@ -110,9 +111,9 @@ function ReferenceForm({ task, reviewer, material, existing, onChanged }: {
 function ReviewTask({ task, reviewer, onChanged }: {
   task: AnnotationTask; reviewer: string; onChanged: () => void;
 }) {
-  const material = useQuery({ queryKey: ['blind-material', task.scenario_id], queryFn: () => researchApi.blindMaterial(task) });
+  const material = useQuery({ queryKey: researchKeys.blindMaterial(task.scenario_id), queryFn: () => researchApi.blindMaterial(task) });
   const own = useQuery({
-    queryKey: ['own-annotation', task.scenario_id, reviewer],
+    queryKey: researchKeys.ownAnnotation(task.scenario_id, reviewer),
     queryFn: () => researchApi.ownAnnotation(task.scenario_id, reviewer), enabled: Boolean(reviewer),
   });
   if (material.isError || (reviewer && own.isError)) return <ErrorState error={material.error || own.error}
@@ -122,12 +123,23 @@ function ReviewTask({ task, reviewer, onChanged }: {
     task={task} material={material.data} existing={own.data ?? null} reviewer={reviewer} onChanged={onChanged} />;
 }
 
-export function BlindReviewWorkbench({ onChanged }: { onChanged: () => void }) {
-  const tasks = useQuery({ queryKey: ['blind-tasks'], queryFn: researchApi.annotationTasks });
-  const [selected, setSelected] = useState('');
-  const [reviewer, setReviewer] = useState('');
-  const [identity, setIdentity] = useState('');
+export function BlindReviewWorkbench({ requestedScenario = '', onChanged }: { requestedScenario?: string; onChanged: () => void }) {
+  const tasks = useQuery({ queryKey: researchKeys.annotationTasks, queryFn: researchApi.annotationTasks });
+  const [selected, setSelected] = useState(requestedScenario);
+  const [reviewer, setReviewer] = useState(() => {
+    try { return sessionStorage.getItem('mdt-active-reviewer') ?? ''; } catch { return ''; }
+  });
+  const [identity, setIdentity] = useState(reviewer);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (!requestedScenario || !tasks.data) return;
+    const idx = tasks.data.findIndex(t => t.scenario_id === requestedScenario);
+    if (idx >= 0) {
+      setSelected(requestedScenario);
+      setPage(Math.floor(idx / 20) + 1);
+    }
+  }, [requestedScenario, tasks.data]);
   if (tasks.isError) return <ErrorState error={tasks.error} retry={() => void tasks.refetch()} />;
   if (!tasks.data) return <Loading />;
   const queue = tasks.data;

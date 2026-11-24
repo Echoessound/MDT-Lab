@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { jumpResults } from '../console/navigation';
+import { researchKeys } from './query-keys';
 import { ablationMatrixSchema, agreementReportSchema, annotationSchema, blindMaterialSchema, attachmentSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, temporalAuditSchema, workflowPlanSchema } from './schemas';
 import { computeSlideDirection } from './workspace-controls';
 import {
@@ -322,5 +324,16 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
       checks: [{ code: 'snapshot_timeline_boundary', status: 'passed', message: '通过' }],
     });
     expect(audit.passed).toBe(true);
+  });
+
+  it('provides centralized query keys and Spotlight quick actions for the research loop', () => {
+    expect(researchKeys.caseDetail('LUNG-SYN-001', 2)).toEqual(['research-case', 'LUNG-SYN-001', 2]);
+    expect(researchKeys.reviewPanelOwn('LUNG-SYN-001:v1:E002', 'rater_1')).toEqual([
+      'review-panel-own', 'LUNG-SYN-001:v1:E002', 'rater_1',
+    ]);
+    const initialJump = jumpResults('', [], []);
+    expect(initialJump.some(item => item.href === '/research/experiments?view=annotate')).toBe(true);
+    const filteredJump = jumpResults('盲标', [], []);
+    expect(filteredJump[0]?.href).toContain('/research/experiments');
   });
 });

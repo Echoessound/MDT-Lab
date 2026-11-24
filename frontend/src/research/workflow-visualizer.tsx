@@ -257,14 +257,14 @@ export function AutomatedWorkflowBlueprint({
           <span>严格规则资料完备度</span>
           <strong>{plan.completeness.strict_completeness_score}%</strong>
           <div className="completeness-bar">
-            <div style={{ width: `${plan.completeness.strict_completeness_score}%` }} />
+            <div style={{ '--bar-scale': plan.completeness.strict_completeness_score / 100 } as React.CSSProperties} />
           </div>
         </div>
         <div>
           <span>语义推导后完备度</span>
           <strong>{plan.completeness.semantic_completeness_score}%</strong>
           <div className="completeness-bar semantic">
-            <div style={{ width: `${plan.completeness.semantic_completeness_score}%` }} />
+            <div style={{ '--bar-scale': plan.completeness.semantic_completeness_score / 100 } as React.CSSProperties} />
           </div>
         </div>
         <div>

@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
+    "lint:ui": "node scripts/check-ui-standards.mjs",
     "test": "vitest run",
-    "build": "tsc --noEmit && vite build",
+    "check": "tsc --noEmit && node scripts/check-ui-standards.mjs && vitest run",
+    "build": "tsc --noEmit && node scripts/check-ui-standards.mjs && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

@@ -22,6 +22,8 @@ jobs:
           MDT_TEST_MONGODB_URI: mongodb://127.0.0.1:27018/?replicaSet=mdt-rs&directConnection=true
       - run: npm ci
         working-directory: frontend
+      - run: npm run lint:ui
+        working-directory: frontend
       - run: npm test
         working-directory: frontend
       - run: npm run build

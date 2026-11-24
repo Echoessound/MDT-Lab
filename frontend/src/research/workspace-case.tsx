@@ -6,6 +6,7 @@ import { researchApi } from './api';
 import { CaseSources, caseKindName } from './data-components';
 import { InlineError, RoutingPanel, eventNames, roleNames, scenarioNames, sexName } from './components';
 import { selectedModelsReady } from './model-settings';
+import { researchKeys } from './query-keys';
 import { factsSchema, type EventType, type ResearchCase, type RunRequest } from './schemas';
 import { TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
 import { WorkspaceEvents } from './workspace-events';
@@ -194,14 +195,14 @@ function CaseWorkspace({ id }: { id: string }) {
   const routingMode = params.get('routing') === 'fixed' ? 'fixed' : 'event';
   const requestedScenario = params.get('scenario') ?? '';
   const scenario: RunRequest['mock_scenario'] = mode === 'mock' && Object.hasOwn(scenarioNames, requestedScenario) ? requestedScenario as RunRequest['mock_scenario'] : 'standard';
-  const latest = useQuery({ queryKey: ['research-case', id, 'latest'], queryFn: () => researchApi.case(id) });
-  const query = useQuery({ queryKey: ['research-case', id, version ?? 'latest'], queryFn: () => researchApi.case(id, version) });
-  const models = useQuery({ queryKey: ['research-agent-models'], queryFn: researchApi.agentModels });
+  const latest = useQuery({ queryKey: researchKeys.caseDetail(id, 'latest'), queryFn: () => researchApi.case(id) });
+  const query = useQuery({ queryKey: researchKeys.caseDetail(id, version ?? 'latest'), queryFn: () => researchApi.case(id, version) });
+  const models = useQuery({ queryKey: researchKeys.agentModels, queryFn: researchApi.agentModels });
   const item = query.data;
   const requestedTrigger = params.get('trigger');
   const trigger = requestedTrigger ? item?.timeline.find(event => event.event_id === requestedTrigger) : item?.timeline.at(-1);
   const routing = useQuery({
-    queryKey: ['research-routing', id, item?.version, trigger?.event_id, routingMode],
+    queryKey: researchKeys.routing(id, item?.version, trigger?.event_id, routingMode),
     queryFn: () => researchApi.routing(id, item!.version, trigger!.event_id, routingMode),
     enabled: !!item && !!trigger,
   });
@@ -400,6 +401,17 @@ function CaseWorkspace({ id }: { id: string }) {
             </select>
           </label>
 
+          <div className="llm-readiness-box" data-ready={modelsReady}>
+            <span>
+              <strong>{modelsReady ? '专科大模型已就绪' : '大模型尚未配置密钥'}</strong>
+              {' · '}
+              {modelsReady ? '可直接切换为大模型智能推演' : '当前可用本地规则仿真离线验证'}
+            </span>
+            <Link className="text-link" to="/settings/models">
+              {modelsReady ? '管理方案' : '去配置'} <Icon name="arrow" size={12} />
+            </Link>
+          </div>
+
           {mode === 'mock' && (
             <details className="workspace-advanced" open={scenario !== 'standard' || undefined}>
               <summary>异常与边界验证场景{scenario !== 'standard' ? ` · ${scenarioNames[scenario]}` : ''}</summary>
@@ -421,10 +433,19 @@ function CaseWorkspace({ id }: { id: string }) {
           </button>
           <div className="launch-footer-links">
             <button type="button" className="text-link" onClick={() => update({ view: 'workflow' })}>
-              <Icon name="eye" size={13} />预览自动化工作流与影像
+              <Icon name="eye" size={13} />工作流与影像
             </button>
+            <Link
+              className="text-link"
+              to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(`${id}:v${item.version}:${trigger.event_id}`)}`}
+            >
+              <Icon name="check" size={13} />盲标当前截点
+            </Link>
+            <Link className="text-link" to={`/research/experiments?case=${encodeURIComponent(id)}`}>
+              <Icon name="route" size={13} />对比 8 组消融
+            </Link>
             <Link className="text-link" to="/settings/models">
-              <Icon name="settings" size={13} />配置专科大模型
+              <Icon name="settings" size={13} />专科模型设置
             </Link>
           </div>
         </form>

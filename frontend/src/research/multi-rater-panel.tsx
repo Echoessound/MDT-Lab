@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DecisionBadge, ErrorState, Icon, Loading } from '../ui';
 import { researchApi } from './api';
 import { eventNames, InlineError, roleNames, roleOrder } from './components';
+import { researchKeys } from './query-keys';
 import type { AgreementReport, BlindMaterial, MultiRaterSubmission, ReviewPanelTask, Role } from './schemas';
 import { PageLinks, pageSlice } from './workspace-controls';
 import { factKeyLabel } from './zh-dict';
@@ -19,12 +20,13 @@ function toggle<T>(values: T[], value: T) {
   return values.includes(value) ? values.filter(item => item !== value) : [...values, value];
 }
 
-function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
+function MultiRaterForm({ task, reviewer, material, existing, onChanged, onSavedAdvance }: {
   task: ReviewPanelTask;
   reviewer: string;
   material: BlindMaterial;
   existing: MultiRaterSubmission | null;
   onChanged: () => void;
+  onSavedAdvance?: () => void;
 }) {
   const client = useQueryClient();
   const [decision, setDecision] = useState<Decision | ''>(existing?.expected_decision ?? '');
@@ -32,7 +34,8 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
   const [evidence, setEvidence] = useState(existing?.evidence_ids ?? []);
   const [missing, setMissing] = useState(existing?.missing_fields.join('\n') ?? '');
   const [rationale, setRationale] = useState(existing?.rationale ?? '');
-  const ownKey = ['review-panel-own', task.scenario_id, reviewer];
+  const [autoAdvance, setAutoAdvance] = useState(true);
+  const ownKey = researchKeys.reviewPanelOwn(task.scenario_id, reviewer);
 
   const save = useMutation({
     mutationFn: (label: Decision) => researchApi.saveReviewSubmission(task.scenario_id, {
@@ -49,8 +52,9 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
     }),
     onSuccess: record => {
       client.setQueryData(ownKey, record);
-      void client.invalidateQueries({ queryKey: ['review-panel-agreement'] });
+      void client.invalidateQueries({ queryKey: researchKeys.reviewPanelAgreement });
       onChanged();
+      if (autoAdvance && onSavedAdvance) onSavedAdvance();
     },
   });
 
@@ -58,7 +62,7 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
     mutationFn: () => researchApi.deleteReviewSubmission(task.scenario_id, reviewer),
     onSuccess: () => {
       client.setQueryData(ownKey, null);
-      void client.invalidateQueries({ queryKey: ['review-panel-agreement'] });
+      void client.invalidateQueries({ queryKey: researchKeys.reviewPanelAgreement });
       onChanged();
     },
   });
@@ -116,10 +120,19 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
         {!reviewer ? (
           <p className="muted">请先在左侧填写您的标注人编号（如 <code>rater_1</code>、<code>rater_2</code>），不同标注人可独立提交同一截点且彼此完全不可见。</p>
         ) : (
-          <form className="research-form" onSubmit={e => {
-            e.preventDefault();
-            if (decision && roles.length && !busy && !stale) save.mutate(decision);
-          }}>
+          <form
+            className="research-form"
+            onKeyDown={e => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && decision && roles.length && !busy && !stale) {
+                e.preventDefault();
+                save.mutate(decision);
+              }
+            }}
+            onSubmit={e => {
+              e.preventDefault();
+              if (decision && roles.length && !busy && !stale) save.mutate(decision);
+            }}
+          >
             {stale && <p className="notice" role="alert">已保存初标与当前材料指纹不同，请核查病例版本。</p>}
             <label>预期流程结论
               <select value={decision} required onChange={e => setDecision(e.target.value as Decision)}>
@@ -146,7 +159,11 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
               <textarea rows={3} maxLength={2000} value={rationale} onChange={e => setRationale(e.target.value)}
                 placeholder="独立说明支持结论的关键事实、资料缺口或同日冲突。" />
             </label>
-            <p className="muted">已勾选 {evidence.length} 项可见证据。</p>
+            <p className="muted">已勾选 {evidence.length} 项可见证据 · 支持快捷键 <kbd>⌘/Ctrl + Enter</kbd> 提交。</p>
+            <label className="fact-toggle-chip">
+              <input type="checkbox" checked={autoAdvance} onChange={e => setAutoAdvance(e.target.checked)} />
+              <span>保存后自动跳至下一本人待标截点</span>
+            </label>
             <InlineError error={save.error || remove.error} />
             <div className="button-group">
               <button className="button primary" type="submit" disabled={!decision || !roles.length || busy || stale}>
@@ -165,14 +182,15 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged }: {
   );
 }
 
-function MultiRaterTaskPanel({ task, reviewer, onChanged }: {
+function MultiRaterTaskPanel({ task, reviewer, onChanged, onSavedAdvance }: {
   task: ReviewPanelTask;
   reviewer: string;
   onChanged: () => void;
+  onSavedAdvance: () => void;
 }) {
-  const material = useQuery({ queryKey: ['blind-material', task.scenario_id], queryFn: () => researchApi.blindMaterial(task) });
+  const material = useQuery({ queryKey: researchKeys.blindMaterial(task.scenario_id), queryFn: () => researchApi.blindMaterial(task) });
   const own = useQuery({
-    queryKey: ['review-panel-own', task.scenario_id, reviewer],
+    queryKey: researchKeys.reviewPanelOwn(task.scenario_id, reviewer),
     queryFn: () => researchApi.reviewPanelOwn(task.scenario_id, reviewer),
     enabled: Boolean(reviewer),
   });
@@ -188,6 +206,7 @@ function MultiRaterTaskPanel({ task, reviewer, onChanged }: {
       existing={own.data ?? null}
       reviewer={reviewer}
       onChanged={onChanged}
+      onSavedAdvance={onSavedAdvance}
     />
   );
 }
@@ -243,7 +262,7 @@ function DisputeAdjudicationCard({
         </span>
       </div>
 
-      <div className="contrast-grid" style={{ marginBottom: 14 }}>
+      <div className="contrast-grid contrast-grid-spaced">
         {dispute.submissions.map(sub => (
           <div key={sub.annotator_id} className="contrast-card">
             <div className="contrast-head">
@@ -294,23 +313,51 @@ function DisputeAdjudicationCard({
   );
 }
 
-export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
+const REVIEWER_SESSION_KEY = 'mdt-active-reviewer';
+
+function loadSessionReviewer(): string {
+  try {
+    return sessionStorage.getItem(REVIEWER_SESSION_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function saveSessionReviewer(value: string) {
+  try {
+    if (value) sessionStorage.setItem(REVIEWER_SESSION_KEY, value);
+    else sessionStorage.removeItem(REVIEWER_SESSION_KEY);
+  } catch {
+    // Ignore restricted storage environments.
+  }
+}
+
+export function MultiRaterPanel({ requestedScenario = '', onChanged }: { requestedScenario?: string; onChanged: () => void }) {
   const [subView, setSubView] = useState<'blind' | 'agreement' | 'adjudicate'>('blind');
-  const [reviewer, setReviewer] = useState('');
-  const [identity, setIdentity] = useState('');
+  const [reviewer, setReviewer] = useState(loadSessionReviewer);
+  const [identity, setIdentity] = useState(loadSessionReviewer);
   const [adjudicatorId, setAdjudicatorId] = useState('adjudicator_1');
-  const [selected, setSelected] = useState('');
+  const [selected, setSelected] = useState(requestedScenario);
   const [page, setPage] = useState(1);
 
   const tasksQuery = useQuery({
-    queryKey: ['review-panel-tasks', reviewer],
+    queryKey: researchKeys.reviewPanelTasks(reviewer),
     queryFn: () => researchApi.reviewPanelTasks(reviewer || undefined),
   });
   const agreementQuery = useQuery({
-    queryKey: ['review-panel-agreement'],
+    queryKey: researchKeys.reviewPanelAgreement,
     queryFn: researchApi.reviewPanelAgreement,
     enabled: subView !== 'blind',
   });
+
+  useEffect(() => {
+    if (!requestedScenario || !tasksQuery.data) return;
+    const idx = tasksQuery.data.findIndex(t => t.scenario_id === requestedScenario);
+    if (idx >= 0) {
+      setSelected(requestedScenario);
+      setPage(Math.floor(idx / 20) + 1);
+    }
+  }, [requestedScenario, tasksQuery.data]);
 
   if (tasksQuery.isError) return <ErrorState error={tasksQuery.error} retry={() => void tasksQuery.refetch()} />;
   if (!tasksQuery.data) return <Loading />;
@@ -320,10 +367,20 @@ export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
   const { rows, page: currentPage, pages, first } = pageSlice(queue, page);
   const multiRatedCount = queue.filter(t => t.submission_count >= 2).length;
 
+  function advanceNext() {
+    if (!active) return;
+    const start = queue.indexOf(active) + 1;
+    const next = [...queue.slice(start), ...queue.slice(0, start)].find(t => !t.own_submitted && t !== active);
+    if (next) {
+      setSelected(next.scenario_id);
+      setPage(Math.floor(queue.indexOf(next) / 20) + 1);
+    }
+  }
+
   return (
     <div className="workspace-column">
-      <div className="panel" style={{ padding: '12px 16px' }}>
-        <div className="workspace-section-heading" style={{ marginBottom: 0 }}>
+      <div className="panel panel-compact">
+        <div className="workspace-section-heading heading-flush">
           <div className="scenario-filter-bar" role="tablist" aria-label="多人盲标与仲裁阶段">
             <button type="button" className={`filter-chip ${subView === 'blind' ? 'is-active' : ''}`}
               onClick={() => setSubView('blind')}>1. 独立盲标录入</button>
@@ -352,19 +409,32 @@ export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
             </div>
             <div className="blind-progress-wrap">
               <progress max={queue.length} value={multiRatedCount} aria-label="双人盲标进度" />
-              <form className="research-form" onSubmit={e => { e.preventDefault(); setReviewer(identity.trim()); }}>
+              <form className="research-form" onSubmit={e => {
+                e.preventDefault();
+                const trimmed = identity.trim();
+                saveSessionReviewer(trimmed);
+                setReviewer(trimmed);
+              }}>
                 <label>当前标注人编号
                   <input value={identity} maxLength={80} required readOnly={Boolean(reviewer)}
                     placeholder="如 rater_1 / rater_2" onChange={e => setIdentity(e.target.value)} autoComplete="off" />
                 </label>
                 {reviewer ? (
-                  <button type="button" className="button secondary" onClick={() => { setIdentity(''); setReviewer(''); }}>
+                  <button type="button" className="button secondary" onClick={() => {
+                    saveSessionReviewer('');
+                    setIdentity('');
+                    setReviewer('');
+                  }}>
                     切换标注人
                   </button>
                 ) : (
                   <button className="button secondary" disabled={!identity.trim()}>启用盲标身份</button>
                 )}
               </form>
+              <button type="button" className="text-link" disabled={!queue.some(t => !t.own_submitted && t !== active)}
+                onClick={advanceNext}>
+                下一待标截点 <Icon name="arrow" size={14} />
+              </button>
             </div>
             <div className="blind-list-scroll">
               {rows.map((task, index) => (
@@ -390,6 +460,7 @@ export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
             task={active}
             reviewer={reviewer}
             onChanged={() => { void tasksQuery.refetch(); onChanged(); }}
+            onSavedAdvance={advanceNext}
           />
         </div>
       )}
@@ -476,7 +547,7 @@ export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
                   </tbody>
                 </table>
               </div>
-              <p className="notice neutral" style={{ marginTop: 14, marginBottom: 0 }}>
+              <p className="notice neutral notice-spaced">
                 <Icon name="info" size={16} />
                 <span>{agreementQuery.data.summary_note}</span>
               </p>
@@ -490,11 +561,10 @@ export function MultiRaterPanel({ onChanged }: { onChanged: () => void }) {
           <ErrorState error={agreementQuery.error} retry={() => void agreementQuery.refetch()} />
         ) : agreementQuery.data && (
           <div className="workspace-column">
-            <section className="panel" style={{ padding: '14px 18px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <section className="panel panel-compact">
+              <label className="adjudicator-bar">
                 <strong>仲裁人编号</strong>
-                <input value={adjudicatorId} maxLength={80} onChange={e => setAdjudicatorId(e.target.value)}
-                  style={{ maxWidth: 240 }} />
+                <input value={adjudicatorId} maxLength={80} onChange={e => setAdjudicatorId(e.target.value)} />
                 <span className="muted">仲裁定稿后的共识金标准将自动作为 8 组配对评测的最高优先级参考。</span>
               </label>
             </section>

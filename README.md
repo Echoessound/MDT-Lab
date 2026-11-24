@@ -7,6 +7,7 @@
 项目提供 3 个手工编写的肺癌合成场景，可导入 Synthea CSV ZIP、TCIA NSCLC 临床 CSV、TCGA/cBioPortal 临床 TSV 与结构化研究 JSON，并保留来源和映射记录。Mock 以确定性规则模拟资料审阅，流程标签仅供科研核对。
 
 - [技术方案与开发计划](docs/技术方案与开发计划.md)：当前实现、差距与后续验收标准。
+- [前端架构与 iOS 交互工程规范](docs/前端架构与iOS交互工程规范.md)：融合 `emilkowalski/skills` 的动效曲线、内在 CSS Grid 布局与前端工程门禁规范。
 - [API 与事件契约](docs/API与事件契约.md)：V0.3 `/api/v2` 与旧版兼容接口。
 - [验收记录](docs/验收记录.md)：实际测试、浏览器检查与已知限制。
 

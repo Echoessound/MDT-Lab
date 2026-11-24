@@ -36,16 +36,25 @@ export type JumpItem = { label: string; detail: string; href: string; icon: stri
 type SearchCase = { case_id: string; title: string };
 type SearchRun = { run_id: string; case_id: string; case_version: number };
 
+export const quickActions: JumpItem[] = [
+  { label: '多人独立盲标与争议仲裁', detail: '快捷操作 · 实验与盲标', href: '/research/experiments?view=annotate', icon: 'check' },
+  { label: '运行 8 组基线与消融评测', detail: '快捷操作 · 配对统计与 LaTeX 导出', href: '/research/experiments', icon: 'route' },
+  { label: '导入外部临床队列 (TCIA / TCGA / Synthea)', detail: '快捷操作 · 数据预检与落库', href: '/research/datasets', icon: 'database' },
+  { label: '切换命名大模型连接方案', detail: '快捷操作 · 共享与专科绑定', href: '/settings/models', icon: 'settings' },
+];
+
 export function jumpResults(raw: string, cases: SearchCase[], runs: SearchRun[]): JumpItem[] {
   const term = raw.trim().toLocaleLowerCase();
   const matches = (...fields: string[]) => fields.some(field => field.toLocaleLowerCase().includes(term));
   const pages = [...destinations, help]
     .filter(page => matches(page.label))
     .map(page => ({ ...page, detail: '页面' }));
-  if (!term) return pages;
+  const actions = quickActions.filter(act => matches(act.label, act.detail));
+  if (!term) return [...quickActions.slice(0, 3), ...pages];
   const matchingCases = cases.filter(item => matches(item.case_id, item.title)).slice(0, 6);
   const matchingRuns = runs.filter(item => matches(item.run_id, item.case_id)).slice(0, 6);
   return [
+    ...actions,
     ...pages,
     ...matchingCases.map(item => ({
       label: item.title, detail: item.case_id, icon: 'file',

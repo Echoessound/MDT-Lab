@@ -46,7 +46,7 @@
 .console-flow-stage:first-child::after, .console-flow-specialists::after { width: calc(var(--rail) / 2); }
 .console-flow-specialists::after { left: calc(100% + var(--rail) / 2); }
 .console-flow-specialists { display: grid; gap: 6px; }
-.specialist-branch { height: 48px; }
+.specialist-branch { min-block-size: 3rem; }
 .specialist-branch::before, .specialist-branch::after {
   content: ''; position: absolute; height: calc(100% + 6px); top: 50%; width: calc(var(--rail) / 2);
   border-top: 1px solid var(--wire); pointer-events: none;
