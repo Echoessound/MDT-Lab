@@ -536,15 +536,15 @@ export function ExperimentsPage() {
   const tabsWithBadges = [
     { key: 'batch' as const, label: '8 组配对实验与导出', badge: evaluate.data ? `${evaluate.data.scenario_count} 截点` : undefined },
     { key: 'annotate' as const, label: '独立盲标工作台' },
-    { key: 'pipeline' as const, label: '多模态数据接入架构', badge: '5 类模态' },
+    { key: 'pipeline' as const, label: '多模态数据接入' },
   ];
 
   return (
     <div className="page-enter research-page workspace-page">
       <header className="workspace-heading">
         <div>
-          <h1>科研实验、独立盲标与论文导出</h1>
-          <p>按冻结截点记录独立参考，比较八组方法的调用开销与流程判断。</p>
+          <h1>实验与盲标</h1>
+          <p>按冻结截点记录独立参考，对比八组方法的调用开销与门控结论。</p>
         </div>
       </header>
 

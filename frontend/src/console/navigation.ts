@@ -57,7 +57,7 @@ export function jumpResults(raw: string, cases: SearchCase[], runs: SearchRun[])
     ...actions,
     ...pages,
     ...matchingCases.map(item => ({
-      label: item.title, detail: item.case_id, icon: 'file',
+      label: item.case_id, detail: item.title, icon: 'file',
       href: '/research/cases/' + encodeURIComponent(item.case_id),
     })),
     ...matchingRuns.map(item => ({

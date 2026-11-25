@@ -1,4 +1,4 @@
-import type { Role } from './schemas';
+import type { ResearchCase, Role } from './schemas';
 
 export const factLabelsZh: Record<string, string> = {
   imaging_complete: '影像资料齐备',
@@ -170,6 +170,7 @@ export function toolNameLabel(tool: string): string {
 
 export const ruleIdLabelsZh: Record<string, string> = {
   fixed_all: '固定全员对照规则',
+  adaptive_utility: '纵向风险效用自适应规则',
   event_diagnosis: '初诊综合评估规则',
   event_imaging: '影像复核调度规则',
   event_pathology: '病理确诊调度规则',
@@ -232,4 +233,70 @@ export function roleBadgeColor(role: Role): string {
     pathology: 'role-badge-pathology',
   };
   return colors[role];
+}
+
+export function routingModeNameZh(mode: string): string {
+  if (mode === 'adaptive') return '风险自适应路由';
+  if (mode === 'fixed') return '固定四科全员';
+  return '按事件智能路由';
+}
+
+const LEGACY_WORKFLOW_TITLES: Record<string, string> = {
+  '资料逐步补齐：影像、病理与分子记录': '右肺上叶实性占位伴纵隔淋巴结待查',
+  '资料缺失：等待病理与分子记录': '左肺下叶肿块疑似原发性支气管肺癌',
+  '证据冲突：同日记录存在相反标记': '右肺腺癌一线治疗后复查病灶评估',
+};
+
+export function clinicalCaseTitle(item: ResearchCase): string {
+  if (LEGACY_WORKFLOW_TITLES[item.title]) return LEGACY_WORKFLOW_TITLES[item.title];
+  const sexLabel = item.patient.sex === 'female' ? '女性' : item.patient.sex === 'male' ? '男性' : '患者';
+  if (item.title === 'Synthea 通用合成病程') {
+    const diag = item.timeline.find(ev => ev.event_type === 'diagnosis') ?? item.timeline[0];
+    return diag ? `${diag.title}（合成病程）` : `${item.patient.age}岁${sexLabel} · 合成病例`;
+  }
+  if (/^NSCLC 公开研究病例\s+/.test(item.title)) {
+    const modalities = Array.from(new Set(
+      item.timeline.map(ev => ev.facts.modality).filter((m): m is string => typeof m === 'string' && m.trim().length > 0),
+    ));
+    return `${item.patient.age}岁${sexLabel} · 非小细胞肺癌（${modalities.length ? `${modalities.join(' / ')} 队列` : '公开影像队列'}）`;
+  }
+  if (/^TCGA\/cBioPortal 公开病例\s+/.test(item.title)) {
+    return `${item.patient.age}岁${sexLabel} · ${item.disease}`;
+  }
+  return item.title;
+}
+
+const CONFLICT_CHECK_KEYS = new Set([
+  'imaging_complete', 'progression_confirmed', 'pathology_confirmed', 'molecular_complete',
+  'histology', 'egfr_status', 'kras_status', 'alk_status', 'pathological_t', 'pathological_n', 'pathological_m',
+]);
+const COMPLETENESS_KEYS = [
+  'imaging_complete', 'pathology_confirmed', 'molecular_complete',
+  'follow_up_complete', 'procedure_record_complete', 'treatment_record_complete',
+];
+
+export function caseBaselineHint(item: ResearchCase): string {
+  const byKey = new Map<string, Array<{ eventId: string; date: string; value: unknown; supersedes: unknown }>>();
+  const latestScalar: Record<string, unknown> = {};
+  for (const ev of item.timeline) {
+    for (const [k, v] of Object.entries(ev.facts)) {
+      latestScalar[k] = v;
+      if (CONFLICT_CHECK_KEYS.has(k) && v !== null) {
+        const list = byKey.get(k) ?? [];
+        list.push({ eventId: ev.event_id, date: ev.occurred_at, value: v, supersedes: ev.facts.supersedes_event_id });
+        byKey.set(k, list);
+      }
+    }
+  }
+  for (const records of byKey.values()) {
+    const maxDate = records.reduce((acc, r) => (r.date > acc ? r.date : acc), '');
+    const sameDay = records.filter(r => r.date === maxDate);
+    const superseded = new Set(sameDay.map(r => r.supersedes).filter(Boolean));
+    const distinct = new Set(sameDay.filter(r => !superseded.has(r.eventId)).map(r => `${typeof r.value}:${JSON.stringify(r.value)}`));
+    if (distinct.size > 1) return '待审阅 · 含同日冲突记录';
+  }
+  if (COMPLETENESS_KEYS.some(k => latestScalar[k] === false)) {
+    return '待审阅 · 存在待补记录';
+  }
+  return '待审阅 · 资料已登记';
 }

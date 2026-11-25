@@ -63,6 +63,9 @@
 .workspace-table td code, .workspace-table td small { display: block; color: var(--muted); font-size: 0.625rem; overflow-wrap: anywhere; }
 .workspace-table small, .workspace-table .workspace-row-title + code { margin-top: 3px; }
 .workspace-row-title { display: inline-block; font-size: 0.8125rem; font-weight: 600; color: var(--text); overflow-wrap: anywhere; text-underline-offset: 3px; }
+.case-id-title { display: inline-block; font-size: 0.9375rem; font-weight: 700; font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; color: var(--text); letter-spacing: -0.015em; text-underline-offset: 3px; }
+.case-clinical-name { display: block; font-size: 0.78125rem; font-weight: 500; color: var(--text); margin-top: 2px; overflow-wrap: anywhere; }
+.case-progress-cell { display: grid; justify-items: start; gap: 3px; }
 .workspace-number, .workspace-table time, .workspace-list-footer { font-variant-numeric: tabular-nums; }
 .workspace-table time, .workspace-type { white-space: nowrap; }
 .workspace-version, .workspace-table time { font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace; font-size: 0.6875rem; }
@@ -688,7 +691,7 @@
 @media (hover: hover) and (pointer: fine) {
   .workspace-recent-list a:hover, .workspace-table tbody tr:hover { background: var(--soft); }
   .workspace-tool:hover:not(:disabled), .workspace-pagination button:hover:not(:disabled) { background: var(--soft); }
-  .workspace-row-title:hover { text-decoration: underline; }
+  .workspace-row-title:hover, .case-id-title:hover { text-decoration: underline; }
   .workspace-views button:hover:not([aria-selected=true]) { color: var(--text); }
   .telemetry-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--green) 42%, var(--line)); }
   .pipeline-step-card:hover { transform: translateY(-2px); border-color: var(--green); background: var(--panel); }
@@ -724,7 +727,7 @@
   .workspace-section-heading { padding: 0.75rem; }
   .workspace-table th, .workspace-table td { padding: 0.5625rem; }
   .workspace-table th:first-child, .workspace-table td:first-child { padding-left: 0.75rem; }
-  .case-register th:nth-child(3), .case-register td:nth-child(3), .case-register th:nth-child(5), .case-register td:nth-child(5), .runs-register th:nth-child(2), .runs-register td:nth-child(2), .runs-register th:nth-child(3), .runs-register td:nth-child(3), .runs-register th:nth-child(5), .runs-register td:nth-child(5) { display: none; }
+  .case-register th:nth-child(2), .case-register td:nth-child(2), .case-register th:nth-child(3), .case-register td:nth-child(3), .runs-register th:nth-child(2), .runs-register td:nth-child(2), .runs-register th:nth-child(3), .runs-register td:nth-child(3), .runs-register th:nth-child(5), .runs-register td:nth-child(5) { display: none; }
   .workspace-case-brief { grid-template-columns: minmax(0, 1fr); }
   .workspace-views button { padding: 0.4375rem 0.625rem; }
   .workspace-event-row { grid-template-columns: minmax(0, 1fr); }

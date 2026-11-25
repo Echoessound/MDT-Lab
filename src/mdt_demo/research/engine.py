@@ -1,6 +1,7 @@
 """Event-routed, bounded research workflow over a frozen synthetic timeline."""
 
 from copy import deepcopy
+from graphlib import CycleError, TopologicalSorter
 from itertools import combinations
 import json
 import time
@@ -9,7 +10,7 @@ from typing import Literal
 from pydantic import ValidationError
 
 from .schemas import (
-    AgentOutput, Conflict, EvidenceRef, Metrics, ModelInfo, Opinion, Report,
+    AgentOutput, ClinicalEvent, Conflict, EvidenceRef, Metrics, ModelInfo, Opinion, Report,
     ResearchCase, ROLES, Routing, RunRequest, Safety,
 )
 
@@ -71,8 +72,26 @@ def freeze_context(case: ResearchCase, trigger_event_id: str) -> ResearchCase:
 def route_case(case: ResearchCase, trigger_event_id: str, routing_mode: str = "event") -> dict:
     frozen = freeze_context(case, trigger_event_id)
     trigger = frozen.timeline[-1]
-    if routing_mode not in {"event", "fixed"}:
+    if routing_mode not in {"event", "fixed", "adaptive"}:
         raise WorkflowError("invalid_routing_mode")
+    if routing_mode == "adaptive":
+        from .consensus_metrics import compute_specialist_utilities
+
+        util = compute_specialist_utilities(frozen)
+        return Routing(
+            strategy_version=util["strategy_version"],
+            trigger_event_id=trigger_event_id,
+            selected_agents=util["selected_agents"],
+            skipped_agents=util["skipped_agents"],
+            reasons=[
+                {
+                    "agent_id": item["agent_id"],
+                    "rule_id": "adaptive_utility",
+                    "description": item["description"],
+                }
+                for item in util["utilities"]
+            ],
+        ).model_dump(mode="json")
     selected = list(ROLES) if routing_mode == "fixed" else ROUTES[trigger.event_type].copy()
     return Routing(
         strategy_version=RULE_VERSION, trigger_event_id=trigger_event_id,
@@ -97,9 +116,50 @@ def evidence_registry(case: ResearchCase) -> list[dict]:
     ).model_dump(mode="json") for event in case.timeline for key, value in event.facts.items()]
 
 
+def current_fact_records(frozen: ResearchCase) -> dict[str, list[ClinicalEvent]]:
+    """Keep the latest day's records per field, honoring explicit same-field corrections."""
+    groups: dict[str, list[ClinicalEvent]] = {}
+    for event in frozen.timeline:  # ResearchCase orders by date, then technical event ID.
+        for key in event.facts:
+            records = groups.get(key)
+            if records and records[-1].occurred_at == event.occurred_at:
+                records.append(event)
+            else:
+                groups[key] = [event]
+    for key, records in groups.items():
+        if len(records) == 1:
+            continue
+        ids = {record.event_id for record in records}
+        replaced = set()
+        graph = TopologicalSorter()
+        for record in records:
+            target = record.facts.get("supersedes_event_id")
+            if target in ids and target != record.event_id:
+                replaced.add(target)
+                graph.add(record.event_id, target)
+        if replaced:
+            try:
+                graph.prepare()
+            except CycleError:
+                continue  # Contradictory circular corrections remain visible to the conflict gate.
+            groups[key] = [record for record in records if record.event_id not in replaced]
+    return groups
+
+
+def current_fact_values(groups: dict[str, list[ClinicalEvent]]) -> dict:
+    """A technical tie-break cannot establish which contradictory value is current."""
+    result = {}
+    for key, records in groups.items():
+        values = {(type(record.facts[key]), record.facts[key]) for record in records}
+        if len(values) == 1:
+            result[key] = records[-1].facts[key]
+    return result
+
+
 def _review_input(frozen: ResearchCase) -> dict:
     registry = evidence_registry(frozen)
-    latest = {item["fact_key"]: item["value"] for item in registry}
+    current = current_fact_records(frozen)
+    latest = current_fact_values(current)
     trigger = frozen.timeline[-1]
     required = REQUIRED[trigger.event_type]
     return {
@@ -107,30 +167,27 @@ def _review_input(frozen: ResearchCase) -> dict:
         "current_question": frozen.current_question, "trigger_event": trigger.model_dump(mode="json"),
         "events": [event.model_dump(mode="json") for event in frozen.timeline],
         "evidence_registry": registry, "current_facts": latest, "required_fields": required.copy(),
+        "required_evidence_ids": [f"{current[key][-1].event_id}:{key}" for key in required if key in current],
         "missing_information": [key for key in required if latest.get(key) is not True],
     }
 
 
 def source_conflicts(case: ResearchCase, selected: list[str]) -> list[dict]:
     """Only opposing structured facts at the latest date conflict; later updates supersede history."""
-    material_keys = set(key for values in REQUIRED.values() for key in values) | {"histology"}
-    grouped = {}
-    for event in case.timeline:
-        for key, value in event.facts.items():
-            if key not in material_keys or value is None:
-                continue
-            grouped.setdefault(key, []).append((event, value))
+    material_keys = set(key for values in REQUIRED.values() for key in values) | {
+        "histology", "egfr_status", "kras_status", "alk_status",
+        "pathological_t", "pathological_n", "pathological_m",
+    }
     result = []
-    for key, records in grouped.items():
-        last_date = max(event.occurred_at for event, _ in records)
-        current = [(event, value) for event, value in records if event.occurred_at == last_date]
-        superseded = {event.facts.get("supersedes_event_id") for event, _ in current}
-        current = [(event, value) for event, value in current if event.event_id not in superseded]
-        distinct = {(type(value).__name__, json.dumps(value, ensure_ascii=False)) for _, value in current}
+    for key, records in current_fact_records(case).items():
+        if key not in material_keys:
+            continue
+        current = [event for event in records if event.facts[key] is not None]
+        distinct = {(type(event.facts[key]), event.facts[key]) for event in current}
         if len(distinct) > 1:
             result.append({"conflict_id": f"source_{key}", "dimension": "source_fact_conflict",
                            "agent_ids": selected, "description": f"同日来源对 {key} 有相反事实，尚无明确替代记录。",
-                           "evidence_ids": [f"{event.event_id}:{key}" for event, _ in current]})
+                           "evidence_ids": [f"{event.event_id}:{key}" for event in current]})
     return result
 
 
@@ -181,10 +238,7 @@ def _mock(context: dict, scenario: str, designated: str, selected: list[str]) ->
     if scenario == "partial_failure" and role == designated:
         raise WorkflowError("simulated_agent_failure")
     lookup = {item["evidence_id"]: item for item in context["evidence_registry"]}
-    latest = {}
-    for item in lookup.values():
-        latest[item["fact_key"]] = item
-    chosen = [latest[key] for key in context["required_fields"] if key in latest]
+    chosen = [lookup[evidence_id] for evidence_id in context["required_evidence_ids"]]
     if not chosen:
         chosen = [list(lookup.values())[-1]]
     decision = "NEED_MORE_INFORMATION" if missing else "READY_FOR_REVIEW"

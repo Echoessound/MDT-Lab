@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { jumpResults } from '../console/navigation';
 import { researchKeys } from './query-keys';
-import { ablationMatrixSchema, agreementReportSchema, annotationSchema, blindMaterialSchema, attachmentSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, temporalAuditSchema, workflowPlanSchema } from './schemas';
+import { ablationMatrixSchema, agreementReportSchema, annotationSchema, blindMaterialSchema, attachmentSchema, consensusMetricsSchema, dataCapabilitySchema, imagingPipelineSchema, libraryEvaluationSchema, longitudinalDynamicsSchema, routingModeSchema, temporalAuditSchema, workflowPlanSchema } from './schemas';
+import { toggleCutoffTrigger } from './workspace-case';
 import { computeSlideDirection } from './workspace-controls';
 import {
+  clinicalCaseTitle,
   conflictDimensionLabel,
   errorCodeLabel,
   factKeyLabel,
@@ -11,6 +13,7 @@ import {
   modeNameZh,
   nodeNameLabel,
   providerLabelZh,
+  routingModeNameZh,
   ruleIdLabel,
   safetyCheckLabel,
   sourceNameLabel,
@@ -335,5 +338,83 @@ describe('workflow designer, imaging pipeline, and ablation schemas', () => {
     expect(initialJump.some(item => item.href === '/research/experiments?view=annotate')).toBe(true);
     const filteredJump = jumpResults('盲标', [], []);
     expect(filteredJump[0]?.href).toContain('/research/experiments');
+  });
+
+  it('toggles cutoff scrubber nodes cleanly (click selects, clicking selected node cancels)', () => {
+    expect(toggleCutoffTrigger(null, 'E004')).toBe('E004');
+    expect(toggleCutoffTrigger('E004', 'E004')).toBe('');
+    expect(toggleCutoffTrigger('E004', 'E002')).toBe('E002');
+    expect(toggleCutoffTrigger('', 'E006')).toBe('E006');
+    expect(toggleCutoffTrigger('E006', 'E006')).toBe('');
+  });
+
+  it('normalizes legacy workflow-progress titles to clinical summaries and validates adaptive metrics schemas', () => {
+    expect(routingModeSchema.parse('adaptive')).toBe('adaptive');
+    expect(routingModeNameZh('adaptive')).toBe('风险自适应路由');
+    expect(clinicalCaseTitle({
+      case_id: 'LUNG-SYN-001',
+      title: '资料逐步补齐：影像、病理与分子记录',
+      disease: '肺癌',
+      case_kind: 'synthetic',
+      version: 1,
+      patient: { age: 58, sex: 'female' },
+      current_question: null,
+      timeline: [],
+      provenance: [],
+      unplaced_records: [],
+      data_notes: [],
+    })).toBe('右肺上叶实性占位伴纵隔淋巴结待查');
+
+    const consensus = consensusMetricsSchema.parse({
+      run_id: 'run_1',
+      case_id: 'LUNG-SYN-001',
+      case_version: 1,
+      trigger_event_id: 'E001',
+      routing_mode: 'adaptive',
+      initial_entropy: 0.6309,
+      final_entropy: 0.0,
+      entropy_reduction: 0.6309,
+      opinions_revised_count: 1,
+      converged: true,
+      coverage_ratio: 1.0,
+      evidence_jaccard_mean: 1.0,
+      claim_agreement_rate: 1.0,
+      unique_cited_evidence_count: 2,
+      evidence_utilization_rate: 0.6667,
+      consensus_score: 0.85,
+      safety_veto_applied: false,
+      final_decision: 'NEED_MORE_INFORMATION',
+    });
+    expect(consensus.entropy_reduction).toBeGreaterThan(0);
+
+    const dyn = longitudinalDynamicsSchema.parse({
+      case_id: 'LUNG-SYN-001',
+      case_version: 1,
+      checkpoint_count: 1,
+      first_ready_event_id: null,
+      transition_count: 0,
+      decision_oscillation_count: 0,
+      cumulative_calls: { event: 2, adaptive: 3, fixed: 4 },
+      event_saving_vs_fixed_pct: 50,
+      adaptive_saving_vs_fixed_pct: 25,
+      adaptive_risk_escalations: 1,
+      checkpoints: [{
+        event_id: 'E001',
+        occurred_at: '2026-01-05',
+        event_type: 'diagnosis',
+        title: '初诊登记',
+        event_selected_agents: ['oncology', 'pathology'],
+        adaptive_selected_agents: ['oncology', 'radiology', 'pathology'],
+        event_calls: 2,
+        adaptive_calls: 3,
+        fixed_calls: 4,
+        missing_count: 2,
+        source_conflict_count: 0,
+        event_decision: 'NEED_MORE_INFORMATION',
+        adaptive_decision: 'NEED_MORE_INFORMATION',
+        imaging_staleness_days: null,
+      }],
+    });
+    expect(dyn.adaptive_risk_escalations).toBe(1);
   });
 });

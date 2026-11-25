@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from ..api_schemas import APIError
 from .adjudication import AdjudicationInput, MultiRaterStore, MultiRaterSubmissionInput
 from .blind_review import review_material, validate_reference
+from .consensus_metrics import compute_case_longitudinal_dynamics, compute_run_consensus_metrics
 from .engine import execute, route_case, WorkflowCancelled, WorkflowError
 from .agent_settings import SettingsService
 from .import_service import ImportPreviews
@@ -227,6 +228,13 @@ class ResearchService:
         rep = self.report(run_id)
         original = ResearchCase.model_validate(self.store.case(rep["case_id"], rep["case_version"]))
         return audit_temporal_boundary(original, rep)
+
+    def consensus_metrics_run(self, run_id: str) -> dict:
+        return compute_run_consensus_metrics(self.report(run_id))
+
+    def longitudinal_dynamics(self, case_id: str, version: int | None = None) -> dict:
+        case = ResearchCase.model_validate(self.store.case(case_id, version))
+        return compute_case_longitudinal_dynamics(case)
 
     def evaluate_experiments(self, *, case_ids: list[str] | None = None,
                              case_versions: dict[str, int] | None = None,

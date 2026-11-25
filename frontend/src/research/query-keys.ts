@@ -8,6 +8,8 @@ export const researchKeys = {
   caseDetail: (id: string, version: number | 'latest' = 'latest') => ['research-case', id, version] as const,
   routing: (id: string, version: number | undefined, trigger: string | undefined, mode: string) =>
     ['research-routing', id, version, trigger, mode] as const,
+  longitudinalDynamics: (id: string, version?: number) =>
+    ['research-longitudinal-dynamics', id, version ?? 'latest'] as const,
   workflowPlan: (id: string, version?: number, trigger?: string) =>
     trigger !== undefined ? (['research-workflow-plan', id, version, trigger] as const) : (['research-workflow-plan', id] as const),
   imaging: (id: string, version?: number, trigger?: string) =>
@@ -19,6 +21,7 @@ export const researchKeys = {
   runDetail: (runId: string) => ['research-run', runId] as const,
   report: (runId: string) => ['research-report', runId] as const,
   temporalAudit: (runId: string) => ['research-temporal-audit', runId] as const,
+  consensusMetrics: (runId: string) => ['research-consensus-metrics', runId] as const,
   agentModels: ['research-agent-models'] as const,
   modelProfiles: ['research-model-profiles'] as const,
   datasets: ['research-datasets'] as const,

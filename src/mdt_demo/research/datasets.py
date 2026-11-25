@@ -293,7 +293,9 @@ def _synthea(raw, digest, max_cases, warnings, rejected, table_counts):
             first = min(date.fromisoformat(event["occurred_at"]) for event in events)
             age = first.year - birth.year - ((first.month, first.day) < (birth.month, birth.day))
             patient = {"age": age, "sex": {"M": "male", "F": "female"}.get(row["GENDER"], "unknown")}
-            cases.append(_case(case_id, "Synthea 通用合成病程", patient, events, provenance, [
+            ordered_events = sorted(events, key=lambda x: (x["occurred_at"], x["event_id"]))
+            primary_diag = next((e["title"] for e in ordered_events if e["event_type"] == "diagnosis"), ordered_events[0]["title"])
+            cases.append(_case(case_id, f"{primary_diag[:60]}（Synthea 合成病程）", patient, events, provenance, [
                 "通用合成样本不保证包含肺癌；未导入姓名、地址、证件、保险或费用字段。",
                 "年龄以最早导入事件日期计算。原始时间保留；同日序号仅为技术排序，不表示临床因果。",
                 "未从诊断、操作或检查记录自动推断资料完整性；当前研究规则可能持续要求补充资料。",
@@ -366,7 +368,10 @@ def _tcia(raw, digest, max_cases, warnings, rejected, table_counts):
                         "source_fields": fields})
             patient = {"age": int(row["Age at Histological Diagnosis"]),
                        "sex": {"male": "male", "female": "female"}.get(row["Gender"].lower(), "unknown")}
-            cases.append(_case(case_id, f"NSCLC 公开研究病例 {row['Case ID']}", patient, events, provenance, [
+            modalities = " / ".join(dict.fromkeys(str(e["facts"]["modality"]) for e in events if e["facts"].get("modality")))
+            sex_zh = {"male": "男性", "female": "女性"}.get(patient["sex"], "患者")
+            clinical_title = f"{patient['age']}岁{sex_zh} · 非小细胞肺癌（{modalities + ' 队列' if modalities else '公开影像队列'}）"
+            cases.append(_case(case_id, clinical_title, patient, events, provenance, [
                 "来源为公开去标识研究临床表；日期按来源 MM/DD/YYYY 转换，保留日期移位语义，不还原身份或真实日历。",
                 "年龄为来源的组织学诊断年龄。无时间的病理、分子、治疗与结局汇总不进入历史评议。",
                 "只导入日期及表内事实；未下载 DICOM，未推断影像或病理报告齐备，未推导手术日期。",
@@ -549,7 +554,9 @@ def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
                     })
 
             disease_title = row[hist_col] if (hist_col and row.get(hist_col, "").lower() not in MISSING) else "TCGA/cBioPortal 肺癌公开队列"
-            cases.append(_case(case_id, f"TCGA/cBioPortal 公开病例 {pid}", {"age": age_val, "sex": sex}, events, provenance, [
+            sex_zh = {"male": "男性", "female": "女性"}.get(sex, "患者")
+            clinical_title = f"{age_val}岁{sex_zh} · {disease_title}"[:120]
+            cases.append(_case(case_id, clinical_title, {"age": age_val, "sex": sex}, events, provenance, [
                 "来源为 TCGA / cBioPortal 公开临床表；回顾性 TNM 分期、驱动基因及生存结局已隔离至未定位资料，不进入历史截点。",
                 "若原始表仅含诊断年份或随访月数，时间轴采用相对锚点并显式标注 time_note，不还原真实日历。",
             ], unplaced=unplaced, disease=disease_title))

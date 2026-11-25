@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DecisionBadge, Icon, Loading } from '../ui';
 import { researchApi } from './api';
-import { InlineError, roleNames } from './components';
-import type { AblationMatrix, CaseAttachment, ImagingPipeline, ResearchCase, WorkflowPlan } from './schemas';
+import { InlineError, eventNames, roleNames } from './components';
+import type { AblationMatrix, CaseAttachment, ImagingPipeline, LongitudinalDynamics, ResearchCase, WorkflowPlan } from './schemas';
 
 import { factKeyLabel, sourceNameLabel } from './zh-dict';
 
@@ -339,7 +339,12 @@ export function AutomatedWorkflowBlueprint({
             <div key={spec.agent_id} className={`specialist-task-card ${spec.selected ? 'is-selected' : 'is-skipped'}`}>
               <div className="specialist-card-head">
                 <strong>{spec.agent_label}</strong>
-                <span className={`pill ${spec.selected ? 'soft' : 'outline'}`}>{spec.routing_type}</span>
+                <div className="badge-row">
+                  {spec.utility_score !== undefined && (
+                    <span className="pill outline">效用 {spec.utility_score.toFixed(2)}</span>
+                  )}
+                  <span className={`pill ${spec.selected ? 'soft' : 'outline'}`}>{spec.routing_type}</span>
+                </div>
               </div>
               <p className="specialist-focus">{spec.focus}</p>
               <ul>
@@ -401,6 +406,53 @@ export function AblationExperimentMatrix({ matrix }: { matrix: AblationMatrix })
   );
 }
 
+function LongitudinalDynamicsSection({ dynamics }: { dynamics: LongitudinalDynamics }) {
+  return (
+    <section className="panel workflow-card" aria-label="纵向全截点轨迹与调度对比">
+      <div className="workspace-section-heading">
+        <div>
+          <h2>纵向全截点轨迹与自适应调度对比</h2>
+          <p className="muted">
+            首次可复核截点：{dynamics.first_ready_event_id ?? '尚无'} · 决策跃迁 {dynamics.transition_count} 次 · 震荡 {dynamics.decision_oscillation_count} 次 · 自适应风险增补 {dynamics.adaptive_risk_escalations} 处
+          </p>
+        </div>
+        <span className="pill soft">
+          累计调用：事件 {dynamics.cumulative_calls.event} / 自适应 {dynamics.cumulative_calls.adaptive} / 固定 {dynamics.cumulative_calls.fixed}（省 {dynamics.event_saving_vs_fixed_pct}%）
+        </span>
+      </div>
+      <div className="workspace-table-scroll">
+        <table className="workspace-table">
+          <thead>
+            <tr>
+              <th>截点</th>
+              <th>类型与日期</th>
+              <th>事件路由</th>
+              <th>自适应路由</th>
+              <th>调用 (事件 / 自适应 / 固定)</th>
+              <th>结论与影像间隔</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dynamics.checkpoints.map(cp => (
+              <tr key={cp.event_id}>
+                <td><code>{cp.event_id}</code></td>
+                <td>{eventNames[cp.event_type]}<small>{cp.occurred_at}</small></td>
+                <td>{cp.event_selected_agents.map(r => roleNames[r]).join('、')}</td>
+                <td>{cp.adaptive_selected_agents.map(r => roleNames[r]).join('、')}</td>
+                <td className="workspace-number">{cp.event_calls} / {cp.adaptive_calls} / {cp.fixed_calls}</td>
+                <td>
+                  <DecisionBadge decision={cp.event_decision} />
+                  <small>{cp.imaging_staleness_days === null ? '无前置影像' : `距前次影像 ${cp.imaging_staleness_days} 天`}</small>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export function CaseWorkflowAndImagingSection({
   caseId,
   version,
@@ -426,6 +478,10 @@ export function CaseWorkflowAndImagingSection({
     queryKey: ['research-ablation', caseId, version, triggerEventId],
     queryFn: () => researchApi.ablationMatrix(caseId, version, triggerEventId),
   });
+  const dynamicsQuery = useQuery({
+    queryKey: ['research-longitudinal-dynamics', caseId, version],
+    queryFn: () => researchApi.longitudinalDynamics(caseId, version),
+  });
 
   if (planQuery.isPending || imagingQuery.isPending || ablationQuery.isPending) {
     return <Loading />;
@@ -441,6 +497,7 @@ export function CaseWorkflowAndImagingSection({
         isLatestVersion={isLatestVersion}
         onEnriched={onEnriched}
       />
+      {dynamicsQuery.data && <LongitudinalDynamicsSection dynamics={dynamicsQuery.data} />}
       <MedicalImagingWorkbench imaging={imagingQuery.data} allowUpload={isLatestVersion} />
       <AblationExperimentMatrix matrix={ablationQuery.data} />
     </div>

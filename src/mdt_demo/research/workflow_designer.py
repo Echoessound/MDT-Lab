@@ -10,10 +10,12 @@ from __future__ import annotations
 
 from collections import Counter
 
+from .consensus_metrics import compute_specialist_utilities
 from .engine import (
     REQUIRED,
     ROUTES,
-    evidence_registry,
+    current_fact_records,
+    current_fact_values,
     execute,
     freeze_context,
     single_mock_review,
@@ -131,17 +133,18 @@ def _adjacent_extension_id(case: ResearchCase, trigger: ClinicalEvent) -> str | 
             return None
 
 
-def _dated_pathology_result(frozen: ResearchCase) -> ClinicalEvent | None:
-    source = next((event for event in reversed(frozen.timeline)
-                   if "histology" in event.facts or event.facts.get("histology_missing_reason")), None)
-    if source is None or source.event_type != "pathology" or source.facts.get("histology_missing_reason"):
+def _dated_pathology_result(frozen: ResearchCase, current, latest) -> ClinicalEvent | None:
+    records = current.get("histology")
+    value = latest.get("histology")
+    if not records or not isinstance(value, str) or value.strip().casefold() not in PATHOLOGY_HISTOLOGIES:
         return None
-    value = source.facts.get("histology")
-    if not isinstance(value, str) or value.strip().casefold() not in PATHOLOGY_HISTOLOGIES:
+    source = records[-1]
+    if source.event_type != "pathology" or any(
+        event.facts["histology_missing_reason"] and event.occurred_at >= source.occurred_at
+        for event in current.get("histology_missing_reason", [])
+    ):
         return None
     if any(event.facts.get("supersedes_event_id") == source.event_id for event in frozen.timeline):
-        return None
-    if any(item["conflict_id"] == "source_histology" for item in source_conflicts(frozen, list(ROLES))):
         return None
     return source
 
@@ -150,14 +153,15 @@ def infer_semantic_completeness(case: ResearchCase, trigger_event_id: str | None
     frozen = freeze_context(case, _resolve_trigger_id(case, trigger_event_id))
     trigger = frozen.timeline[-1]
     required = REQUIRED[trigger.event_type]
-    latest = {ref["fact_key"]: ref for ref in evidence_registry(frozen)}
-    strict_missing = [key for key in required if latest.get(key, {}).get("value") is not True]
+    current = current_fact_records(frozen)
+    latest = current_fact_values(current)
+    strict_missing = [key for key in required if latest.get(key) is not True]
     inferred = []
-    if ("pathology_confirmed" in strict_missing and "pathology_confirmed" not in latest
-            and "pathology_confirmed_missing_reason" not in latest):
-        source = _dated_pathology_result(frozen)
+    if ("pathology_confirmed" in strict_missing and "pathology_confirmed" not in current
+            and "pathology_confirmed_missing_reason" not in current):
+        source = _dated_pathology_result(frozen, current, latest)
         if source is not None:
-            evidence_id = latest["histology"]["evidence_id"]
+            evidence_id = f"{source.event_id}:histology"
             inferred.append({
                 "fact_key": "pathology_confirmed", "fact_label": FACT_LABELS_ZH["pathology_confirmed"],
                 "inferred_value": True, "confidence": "derived", "rule_id": HISTOLOGY_RULE,
@@ -298,25 +302,13 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
     conflicts = source_conflicts(frozen, list(ROLES))
 
     base_selected = ROUTES[trigger.event_type].copy()
-    adaptive_selected = base_selected.copy()
+    util = compute_specialist_utilities(frozen)
+    util_by_role = {item["agent_id"]: item for item in util["utilities"]}
+    adaptive_selected = [
+        role for role in ROLES
+        if role in set(base_selected) | set(util["selected_agents"])
+    ]
     adaptive_reasons: list[dict] = []
-
-    # Dynamic specialist expansion based on longitudinal case characteristics
-    has_imaging = imaging["study_count"] > 0
-    has_pathology = any(e.event_type == "pathology" or "pathology_confirmed" in e.facts or "histology" in e.facts for e in frozen.timeline)
-    has_procedure = any(e.event_type == "procedure" for e in frozen.timeline)
-
-    if has_imaging and "radiology" not in adaptive_selected and (
-        imaging["overall_record_status"] in {"incomplete", "conflict"} or trigger.event_type in {"diagnosis", "progression", "recurrence", "follow_up"}
-    ):
-        adaptive_selected.append("radiology")
-    if has_pathology and "pathology" not in adaptive_selected and completeness["strict_missing"]:
-        adaptive_selected.append("pathology")
-    if has_procedure and "surgery" not in adaptive_selected and trigger.event_type in {"progression", "recurrence", "follow_up"}:
-        adaptive_selected.append("surgery")
-
-    # Preserve canonical specialist ordering
-    adaptive_selected = [r for r in ROLES if r in adaptive_selected]
 
     role_tasks_map = {
         "oncology": {
@@ -356,13 +348,16 @@ def design_medical_workflow(case: ResearchCase, trigger_event_id: str | None = N
         in_base = role in base_selected
         in_adaptive = role in adaptive_selected
         info = role_tasks_map[role]
+        role_util = util_by_role[role]
         adaptive_reasons.append({
             "agent_id": role,
             "agent_label": ROLE_LABELS_ZH[role],
             "selected": in_adaptive,
-            "routing_type": "基础事件命中" if in_base else "案例特征建议增补" if in_adaptive else "本计划未建议",
+            "routing_type": "基础事件命中" if in_base else "风险效用自适应增补" if in_adaptive else "本计划未建议",
             "focus": info["focus"],
             "clinical_tasks": info["tasks"] if in_adaptive else ["当前计划中未列出该专科的审阅任务。"],
+            "utility_score": role_util["utility_score"],
+            "utility_signals": role_util["signals"],
         })
 
     if conflicts:

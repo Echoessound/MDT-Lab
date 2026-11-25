@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import ValidationError
 
 from .engine import (
+    WorkflowError,
     _review_input,
     _verified_references,
     execute,
@@ -56,7 +57,38 @@ def _sanitized_config(config: LLMConfigInput, response_format_mode: str) -> dict
     }
 
 
-def _single_llm_b0(frozen: ResearchCase, llm: RunLLM) -> dict:
+def _model_context_matches_source(source: ResearchCase, trigger_id: str, context: dict,
+                                  opinion: dict | None = None) -> bool:
+    """Audit the evidence actually passed to the provider, including peer citations."""
+    peers = list(context["peer_opinions"])
+    if context["prior_opinion"] is not None:
+        peers.append(context["prior_opinion"])
+    audit = audit_temporal_boundary(source, {
+        "trigger_event_id": trigger_id,
+        "case_snapshot": {
+            "case_id": context["case_id"], "version": context["case_version"],
+            "current_question": context["current_question"], "timeline": context["events"],
+            "unplaced_records": context.get("unplaced_records", []),
+        },
+        "evidence_registry": context["evidence_registry"],
+        "initial_opinions": peers, "final_opinions": [opinion] if opinion is not None else [],
+        "discussion_records": [],
+    })
+    if not audit["passed"]:
+        return False
+    # Compare the standalone trigger and derived facts too: they are serialized
+    # independently of the checked event list in the provider's request.
+    if json.dumps(context["trigger_event"], sort_keys=True) != json.dumps(context["events"][-1], sort_keys=True):
+        return False
+    refs = context["evidence_registry"]
+    allowed_values = {(ref["fact_key"], type(ref["value"]), ref["value"]) for ref in refs}
+    allowed_ids = {ref["evidence_id"] for ref in refs}
+    return (all((key, type(value), value) in allowed_values for key, value in context["current_facts"].items())
+            and set(context["required_evidence_ids"]) <= allowed_ids
+            and all(set(conflict["evidence_ids"]) <= allowed_ids for conflict in context["conflicts"]))
+
+
+def _single_llm_b0(source: ResearchCase, frozen: ResearchCase, trigger_id: str, llm: RunLLM) -> dict:
     """Execute one non-specialist B0 LLM call over the exact shared frozen input."""
     started = time.monotonic()
     role = "general_reviewer"
@@ -70,8 +102,11 @@ def _single_llm_b0(frozen: ResearchCase, llm: RunLLM) -> dict:
 
     def validate(raw):
         output = _GeneralReviewOutput.model_validate(raw)
-        _verified_references(output, role, context["evidence_registry"])
-        return output.model_dump(mode="json")
+        try:
+            refs = _verified_references(output, role, context["evidence_registry"])
+        except WorkflowError as exc:
+            raise ValueError("invalid role or evidence") from exc
+        return {**output.model_dump(mode="json"), "evidence_refs": refs}
 
     opinion = None
     error_code = None
@@ -117,7 +152,7 @@ def _single_llm_b0(frozen: ResearchCase, llm: RunLLM) -> dict:
         "missing_count": len(context["missing_information"]),
         "unresolved_conflicts": len(conflicts),
         "wall_clock_ms": wall_ms,
-        "temporal_audit_passed": True,
+        "temporal_audit_passed": _model_context_matches_source(source, trigger_id, context, opinion),
         "validation_telemetry": llm.validation_summary(),
     }
 
@@ -140,10 +175,22 @@ def _llm_trajectory(
         mode="llm",
         routing_mode=routing,
     )
+    audit_source = original_case
+    if method_id == "A1":
+        # Reconstruct this arm's intended input directly from the full source.
+        trigger = next(event for event in original_case.timeline if event.event_id == trigger_id)
+        audit_source = original_case.model_copy(update={"timeline": [trigger]})
+    input_checks = []
+
+    def call_model(context):
+        input_checks.append(_model_context_matches_source(audit_source, trigger_id, context))
+        return llm(context)
+
+    call_model.metrics = llm.metrics
     report = execute(run_case, request, f"llm_{method_id}", lambda *args: None, lambda: False,
-                     llm=llm, allow_discussion=discussion)
+                     llm=call_model, allow_discussion=discussion)
     wall_ms = round((time.monotonic() - started) * 1000, 2)
-    audit = audit_temporal_boundary(run_case, report)
+    audit = audit_temporal_boundary(audit_source, report)
     successful_calls = len(report["initial_opinions"]) + sum(
         rec["after"] is not None for rec in report["discussion_records"]
     )
@@ -167,7 +214,7 @@ def _llm_trajectory(
         "missing_count": len(report["safety"]["missing_information"]),
         "unresolved_conflicts": len(report["unresolved_conflicts"]),
         "wall_clock_ms": wall_ms,
-        "temporal_audit_passed": audit["passed"],
+        "temporal_audit_passed": audit["passed"] and bool(input_checks) and all(input_checks),
         "validation_telemetry": llm.validation_summary(),
     }
 
@@ -294,7 +341,7 @@ def evaluate_llm_ablation_matrix(
         if sleep_seconds > 0:
             time.sleep(sleep_seconds)
 
-    b0 = _single_llm_b0(frozen, llm_factory())
+    b0 = _single_llm_b0(case, frozen, trigger_event_id, llm_factory())
     pause()
     b1 = _llm_trajectory(case, frozen, trigger_event_id, "B1", llm_factory(), routing="fixed", discussion=False)
     pause()

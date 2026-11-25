@@ -31,7 +31,7 @@ def _case(case_id, title, age, sex, events):
 def seed_cases() -> list[ResearchCase]:
     """Return fresh objects, with explicit source and event-level synthetic flags."""
     return [
-        _case("LUNG-SYN-001", "资料逐步补齐：影像、病理与分子记录", 58, "female", [
+        _case("LUNG-SYN-001", "右肺上叶实性占位伴纵隔淋巴结待查", 58, "female", [
             _event("E001", "2026-01-05", "diagnosis", "初始资料登记（合成）",
                    disease_label="肺部异常待核验", imaging_complete=False, pathology_confirmed=False),
             _event("E002", "2026-01-12", "imaging", "影像报告与附件归档（合成）",
@@ -45,7 +45,7 @@ def seed_cases() -> list[ResearchCase]:
             _event("E006", "2026-02-10", "follow_up", "随访资料归档（合成）",
                    follow_up_complete=True, follow_up_record="仅核对资料完整性，不判断疗效"),
         ]),
-        _case("LUNG-SYN-002", "资料缺失：等待病理与分子记录", 63, "male", [
+        _case("LUNG-SYN-002", "左肺下叶肿块疑似原发性支气管肺癌", 63, "male", [
             _event("E001", "2026-03-02", "diagnosis", "初始资料尚不完整（合成）",
                    disease_label="肺癌研究任务待复核", pathology_confirmed=False),
             _event("E002", "2026-03-06", "imaging", "影像附件缺失（合成）",
@@ -53,7 +53,7 @@ def seed_cases() -> list[ResearchCase]:
             _event("E003", "2026-03-09", "molecular_test", "关键记录仍待提供（合成）",
                    molecular_complete=False, molecular_record="合成场景预设：分子报告尚未提供"),
         ]),
-        _case("LUNG-SYN-003", "证据冲突：同日记录存在相反标记", 67, "female", [
+        _case("LUNG-SYN-003", "右肺腺癌一线治疗后复查病灶评估", 67, "female", [
             _event("E001", "2026-04-01", "diagnosis", "基础资料已登记（合成）",
                    pathology_confirmed=True, disease_label="肺癌研究资料复核任务"),
             _event("E002", "2026-04-03", "imaging", "同日核对记录 A（合成）",

@@ -8,36 +8,32 @@ evidence registries, opinion citations, and free-text questions against that whi
 from __future__ import annotations
 
 from datetime import date
+import json
 import re
 
-from .schemas import ResearchCase
+from .schemas import ClinicalEvent, EvidenceRef, ResearchCase
 
-AUDIT_VERSION = "temporal-boundary-audit-v1"
+AUDIT_VERSION = "temporal-boundary-audit-v2"
 ISO_DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
 
 
-def _independent_whitelist(original_case: ResearchCase, trigger_event_id: str) -> dict:
-    trigger = next((e for e in original_case.timeline if e.event_id == trigger_event_id), None)
-    if trigger is None:
-        raise ValueError(f"触发事件 {trigger_event_id} 不存在于原始病例 {original_case.case_id} v{original_case.version}。")
-    cutoff = (trigger.occurred_at, trigger.event_id)
-    allowed_events: dict[str, dict] = {}
-    allowed_facts: dict[str, tuple[str, object]] = {}
-    same_day_ids: list[str] = []
-    for event in original_case.timeline:
-        if event.occurred_at == trigger.occurred_at:
-            same_day_ids.append(event.event_id)
-        if (event.occurred_at, event.event_id) <= cutoff:
-            allowed_events[event.event_id] = event.model_dump(mode="json")
-            for fact_key, value in event.facts.items():
-                allowed_facts[f"{event.event_id}:{fact_key}"] = (fact_key, value)
-    return {
-        "trigger": trigger,
-        "cutoff": cutoff,
-        "allowed_events": allowed_events,
-        "allowed_facts": allowed_facts,
-        "same_day_ids": same_day_ids,
-    }
+def _expected_references(case: ResearchCase, events: dict[str, dict]) -> dict[str, dict]:
+    """Reconstruct each citation from the source event and its dataset declaration."""
+    sources = {source.source_name: source for source in case.provenance}
+    refs = {}
+    for event in events.values():
+        source = sources[event["source"]]
+        for key, value in event["facts"].items():
+            evidence_id = f"{event['event_id']}:{key}"
+            refs[evidence_id] = {
+                "evidence_id": evidence_id, "event_id": event["event_id"], "fact_key": key, "value": value,
+                "source_name": source.source_name, "source_record_id": event["source_record_id"],
+                "dataset_version": source.dataset_version, "synthetic": source.synthetic,
+                "artifact_sha256": source.artifact_sha256, "source_record_locator": event["source_record_locator"],
+                "source_field": event["source_fields"].get(key),
+                "quote_or_fact": f"{key} = {json.dumps(value, ensure_ascii=False, allow_nan=False)}",
+            }
+    return refs
 
 
 def _scan_question_future_dates(question: str, cutoff_date: date) -> list[str]:
@@ -53,127 +49,146 @@ def _scan_question_future_dates(question: str, cutoff_date: date) -> list[str]:
 
 
 def _same_value(left: object, right: object) -> bool:
-    return type(left) is type(right) and left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(_same_value(left[key], right[key]) for key in left)
+    return left == right
+
+
+def _defaults(model) -> dict:
+    # Older snapshots may omit a newly introduced field whose value is its schema default.
+    return {name: field.get_default(call_default_factory=True) for name, field in model.model_fields.items()
+            if not field.is_required()}
+
+
+_EVENT_DEFAULTS = _defaults(ClinicalEvent)
+_REF_DEFAULTS = _defaults(EvidenceRef)
+
+
+def _issue(code: str, location: str, item_id: object, detail: str) -> dict:
+    return {"check_code": code, "location": location, "item_id": str(item_id), "detail": detail}
+
+
+def _audit_rows(rows, expected: dict[str, dict], id_field: str, defaults: dict,
+                code: str, location: str, *, ordered: bool = False) -> list[dict]:
+    """Check that each expected record appears exactly once with its original content."""
+    if not isinstance(rows, list):
+        return [_issue(code, location, location, "缺少有效的记录列表。")]
+    issues = []
+    seen = set()
+    for index, row in enumerate(rows):
+        item_id = row.get(id_field) if isinstance(row, dict) else None
+        row_loc = f"{location}[{index}]"
+        if not isinstance(item_id, str) or item_id not in expected:
+            issues.append(_issue(code, row_loc, item_id, "记录缺少有效编号或不属于本截点允许的记录。"))
+            continue
+        if item_id in seen:
+            issues.append(_issue(code, row_loc, item_id, "同一编号的记录重复出现。"))
+        seen.add(item_id)
+        if not _same_value({**defaults, **row}, expected[item_id]):
+            issues.append(_issue(code, row_loc, item_id, "记录内容、事实类型或来源与原病例版本不一致。"))
+    for item_id in expected:
+        if item_id not in seen:
+            issues.append(_issue(code, location, item_id, "缺少该截点应有的记录。"))
+    if ordered and not issues and [row[id_field] for row in rows] != list(expected):
+        issues.append(_issue(code, location, location, "快照事件顺序与原病例历史截点不一致。"))
+    return issues
+
+
+def _audit_opinion(op, loc: str, expected: dict[str, dict]) -> tuple[list[dict], int, int]:
+    code = "opinion_citation_boundary"
+    if not isinstance(op, dict):
+        return [_issue(code, loc, loc, "缺少有效的意见记录。")], 0, 0
+    ids = op.get("evidence_ids")
+    claims = op.get("claims")
+    issues = []
+    if not isinstance(ids, list) or not ids:
+        issues.append(_issue(code, f"{loc}.evidence_ids", loc, "意见缺少有效的引用编号列表。"))
+        ids = []
+    if not isinstance(claims, list) or not claims:
+        issues.append(_issue(code, f"{loc}.claims", loc, "意见缺少有效的结构化断言。"))
+        claims = []
+    cited = {}
+    for evidence_id in ids:
+        if not isinstance(evidence_id, str) or evidence_id not in expected:
+            issues.append(_issue(code, f"{loc}.evidence_ids", evidence_id, "引用不在原病例的截点内。"))
+        elif evidence_id in cited:
+            issues.append(_issue(code, f"{loc}.evidence_ids", evidence_id, "同一意见重复声明了引用编号。"))
+        else:
+            cited[evidence_id] = expected[evidence_id]
+    issues.extend(_audit_rows(op.get("evidence_refs"), cited, "evidence_id", _REF_DEFAULTS,
+                              code, f"{loc}.evidence_refs"))
+    for index, claim in enumerate(claims):
+        evidence_id = claim.get("evidence_id") if isinstance(claim, dict) else None
+        target = cited.get(evidence_id) if isinstance(evidence_id, str) else None
+        if target is None or not _same_value(claim, {key: target[key] for key in ("evidence_id", "fact_key", "value")}):
+            issues.append(_issue(code, f"{loc}.claims[{index}]", evidence_id,
+                                 "断言须引用本意见已声明的证据，事实键、值及类型均须与原病例相符。"))
+    return issues, len(ids), len(claims)
 
 
 def audit_temporal_boundary(original_case: ResearchCase, report: dict) -> dict:
     """Independently audit a run Report against the original full ResearchCase."""
-    trigger_event_id = report["trigger_event_id"]
-    wl = _independent_whitelist(original_case, trigger_event_id)
-    trigger = wl["trigger"]
-    allowed_events = wl["allowed_events"]
-    allowed_facts = wl["allowed_facts"]
-    leaked: list[dict] = []
+    return _audit(original_case, report["trigger_event_id"], report.get("case_snapshot"), report)
 
-    snapshot = report.get("case_snapshot") or {}
-    snap_timeline = snapshot.get("timeline") or []
-    snap_ids = [ev.get("event_id") for ev in snap_timeline]
 
-    # 1. Snapshot timeline check
-    for ev in snap_timeline:
-        eid = ev.get("event_id")
-        if eid not in allowed_events:
-            leaked.append({
-                "check_code": "snapshot_timeline_boundary",
-                "location": "case_snapshot.timeline",
-                "item_id": str(eid),
-                "detail": "快照包含超出历史截止点或不存在于原版本的事件。",
-            })
-            continue
-        orig = allowed_events[eid]
-        if ev.get("occurred_at") != orig["occurred_at"] or ev.get("facts") != orig["facts"]:
-            leaked.append({
-                "check_code": "snapshot_timeline_boundary",
-                "location": f"case_snapshot.timeline[{eid}]",
-                "item_id": str(eid),
-                "detail": "快照事件的日期或事实内容与原始病例版本不一致。",
-            })
-    missing_from_snap = [eid for eid in allowed_events if eid not in set(snap_ids)]
-    for eid in missing_from_snap:
-        leaked.append({
-            "check_code": "snapshot_timeline_boundary",
-            "location": "case_snapshot.timeline",
-            "item_id": eid,
-            "detail": "快照缺失截点前的合法历史事件。",
-        })
+def audit_frozen_snapshot(original_case: ResearchCase, frozen: ResearchCase, trigger_event_id: str) -> dict:
+    """Audit only the input before execution, when there is no report or registry yet."""
+    return _audit(original_case, trigger_event_id, frozen.model_dump(mode="json"), None)
 
-    # 2. Unplaced records check
-    unplaced = snapshot.get("unplaced_records") or []
-    for rec in unplaced:
-        leaked.append({
-            "check_code": "unplaced_records_isolated",
-            "location": "case_snapshot.unplaced_records",
-            "item_id": str(rec.get("record_id", "unknown")),
-            "detail": "无可用日期记录（unplaced_records）泄漏进入了历史运行快照。",
-        })
 
-    # 3. Evidence registry check
-    registry = report.get("evidence_registry") or []
-    for ref in registry:
-        ev_id = ref.get("evidence_id")
-        if ev_id not in allowed_facts:
-            leaked.append({
-                "check_code": "evidence_registry_boundary",
-                "location": "evidence_registry",
-                "item_id": str(ev_id),
-                "detail": "证据注册表包含截点之外的事实引用。",
-            })
-        else:
-            expected_key, expected_val = allowed_facts[ev_id]
-            if ref.get("fact_key") != expected_key or not _same_value(ref.get("value"), expected_val):
-                leaked.append({
-                    "check_code": "evidence_registry_boundary",
-                    "location": f"evidence_registry[{ev_id}]",
-                    "item_id": str(ev_id),
-                    "detail": "证据注册表中的事实键或值与原病例截点事实不匹配。",
-                })
+def _audit(original_case: ResearchCase, trigger_event_id: str, snapshot, report: dict | None) -> dict:
+    trigger = next((event for event in original_case.timeline if event.event_id == trigger_event_id), None)
+    if trigger is None:
+        raise ValueError(f"触发事件 {trigger_event_id} 不存在于原始病例 {original_case.case_id} v{original_case.version}。")
+    cutoff = (trigger.occurred_at, trigger.event_id)
+    allowed_events = {event.event_id: event.model_dump(mode="json") for event in original_case.timeline
+                      if (event.occurred_at, event.event_id) <= cutoff}
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    leaked = _audit_rows(snapshot.get("timeline"), allowed_events, "event_id", _EVENT_DEFAULTS,
+                         "snapshot_timeline_boundary", "case_snapshot.timeline", ordered=True)
+    for key in ("case_id", "version", "current_question"):
+        if not _same_value(snapshot.get(key), getattr(original_case, key)):
+            leaked.append(_issue("snapshot_timeline_boundary", f"case_snapshot.{key}", key,
+                                 "冻结输入的病例标识、版本或研究问题与原病例版本不一致。"))
+    unplaced = snapshot.get("unplaced_records", [])
+    if not isinstance(unplaced, list):
+        leaked.append(_issue("unplaced_records_isolated", "case_snapshot.unplaced_records", "unplaced_records",
+                             "无日期记录列表格式无效。"))
+    else:
+        for rec in unplaced:
+            record_id = rec.get("record_id") if isinstance(rec, dict) else None
+            leaked.append(_issue("unplaced_records_isolated", "case_snapshot.unplaced_records", record_id,
+                                 "无可用日期的记录泄漏进入历史运行快照。"))
 
-    # 4. Opinion citations & claims check (initial + final + discussion before/after)
-    audited_citations = 0
-    audited_claims = 0
-    opinion_sources: list[tuple[str, dict]] = []
-    for idx, op in enumerate(report.get("initial_opinions") or []):
-        opinion_sources.append((f"initial_opinions[{idx}]", op))
-    for idx, op in enumerate(report.get("final_opinions") or []):
-        opinion_sources.append((f"final_opinions[{idx}]", op))
-    for idx, rec in enumerate(report.get("discussion_records") or []):
-        if rec.get("before"):
-            opinion_sources.append((f"discussion_records[{idx}].before", rec["before"]))
-        if rec.get("after"):
-            opinion_sources.append((f"discussion_records[{idx}].after", rec["after"]))
-
-    for loc, op in opinion_sources:
-        for ev_id in op.get("evidence_ids") or []:
-            audited_citations += 1
-            if ev_id not in allowed_facts:
-                leaked.append({
-                    "check_code": "opinion_citation_boundary",
-                    "location": f"{loc}.evidence_ids",
-                    "item_id": str(ev_id),
-                    "detail": "专科意见引用了超出历史截止点的证据编号。",
-                })
-        for claim in op.get("claims") or []:
-            audited_claims += 1
-            ev_id = claim.get("evidence_id")
-            if ev_id not in allowed_facts:
-                leaked.append({
-                    "check_code": "opinion_citation_boundary",
-                    "location": f"{loc}.claims",
-                    "item_id": str(ev_id),
-                    "detail": "结构化断言引用了截点之外的证据。",
-                })
-            else:
-                expected_key, expected_val = allowed_facts[ev_id]
-                if claim.get("fact_key") != expected_key or not _same_value(claim.get("value"), expected_val):
-                    leaked.append({
-                        "check_code": "opinion_citation_boundary",
-                        "location": f"{loc}.claims[{ev_id}]",
-                        "item_id": str(ev_id),
-                        "detail": "结构化断言的键或值与原始截点事实不一致。",
-                    })
+    registry_count = audited_citations = audited_claims = 0
+    if report is not None:
+        expected = _expected_references(original_case, allowed_events)
+        registry = report.get("evidence_registry")
+        registry_count = len(registry) if isinstance(registry, list) else 0
+        leaked.extend(_audit_rows(registry, expected, "evidence_id", _REF_DEFAULTS,
+                                  "evidence_registry_boundary", "evidence_registry"))
+        for section in ("initial_opinions", "final_opinions", "discussion_records"):
+            entries = report.get(section)
+            if not isinstance(entries, list):
+                leaked.append(_issue("opinion_citation_boundary", section, section, "缺少有效的意见记录列表。"))
+                continue
+            for index, entry in enumerate(entries):
+                loc = f"{section}[{index}]"
+                opinions = [(loc, entry)]
+                if section == "discussion_records" and isinstance(entry, dict):
+                    opinions = [(f"{loc}.before", entry.get("before"))]
+                    if entry.get("after") is not None:
+                        opinions.append((f"{loc}.after", entry["after"]))
+                for op_loc, opinion in opinions:
+                    issues, citations, claims = _audit_opinion(opinion, op_loc, expected)
+                    leaked.extend(issues)
+                    audited_citations += citations
+                    audited_claims += claims
 
     # 5 & 6. Advisory checks: same-day ordering & future dates in free-text question
-    same_day = wl["same_day_ids"]
+    same_day = [event.event_id for event in original_case.timeline if event.occurred_at == trigger.occurred_at]
     future_dates = _scan_question_future_dates(
         str(snapshot.get("current_question") or original_case.current_question),
         trigger.occurred_at,
@@ -212,7 +227,7 @@ def audit_temporal_boundary(original_case: ResearchCase, report: dict) -> dict:
             "message": (
                 f"证据注册表发现 {len(leaked_by_code['evidence_registry_boundary'])} 项越界或不匹配。"
                 if leaked_by_code["evidence_registry_boundary"]
-                else f"证据注册表全部 {len(registry)} 项事实均与原病例截点事实逐项匹配。"
+                else f"证据注册表全部 {registry_count} 项事实均与原病例截点事实逐项匹配。"
             ),
         },
         {
@@ -244,6 +259,9 @@ def audit_temporal_boundary(original_case: ResearchCase, report: dict) -> dict:
         },
     ]
 
+    if report is None:
+        checks = [check for check in checks if check["code"] not in {"evidence_registry_boundary", "opinion_citation_boundary"}]
+
     return {
         "audit_version": AUDIT_VERSION,
         "passed": len(leaked) == 0,
@@ -255,7 +273,7 @@ def audit_temporal_boundary(original_case: ResearchCase, report: dict) -> dict:
         "allowed_event_count": len(allowed_events),
         "excluded_future_event_count": len(original_case.timeline) - len(allowed_events),
         "original_unplaced_count": len(original_case.unplaced_records),
-        "audited_evidence_count": len(registry),
+        "audited_evidence_count": registry_count,
         "audited_opinion_citations": audited_citations,
         "audited_claims": audited_claims,
         "same_day_events_on_cutoff": same_day,
@@ -264,16 +282,3 @@ def audit_temporal_boundary(original_case: ResearchCase, report: dict) -> dict:
         "leaked_items": leaked,
         "checks": checks,
     }
-
-
-def audit_frozen_snapshot(original_case: ResearchCase, frozen: ResearchCase, trigger_event_id: str) -> dict:
-    """Audit a frozen ResearchCase context prior to model execution."""
-    pseudo_report = {
-        "trigger_event_id": trigger_event_id,
-        "case_snapshot": frozen.model_dump(mode="json"),
-        "evidence_registry": [],
-        "initial_opinions": [],
-        "final_opinions": [],
-        "discussion_records": [],
-    }
-    return audit_temporal_boundary(original_case, pseudo_report)

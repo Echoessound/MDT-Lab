@@ -1,42 +1,79 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ErrorState, Icon, Loading, Status, dateTime, shortId } from '../ui';
+import { DecisionBadge, ErrorState, Icon, Loading, Status, dateTime, shortId } from '../ui';
 import { researchApi } from './api';
-import { InlineError, eventNames } from './components';
+import { InlineError, sexName, stageNames } from './components';
 import { researchKeys } from './query-keys';
 import { terminal } from './realtime';
 import type { ResearchCase, Run } from './schemas';
 import { PageLinks, pageSlice, useWorkspaceParams } from './workspace-controls';
-import { modeNameZh } from './zh-dict';
+import { caseBaselineHint, clinicalCaseTitle, modeNameZh, routingModeNameZh } from './zh-dict';
 
 const kindLabels = { synthetic: '合成场景', public_research: '公开队列', mixed: '混合扩展' };
 const modeLabel = (run: Run) => modeNameZh(run.mode);
 const casePath = (id: string) => `/research/cases/${encodeURIComponent(id)}`;
 const runPath = (id: string) => `/research/runs/${encodeURIComponent(id)}`;
 
-function RegistryRows({ items }: { items: ResearchCase[] }) {
+function RegistryRows({ items, runs }: { items: ResearchCase[]; runs: Run[] }) {
   const { search } = useLocation();
   return <div className="workspace-table-scroll"><table className="workspace-table case-register">
     <caption className="sr-only">病例目录</caption>
-    <thead><tr><th scope="col">病例名称 / 编号</th><th scope="col">来源类型</th><th scope="col">当前版本</th><th scope="col">病程事件</th><th scope="col">最新截点</th><th scope="col">快捷操作</th></tr></thead>
+    <thead><tr><th scope="col">病例编号 / 临床摘要</th><th scope="col">来源与版本</th><th scope="col">病程记录</th><th scope="col">工作流进度</th><th scope="col">操作</th></tr></thead>
     <tbody>{items.map(item => {
       const last = item.timeline.at(-1);
+      const caseRuns = runs.filter(r => r.case_id === item.case_id);
+      const activeRun = caseRuns.find(r => !terminal(r.status));
+      const latestRun = caseRuns[0];
       return <tr key={item.case_id}>
-        <td><Link className="workspace-row-title" to={casePath(item.case_id)} state={{ librarySearch: search }}>{item.title}</Link><code>{item.case_id} · {item.disease}</code></td>
-        <td><span className={`workspace-type kind-${item.case_kind}`}>{kindLabels[item.case_kind]}</span></td>
-        <td><span className="workspace-version">v{item.version}</span></td>
-        <td className="workspace-number">{item.timeline.length} 条</td>
-        <td>{last ? <><time dateTime={last.occurred_at}>{last.occurred_at}</time><small>{eventNames[last.event_type]} · {last.event_id}</small></> : '—'}</td>
+        <td>
+          <Link className="case-id-title" to={casePath(item.case_id)} state={{ librarySearch: search }}>{item.case_id}</Link>
+          <span className="case-clinical-name">{clinicalCaseTitle(item)}</span>
+          <small>{sexName(item.patient.sex)} · {item.patient.age} 岁 · {item.disease}</small>
+        </td>
+        <td>
+          <span className={`workspace-type kind-${item.case_kind}`}>{kindLabels[item.case_kind]}</span>
+          <small className="workspace-version">v{item.version}</small>
+        </td>
+        <td>
+          <span className="workspace-number">{item.timeline.length} 条</span>
+          <small>{last ? `最新 ${last.occurred_at} (${last.event_id})` : '—'}</small>
+        </td>
+        <td>
+          {activeRun ? (
+            <div className="case-progress-cell">
+              <Status status={activeRun.status} />
+              <small>
+                <Link className="text-link" to={runPath(activeRun.run_id)}>
+                  {stageNames[activeRun.stage] ?? activeRun.stage} · 截点 {activeRun.trigger_event_id}
+                </Link>
+              </small>
+            </div>
+          ) : latestRun ? (
+            <div className="case-progress-cell">
+              {latestRun.safety ? <DecisionBadge decision={latestRun.safety.decision} /> : <Status status={latestRun.status} />}
+              <small>
+                <Link className="text-link" to={latestRun.report_ready ? `${runPath(latestRun.run_id)}/report` : runPath(latestRun.run_id)}>
+                  截点 {latestRun.trigger_event_id} · 共 {caseRuns.length} 次运行
+                </Link>
+              </small>
+            </div>
+          ) : (
+            <div className="case-progress-cell">
+              <span className="pill outline">未运行</span>
+              <small>{caseBaselineHint(item)}</small>
+            </div>
+          )}
+        </td>
         <td>
           <div className="table-quick-links">
-            <Link className="text-link" to={casePath(item.case_id)} state={{ librarySearch: search }}>审阅病程</Link>
-            <Link className="text-link" to={`${casePath(item.case_id)}?view=workflow`} state={{ librarySearch: search }}>流程与影像</Link>
+            <Link className="text-link" to={casePath(item.case_id)} state={{ librarySearch: search }}>审阅</Link>
+            <Link className="text-link" to={`${casePath(item.case_id)}?view=workflow`} state={{ librarySearch: search }}>流程</Link>
             {last && (
               <Link
                 className="text-link"
                 to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(`${item.case_id}:v${item.version}:${last.event_id}`)}`}
               >
-                盲标末次截点
+                盲标
               </Link>
             )}
           </div>
@@ -55,103 +92,11 @@ function RecentRuns() {
         {runs.data.slice(0, 4).map(run => <li key={run.run_id}>
           <Link to={runPath(run.run_id)} aria-label={`打开运行 ${shortId(run.run_id)}，病例 ${run.case_id}`}>
             <div><code>#{shortId(run.run_id)}</code><Status status={run.status} /></div>
-            <strong>{run.case_id}</strong><small>{dateTime(run.created_at)} · 版本 v{run.case_version} · {modeLabel(run)}</small>
+            <strong>{run.case_id}</strong><small>{dateTime(run.created_at)} · v{run.case_version} · {modeLabel(run)}</small>
           </Link>
         </li>)}
       </ul>}
   </section>;
-}
-
-function ResearchPipelineStrip({
-  caseCount,
-  publicCount,
-  runCount,
-  firstCaseId,
-}: {
-  caseCount: number;
-  publicCount: number;
-  runCount: number;
-  firstCaseId?: string;
-}) {
-  const agreement = useQuery({
-    queryKey: researchKeys.reviewPanelAgreement,
-    queryFn: researchApi.reviewPanelAgreement,
-    staleTime: 15000,
-  });
-  const submittedCount = agreement.data?.scenarios_with_submissions ?? 0;
-  const disputes = agreement.data?.unadjudicated_disputes ?? 0;
-
-  const recommendedStep = publicCount === 0 && caseCount <= 3
-    ? 1
-    : runCount === 0
-      ? 2
-      : submittedCount === 0 || disputes > 0
-        ? 3
-        : 4;
-
-  const steps = [
-    {
-      num: '01',
-      title: '队列构建与导入',
-      badge: `${caseCount} 份病例`,
-      desc: publicCount > 0 ? `已接入 ${publicCount} 份公开/混合队列病例` : '当前为内置合成病例，可导入 TCIA / TCGA / Synthea 队列',
-      cta: '导入公开队列',
-      to: '/research/datasets',
-      isNext: recommendedStep === 1,
-    },
-    {
-      num: '02',
-      title: '纵向截点协同审阅',
-      badge: `${runCount} 次运行`,
-      desc: '锁定历史触发事件截点，验证按事件路由、有界协商与安全门控',
-      cta: firstCaseId ? `审阅 ${firstCaseId}` : '选择病例审阅',
-      to: firstCaseId ? casePath(firstCaseId) : '/',
-      isNext: recommendedStep === 2,
-    },
-    {
-      num: '03',
-      title: '多人盲标与仲裁',
-      badge: disputes > 0 ? `${disputes} 项待仲裁` : `${submittedCount} 截点已标`,
-      desc: '隐藏系统预测独立录入参考标签，计算 Cohen’s κ 并定稿争议共识',
-      cta: disputes > 0 ? '前往争议仲裁' : '进入盲标工作台',
-      to: '/research/experiments?view=annotate',
-      isNext: recommendedStep === 3,
-    },
-    {
-      num: '04',
-      title: '8 组消融与论文导出',
-      badge: 'B0–B3 · A1–A4',
-      desc: '一键复算聚类 Bootstrap 置信区间、McNemar 检验、误差归因与 LaTeX 表',
-      cta: '进入配对评测',
-      to: '/research/experiments',
-      isNext: recommendedStep === 4,
-    },
-  ];
-
-  return (
-    <section className="panel research-pipeline-panel" aria-label="四步闭环科研操作向导">
-      <div className="workspace-section-heading heading-flush">
-        <div>
-          <h2>四步科研操作闭环</h2>
-          <p className="muted">按推荐流程依次推进：队列准备 → 截点会诊 → 独立盲标仲裁 → 配对统计出表（高亮项为当前建议下一步）</p>
-        </div>
-        <Link className="text-link" to="/roadmap">完整指南与进度排期 <Icon name="arrow" size={13} /></Link>
-      </div>
-      <div className="research-pipeline-strip">
-        {steps.map(step => (
-          <Link key={step.num} to={step.to} className={`pipeline-step-card ${step.isNext ? 'is-next' : ''}`}>
-            <div className="pipeline-step-top">
-              <span className="dag-step-num">{step.num}</span>
-              <span className={`pill ${step.isNext ? 'soft' : 'outline'}`}>{step.badge}</span>
-            </div>
-            <strong>{step.title}</strong>
-            <p>{step.desc}</p>
-            <span className="pipeline-step-cta">{step.cta} <Icon name="arrow" size={12} /></span>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
 }
 
 export function ResearchHome() {
@@ -164,65 +109,34 @@ export function ResearchHome() {
   const sort = params.get('sort') ?? '';
   if (cases.isPending) return <Loading />;
   if (cases.isError) return <ErrorState error={cases.error} retry={() => void cases.refetch()} />;
-  const matches = cases.data.filter(item => (!kind || item.case_kind === kind) && (!queryText || [item.case_id, item.title, item.disease, ...item.provenance.map(source => source.source_name)].some(value => value.toLowerCase().includes(queryText))));
+  const matches = cases.data.filter(item => (!kind || item.case_kind === kind) && (!queryText || [item.case_id, item.title, clinicalCaseTitle(item), item.disease, ...item.provenance.map(source => source.source_name)].some(value => value.toLowerCase().includes(queryText))));
   if (sort === 'latest') matches.sort((a, b) => (b.timeline.at(-1)?.occurred_at ?? '').localeCompare(a.timeline.at(-1)?.occurred_at ?? '') || a.case_id.localeCompare(b.case_id));
   if (sort === 'events') matches.sort((a, b) => b.timeline.length - a.timeline.length || a.case_id.localeCompare(b.case_id));
   const page = pageSlice(matches, Number(params.get('page')));
   const filtered = Boolean(kind || keyword);
   function reset() { update({ q: '', kind: '', page: '' }); }
-  const totalEvents = cases.data.reduce((count, item) => count + item.timeline.length, 0);
-  const publicCount = cases.data.filter(item => item.case_kind !== 'synthetic').length;
   const activeRuns = runs.data?.filter(r => !terminal(r.status)).length ?? 0;
   const totalRuns = runs.data?.length ?? 0;
 
   return <div className="page-enter research-page workspace-page">
     <header className="workspace-heading">
       <div>
-        <h1>多学科病例协同工作台</h1>
-        <p>面向重大疾病全病程的 MDT 多智能体序贯协同决策、证据门控与可复现评测平台</p>
+        <h1>病例工作台</h1>
+        <p>共 {cases.data.length} 份病例 · {activeRuns > 0 ? `${activeRuns} 项运行中` : `累计 ${totalRuns} 次运行`} · <Link className="text-link" to="/roadmap">使用说明</Link></p>
       </div>
       <div className="button-group">
         <Link className="button secondary" to="/research/experiments"><Icon name="route" size={16} />实验与盲标</Link>
-        <Link className="button secondary" to="/research/agents"><Icon name="network" size={16} />多智能体协同</Link>
-        <Link className="button primary" to="/research/datasets"><Icon name="download" size={16} />导入外部数据集</Link>
+        <Link className="button primary" to="/research/datasets"><Icon name="download" size={16} />导入病例</Link>
       </div>
     </header>
-    <div className="telemetry-grid" aria-label="科研工作台态势总览">
-      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 0 } as React.CSSProperties}>
-        <span>纳管纵向病例</span>
-        <strong>{cases.data.length} <small>份</small></strong>
-        <p>合成 {cases.data.length - publicCount} 份 · 公开/混合队列 {publicCount} 份</p>
-      </div>
-      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 1 } as React.CSSProperties}>
-        <span>时序病程事件</span>
-        <strong>{totalEvents.toLocaleString()} <small>条</small></strong>
-        <p>均按不可变版本留痕与截点冻结管理</p>
-      </div>
-      <div className="telemetry-card stagger-item" style={{ '--stagger-i': 2 } as React.CSSProperties}>
-        <span>协同运行轨迹</span>
-        <strong>{totalRuns} <small>次</small></strong>
-        <p>{activeRuns > 0 ? `当前有 ${activeRuns} 项协同任务正在执行` : '支持 SSE 断线重放与同配置重跑'}</p>
-      </div>
-      <Link to="/research/experiments" className="telemetry-card telemetry-link-card stagger-item accent" style={{ '--stagger-i': 3 } as React.CSSProperties}>
-        <span>论文实验与独立盲标</span>
-        <strong>B0–B3 · A1–A4 <Icon name="arrow" size={16} /></strong>
-        <p>一键执行 8 组配对评测并导出 LaTeX / CSV</p>
-      </Link>
-    </div>
-    <ResearchPipelineStrip
-      caseCount={cases.data.length}
-      publicCount={publicCount}
-      runCount={totalRuns}
-      firstCaseId={cases.data[0]?.case_id}
-    />
     <div className="workspace-library-layout"><section className="panel workspace-registry" aria-labelledby="registry-title">
-      <div className="workspace-section-heading"><h2 id="registry-title">纵向病例名录</h2><button type="button" className="workspace-tool" disabled={cases.isFetching} onClick={() => void cases.refetch()}><Icon name="refresh" size={14} />{cases.isFetching ? '正在刷新…' : '刷新列表'}</button></div>
+      <div className="workspace-section-heading"><h2 id="registry-title">纵向病例名录</h2><button type="button" className="workspace-tool" disabled={cases.isFetching} onClick={() => void cases.refetch()}><Icon name="refresh" size={14} />{cases.isFetching ? '刷新中…' : '刷新'}</button></div>
       <div className="workspace-toolbar">
-        <label className="workspace-search"><span className="sr-only">查找病例</span><input type="search" value={keyword} onChange={event => update({ q: event.target.value, page: '' })} placeholder="搜索病例名称、编号、病种或数据来源…" /></label>
+        <label className="workspace-search"><span className="sr-only">查找病例</span><input type="search" value={keyword} onChange={event => update({ q: event.target.value, page: '' })} placeholder="搜索病例编号、临床名称、病种或数据来源…" /></label>
         <select aria-label="病例来源类型" value={kind} onChange={event => update({ kind: event.target.value, page: '' })}><option value="">全部来源类型</option>{Object.entries(kindLabels).map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select>
         <select aria-label="病例排序" value={sort} onChange={event => update({ sort: event.target.value, page: '' })}><option value="">按病例编号排序</option><option value="latest">按最新事件日期</option><option value="events">按病程事件数量</option></select>
       </div>
-      {matches.length ? <RegistryRows items={page.rows} /> : <div className="workspace-empty"><p>{filtered ? '没有符合筛选条件的病例' : '病例库为空'}</p>{filtered ? <button className="text-link" onClick={reset}>重置筛选条件</button> : <Link className="text-link" to="/research/datasets">前往导入病例</Link>}</div>}
+      {matches.length ? <RegistryRows items={page.rows} runs={runs.data ?? []} /> : <div className="workspace-empty"><p>{filtered ? '没有符合筛选条件的病例' : '病例库为空'}</p>{filtered ? <button className="text-link" onClick={reset}>重置筛选条件</button> : <Link className="text-link" to="/research/datasets">前往导入病例</Link>}</div>}
       <footer className="workspace-list-footer"><span aria-live="polite">{matches.length ? `显示第 ${page.first}–${page.last} 份 / 共 ${matches.length} 份病例` : '0 份病例'}</span>{filtered && matches.length > 0 && <button className="text-link" onClick={reset}>重置筛选</button>}<PageLinks {...page} onPage={next => update({ page: String(next) })} /></footer>
     </section><RecentRuns /></div>
   </div>;
@@ -254,9 +168,9 @@ export function ResearchHistoryPage() {
     </div>
     {matches.length ? <div className="workspace-table-scroll"><table className="workspace-table runs-register"><caption className="sr-only">运行结果</caption><thead><tr><th>运行编号 / 关联病例</th><th>锁定触发截点</th><th>执行模式与路由</th><th>运行状态</th><th>创建时间</th><th>操作与报告</th></tr></thead><tbody>
       {page.rows.map(run => <tr key={run.run_id}>
-        <td><Link className="workspace-row-title" state={{ historySearch }} to={runPath(run.run_id)}>#{shortId(run.run_id)}</Link><code>{run.case_id} · 版本 v{run.case_version}</code></td>
+        <td><Link className="workspace-row-title" state={{ historySearch }} to={runPath(run.run_id)}>#{shortId(run.run_id)}</Link><code>{run.case_id} · v{run.case_version}</code></td>
         <td><code>{run.trigger_event_id}</code></td>
-        <td>{modeLabel(run)}<small>{run.routing_mode === 'event' ? '按事件智能路由' : '固定四科全员'}</small></td>
+        <td>{modeLabel(run)}<small>{routingModeNameZh(run.routing_mode)}</small></td>
         <td><Status status={run.status} /></td>
         <td><time dateTime={run.created_at}>{dateTime(run.created_at)}</time></td>
         <td>

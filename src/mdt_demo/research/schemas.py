@@ -171,7 +171,7 @@ class RunRequest(Model):
     trigger_event_id: Identifier
     mode: Mode = "mock"
     mock_scenario: Scenario = "standard"
-    routing_mode: Literal["event", "fixed"] = "event"
+    routing_mode: Literal["event", "fixed", "adaptive"] = "event"
 
 
 class RoutingReason(Model):
@@ -304,7 +304,7 @@ class Report(Model):
     trigger_event_id: Identifier
     mode: Mode
     mock_scenario: Scenario
-    routing_mode: Literal["event", "fixed"]
+    routing_mode: Literal["event", "fixed", "adaptive"]
     case_snapshot: ResearchCase
     routing: Routing
     evidence_registry: list[EvidenceRef]

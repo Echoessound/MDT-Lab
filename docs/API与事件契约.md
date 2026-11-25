@@ -243,3 +243,5 @@ Agent 群页复用真实 `/cases`、`/runs`、`/audit` 和 `/events`，展示特
 | `GET /api/v2/review-panel/export/annotations.jsonl` | 导出计划书 §6.4 格式的独立初标 JSONL。 |
 | `GET /api/v2/review-panel/export/adjudication.jsonl` | 导出计划书 §6.4 格式的仲裁共识 JSONL（CLI `--annotations` 可直接读取）。 |
 | `GET /api/v2/runs/{run_id}/temporal-audit` | 绕过运行引擎直接从原病例版本重建截点白名单，核查快照时间线、`unplaced_records`、证据注册表、意见引用、同日事件及研究问题未来日期。 |
+
+一致性响应中的 `rater_pair_agreement` 按固定双人组合返回三分类和逐专科 κ。每个共同标注截点在该组合的混淆矩阵中计一次，行和列依次对应 `annotators` 中的两位标注人。κ 的预期一致率取两位标注人各自类别比例乘积之和。当全队列涉及多个双人组合时，顶层保留按配对次数计算的原始一致率，顶层 `expected_agreement` 和 `cohens_kappa` 为 `null`。固定组合预期一致率等于 1 时，其 κ 也为 `null`。

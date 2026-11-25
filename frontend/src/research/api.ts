@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { APIError } from '../api';
-import { adjudicationSchema, agentModelSchema, agreementReportSchema, annotationSchema, annotationTaskSchema, blindMaterialSchema, attachmentSchema, storageSchema, auditPageSchema, caseSchema, dataCapabilitySchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, libraryEvaluationSchema, modelProfileSchema, modelStatusSchema, modelTestSchema, multiRaterSubmissionSchema, reportSchema, reviewPanelTaskSchema, routingSchema, runSchema, temporalAuditSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type BlindAnnotation, type AnnotationTask, type Role } from './schemas';
+import { adjudicationSchema, agentModelSchema, agreementReportSchema, annotationSchema, annotationTaskSchema, blindMaterialSchema, attachmentSchema, storageSchema, auditPageSchema, caseSchema, consensusMetricsSchema, dataCapabilitySchema, datasetCatalogSchema, importPreviewSchema, importBatchSchema, libraryEvaluationSchema, longitudinalDynamicsSchema, modelProfileSchema, modelStatusSchema, modelTestSchema, multiRaterSubmissionSchema, reportSchema, reviewPanelTaskSchema, routingSchema, runSchema, temporalAuditSchema, workflowPlanSchema, imagingPipelineSchema, ablationMatrixSchema, type ClinicalEvent, type RunRequest, type BlindAnnotation, type AnnotationTask, type Role } from './schemas';
 
 async function request<S extends z.ZodType>(path: string, schema: S, init?: RequestInit): Promise<z.infer<S>> {
   let response: Response;
@@ -34,6 +34,7 @@ export const researchApi = {
   case: (caseId: string, version?: number) => request(`/cases/${id(caseId)}${version ? `?version=${version}` : ''}`, caseSchema),
   append: (caseId: string, version: number, event: Pick<ClinicalEvent, 'occurred_at' | 'event_type' | 'title' | 'facts'>) => request(`/cases/${id(caseId)}/events`, caseSchema, body({ expected_version: version, event })),
   routing: (caseId: string, version: number, trigger: string, mode: string) => request(`/cases/${id(caseId)}/routing?version=${version}&trigger_event_id=${id(trigger)}&routing_mode=${id(mode)}`, routingSchema),
+  longitudinalDynamics: (caseId: string, version?: number) => request(`/cases/${id(caseId)}/longitudinal-dynamics${version ? `?version=${version}` : ''}`, longitudinalDynamicsSchema),
   workflowPlan: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/workflow-plan?version=${version}&trigger_event_id=${id(trigger)}`, workflowPlanSchema),
   imagingPipeline: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/imaging?version=${version}&trigger_event_id=${id(trigger)}`, imagingPipelineSchema),
   ablationMatrix: (caseId: string, version: number, trigger: string) => request(`/cases/${id(caseId)}/ablation?version=${version}&trigger_event_id=${id(trigger)}`, ablationMatrixSchema),
@@ -63,6 +64,7 @@ export const researchApi = {
   events: (runId: string, after = 0) => request(`/runs/${id(runId)}/audit?after_seq=${after}&limit=500`, auditPageSchema),
   report: (runId: string) => request(`/runs/${id(runId)}/report`, reportSchema),
   temporalAudit: (runId: string) => request(`/runs/${id(runId)}/temporal-audit`, temporalAuditSchema),
+  consensusMetrics: (runId: string) => request(`/runs/${id(runId)}/consensus-metrics`, consensusMetricsSchema),
   modelProfiles: () => request('/settings/llm/profiles', z.array(modelProfileSchema)),
   createModelProfile: (value: ModelProfileInput) => request('/settings/llm/profiles', modelProfileSchema, body(value)),
   saveScopeAsModelProfile: (scope: 'default' | Role, name: string) => request('/settings/llm/profiles/from-scope',

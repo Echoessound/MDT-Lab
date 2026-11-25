@@ -514,6 +514,25 @@ export function MultiRaterPanel({ requestedScenario = '', onChanged }: { request
                 <h2>逐专科二分类一致率与 Cohen&apos;s κ</h2>
                 <span className="pill outline">协议 {agreementQuery.data.protocol_version}</span>
               </div>
+              {agreementQuery.data.rater_pair_agreement.length > 1 && (
+                <div className="workspace-table-scroll">
+                  <table className="workspace-table">
+                    <caption>固定标注人组合的 Cohen&apos;s κ</caption>
+                    <thead><tr>
+                      <th>标注人</th><th>共同截点</th><th>三分类</th>
+                      {roleOrder.map(role => <th key={role}>{roleNames[role]}</th>)}
+                    </tr></thead>
+                    <tbody>{agreementQuery.data.rater_pair_agreement.map(pair => (
+                      <tr key={JSON.stringify(pair.annotators)}>
+                        <th scope="row">{pair.annotators.join(' / ')}</th>
+                        <td>{pair.decision_agreement.pair_count}</td>
+                        <td>{pair.decision_agreement.cohens_kappa?.toFixed(3) ?? '—'}</td>
+                        {roleOrder.map(role => <td key={role}>{pair.per_role[role]?.cohens_kappa?.toFixed(3) ?? '—'}</td>)}
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
               <div className="workspace-table-scroll">
                 <table className="workspace-table">
                   <thead>

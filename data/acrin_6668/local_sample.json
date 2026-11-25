@@ -1,0 +1,3139 @@
+{
+  "cases": [
+    {
+      "case_id": "ACRIN-6668-002",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 61,
+        "sex": "female"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "A0_00002_register",
+          "occurred_at": "1959-12-31",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": -1,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00002",
+          "source_record_locator": "file-set-1!A0.csv:line=2",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day -1",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00002_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00002",
+          "source_record_locator": "file-set-1!IM.csv:line=2",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00002_2_read",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 3.8
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00002",
+          "source_record_locator": "file-set-1!IM.csv:line=2",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00002_first",
+          "occurred_at": "1960-01-14",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 13,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00002",
+          "source_record_locator": "file-set-1!T1.csv:line=2",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +13",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00002_last",
+          "occurred_at": "1960-02-28",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 58,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00002",
+          "source_record_locator": "file-set-1!T1.csv:line=2",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +58",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00003_1_scan",
+          "occurred_at": "1960-05-08",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 128,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00003",
+          "source_record_locator": "file-set-1!IM.csv:line=3",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +128",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00003_2_read",
+          "occurred_at": "1960-05-09",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 129,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 0.9
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00003",
+          "source_record_locator": "file-set-1!IM.csv:line=3",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +129",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00002_receipt",
+          "occurred_at": "1960-10-29",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 302,
+            "assessment_offset_days": 290,
+            "progression_assessment": "首次报告进展"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00002",
+          "source_record_locator": "file-set-1!F1.csv:line=2",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +302",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-004",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 72,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00004_1_scan",
+          "occurred_at": "1959-12-07",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": -25,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00004",
+          "source_record_locator": "file-set-1!IM.csv:line=4",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day -25",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00003_register",
+          "occurred_at": "1960-01-01",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 0,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00003",
+          "source_record_locator": "file-set-1!A0.csv:line=3",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00003_first",
+          "occurred_at": "1960-01-01",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 0,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00003",
+          "source_record_locator": "file-set-1!T1.csv:line=3",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00004_2_read",
+          "occurred_at": "1960-01-06",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 5,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 20.7
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00004",
+          "source_record_locator": "file-set-1!IM.csv:line=4",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +5",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00003_last",
+          "occurred_at": "1960-02-15",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 45,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00003",
+          "source_record_locator": "file-set-1!T1.csv:line=3",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +45",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00003_receipt",
+          "occurred_at": "1960-06-13",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 164,
+            "assessment_offset_days": 148,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00003",
+          "source_record_locator": "file-set-1!F1.csv:line=3",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +164",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-005",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 78,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00005_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00005",
+          "source_record_locator": "file-set-1!IM.csv:line=5",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00004_register",
+          "occurred_at": "1960-01-13",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 12,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00004",
+          "source_record_locator": "file-set-1!A0.csv:line=4",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +12",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00004_first",
+          "occurred_at": "1960-01-15",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 14,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00004",
+          "source_record_locator": "file-set-1!T1.csv:line=4",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +14",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00005_2_read",
+          "occurred_at": "1960-01-17",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 16,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 10.4
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00005",
+          "source_record_locator": "file-set-1!IM.csv:line=5",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +16",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00004_last",
+          "occurred_at": "1960-03-09",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 68,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00004",
+          "source_record_locator": "file-set-1!T1.csv:line=4",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +68",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00006_1_scan",
+          "occurred_at": "1960-06-11",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 162,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00006",
+          "source_record_locator": "file-set-1!IM.csv:line=6",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +162",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00006_2_read",
+          "occurred_at": "1960-06-28",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 179,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 2.7
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00006",
+          "source_record_locator": "file-set-1!IM.csv:line=6",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +179",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00004_receipt",
+          "occurred_at": "1960-12-30",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 364,
+            "assessment_offset_days": 287,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00004",
+          "source_record_locator": "file-set-1!F1.csv:line=4",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +364",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00005_receipt",
+          "occurred_at": "1961-06-03",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 519,
+            "assessment_offset_days": 375,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00005",
+          "source_record_locator": "file-set-1!F1.csv:line=5",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +519",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00006_receipt",
+          "occurred_at": "1961-06-28",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 544,
+            "assessment_offset_days": 533,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00006",
+          "source_record_locator": "file-set-1!F1.csv:line=6",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +544",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00007_receipt",
+          "occurred_at": "1961-10-12",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 650,
+            "assessment_offset_days": 572,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00007",
+          "source_record_locator": "file-set-1!F1.csv:line=7",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +650",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00008_receipt",
+          "occurred_at": "1961-12-08",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 707,
+            "assessment_offset_days": 672,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00008",
+          "source_record_locator": "file-set-1!F1.csv:line=8",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +707",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00009_receipt",
+          "occurred_at": "1962-02-28",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 789,
+            "assessment_offset_days": 712,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00009",
+          "source_record_locator": "file-set-1!F1.csv:line=9",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +789",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00010_receipt",
+          "occurred_at": "1962-05-19",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 869,
+            "assessment_offset_days": 852,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00010",
+          "source_record_locator": "file-set-1!F1.csv:line=10",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +869",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00011_receipt",
+          "occurred_at": "1962-08-17",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 959,
+            "assessment_offset_days": 917,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00011",
+          "source_record_locator": "file-set-1!F1.csv:line=11",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +959",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00012_receipt",
+          "occurred_at": "1962-11-02",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1036,
+            "assessment_offset_days": 1001,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00012",
+          "source_record_locator": "file-set-1!F1.csv:line=12",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1036",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00013_receipt",
+          "occurred_at": "1963-08-24",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1331,
+            "assessment_offset_days": 1208,
+            "progression_assessment": "首次报告进展"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00013",
+          "source_record_locator": "file-set-1!F1.csv:line=13",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1331",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00014_receipt",
+          "occurred_at": "1963-12-12",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1441,
+            "assessment_offset_days": 1286,
+            "progression_assessment": "既往已报告进展，本次无新部位"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00014",
+          "source_record_locator": "file-set-1!F1.csv:line=14",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1441",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-006",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 77,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00007_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00007",
+          "source_record_locator": "file-set-1!IM.csv:line=7",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00005_register",
+          "occurred_at": "1960-02-13",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 43,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00005",
+          "source_record_locator": "file-set-1!A0.csv:line=5",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +43",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00005_first",
+          "occurred_at": "1960-02-16",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 46,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00005",
+          "source_record_locator": "file-set-1!T1.csv:line=5",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +46",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00007_2_read",
+          "occurred_at": "1960-02-20",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 50,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 2.5
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00007",
+          "source_record_locator": "file-set-1!IM.csv:line=7",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +50",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00005_last",
+          "occurred_at": "1960-04-15",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 105,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00005",
+          "source_record_locator": "file-set-1!T1.csv:line=5",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +105",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00008_1_scan",
+          "occurred_at": "1960-07-14",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 195,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00008",
+          "source_record_locator": "file-set-1!IM.csv:line=8",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +195",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00008_2_read",
+          "occurred_at": "1960-07-23",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 204,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 0.9
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00008",
+          "source_record_locator": "file-set-1!IM.csv:line=8",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +204",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00015_receipt",
+          "occurred_at": "1961-08-05",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 582,
+            "assessment_offset_days": 292,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00015",
+          "source_record_locator": "file-set-1!F1.csv:line=15",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +582",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00016_receipt",
+          "occurred_at": "1961-08-05",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 582,
+            "assessment_offset_days": 292
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00016",
+          "source_record_locator": "file-set-1!F1.csv:line=16",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d"
+          },
+          "original_timestamp": "day +582",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-008",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 81,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "A0_00006_register",
+          "occurred_at": "1959-12-29",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": -3,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00006",
+          "source_record_locator": "file-set-1!A0.csv:line=6",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day -3",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00009_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00009",
+          "source_record_locator": "file-set-1!IM.csv:line=9",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00009_2_read",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "欠佳",
+            "lung_suv_peak_assessment_1": 14.2
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00009",
+          "source_record_locator": "file-set-1!IM.csv:line=9",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00006_first",
+          "occurred_at": "1960-01-03",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 2,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00006",
+          "source_record_locator": "file-set-1!T1.csv:line=6",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +2",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00006_last",
+          "occurred_at": "1960-02-23",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 53,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00006",
+          "source_record_locator": "file-set-1!T1.csv:line=6",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +53",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00010_receipt",
+          "occurred_at": "1960-06-05",
+          "event_type": "observation",
+          "title": "收到 PET 未完成记录",
+          "facts": {
+            "offset_days": 156,
+            "pet_completed": false
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00010",
+          "source_record_locator": "file-set-1!IM.csv:line=10",
+          "source_fields": {
+            "offset_days": "rec",
+            "pet_completed": "ime1"
+          },
+          "original_timestamp": "day +156",
+          "time_note": "IM.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00017_receipt",
+          "occurred_at": "1961-02-06",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 402,
+            "assessment_offset_days": 102,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00017",
+          "source_record_locator": "file-set-1!F1.csv:line=17",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +402",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00018_receipt",
+          "occurred_at": "1961-09-19",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 627,
+            "assessment_offset_days": 623,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00018",
+          "source_record_locator": "file-set-1!F1.csv:line=18",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +627",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00019_receipt",
+          "occurred_at": "1963-06-29",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1275,
+            "assessment_offset_days": 623
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00019",
+          "source_record_locator": "file-set-1!F1.csv:line=19",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d"
+          },
+          "original_timestamp": "day +1275",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-009",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 76,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00011_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00011",
+          "source_record_locator": "file-set-1!IM.csv:line=11",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00011_2_read",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 16.0
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00011",
+          "source_record_locator": "file-set-1!IM.csv:line=11",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00007_register",
+          "occurred_at": "1960-01-18",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 17,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00007",
+          "source_record_locator": "file-set-1!A0.csv:line=7",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +17",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00007_first",
+          "occurred_at": "1960-01-18",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 17,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00007",
+          "source_record_locator": "file-set-1!T1.csv:line=7",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +17",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00007_last",
+          "occurred_at": "1960-03-13",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 72,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00007",
+          "source_record_locator": "file-set-1!T1.csv:line=7",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +72",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00012_1_scan",
+          "occurred_at": "1960-06-25",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 176,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00012",
+          "source_record_locator": "file-set-1!IM.csv:line=12",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +176",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00012_2_read",
+          "occurred_at": "1960-06-25",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 176,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 1.9
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00012",
+          "source_record_locator": "file-set-1!IM.csv:line=12",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +176",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00020_receipt",
+          "occurred_at": "1961-01-21",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 386,
+            "assessment_offset_days": 352,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00020",
+          "source_record_locator": "file-set-1!F1.csv:line=20",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +386",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00021_receipt",
+          "occurred_at": "1961-02-12",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 408,
+            "assessment_offset_days": 389
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00021",
+          "source_record_locator": "file-set-1!F1.csv:line=21",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d"
+          },
+          "original_timestamp": "day +408",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-011",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 70,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00013_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00013",
+          "source_record_locator": "file-set-1!IM.csv:line=13",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00013_2_read",
+          "occurred_at": "1960-01-02",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 1,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 4.4
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00013",
+          "source_record_locator": "file-set-1!IM.csv:line=13",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +1",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00008_register",
+          "occurred_at": "1960-01-03",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 2,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00008",
+          "source_record_locator": "file-set-1!A0.csv:line=8",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +2",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00014_receipt",
+          "occurred_at": "1960-07-04",
+          "event_type": "observation",
+          "title": "收到 PET 未完成记录",
+          "facts": {
+            "offset_days": 185,
+            "pet_completed": false
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00014",
+          "source_record_locator": "file-set-1!IM.csv:line=14",
+          "source_fields": {
+            "offset_days": "rec",
+            "pet_completed": "ime1"
+          },
+          "original_timestamp": "day +185",
+          "time_note": "IM.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00008_receipt",
+          "occurred_at": "1960-07-15",
+          "event_type": "observation",
+          "title": "收到放疗未开始记录",
+          "facts": {
+            "offset_days": 196,
+            "radiotherapy_started": false
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00008",
+          "source_record_locator": "file-set-1!T1.csv:line=8",
+          "source_fields": {
+            "offset_days": "rec",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +196",
+          "time_note": "T1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00022_receipt",
+          "occurred_at": "1961-03-17",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 441,
+            "assessment_offset_days": 72
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00022",
+          "source_record_locator": "file-set-1!F1.csv:line=22",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d"
+          },
+          "original_timestamp": "day +441",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-012",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 72,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00015_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00015",
+          "source_record_locator": "file-set-1!IM.csv:line=15",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00009_register",
+          "occurred_at": "1960-01-19",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 18,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00009",
+          "source_record_locator": "file-set-1!A0.csv:line=9",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +18",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00009_first",
+          "occurred_at": "1960-01-23",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 22,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00009",
+          "source_record_locator": "file-set-1!T1.csv:line=9",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +22",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00015_2_read",
+          "occurred_at": "1960-02-17",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 47,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 9.4
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00015",
+          "source_record_locator": "file-set-1!IM.csv:line=15",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +47",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00009_last",
+          "occurred_at": "1960-03-15",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 74,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00009",
+          "source_record_locator": "file-set-1!T1.csv:line=9",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +74",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00016_1_scan",
+          "occurred_at": "1960-06-22",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 173,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00016",
+          "source_record_locator": "file-set-1!IM.csv:line=16",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +173",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00016_2_read",
+          "occurred_at": "1960-07-11",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 192,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 2.6
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00016",
+          "source_record_locator": "file-set-1!IM.csv:line=16",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +192",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00023_receipt",
+          "occurred_at": "1961-04-11",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 466,
+            "assessment_offset_days": 364,
+            "progression_assessment": "首次报告进展"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00023",
+          "source_record_locator": "file-set-1!F1.csv:line=23",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +466",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00024_receipt",
+          "occurred_at": "1961-04-11",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 466,
+            "assessment_offset_days": 406,
+            "progression_assessment": "既往已报告进展，本次无新部位"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00024",
+          "source_record_locator": "file-set-1!F1.csv:line=24",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +466",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00025_receipt",
+          "occurred_at": "1961-07-11",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 557,
+            "assessment_offset_days": 524,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00025",
+          "source_record_locator": "file-set-1!F1.csv:line=25",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +557",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00026_receipt",
+          "occurred_at": "1961-09-13",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 621,
+            "assessment_offset_days": 592,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00026",
+          "source_record_locator": "file-set-1!F1.csv:line=26",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +621",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00027_receipt",
+          "occurred_at": "1962-03-22",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 811,
+            "assessment_offset_days": 669,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00027",
+          "source_record_locator": "file-set-1!F1.csv:line=27",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +811",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00028_receipt",
+          "occurred_at": "1962-03-22",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 811,
+            "assessment_offset_days": 753,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00028",
+          "source_record_locator": "file-set-1!F1.csv:line=28",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +811",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00029_receipt",
+          "occurred_at": "1962-08-22",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 964,
+            "assessment_offset_days": 837,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00029",
+          "source_record_locator": "file-set-1!F1.csv:line=29",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +964",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00030_receipt",
+          "occurred_at": "1962-08-22",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 964,
+            "assessment_offset_days": 893,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00030",
+          "source_record_locator": "file-set-1!F1.csv:line=30",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +964",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00031_receipt",
+          "occurred_at": "1963-08-19",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1326,
+            "assessment_offset_days": 1196,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00031",
+          "source_record_locator": "file-set-1!F1.csv:line=31",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1326",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00032_receipt",
+          "occurred_at": "1963-11-15",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1414,
+            "assessment_offset_days": 1370,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00032",
+          "source_record_locator": "file-set-1!F1.csv:line=32",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1414",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00033_receipt",
+          "occurred_at": "1964-04-17",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 1568,
+            "assessment_offset_days": 1555,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00033",
+          "source_record_locator": "file-set-1!F1.csv:line=33",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +1568",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00034_receipt",
+          "occurred_at": "1965-12-28",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 2188,
+            "assessment_offset_days": 1751,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00034",
+          "source_record_locator": "file-set-1!F1.csv:line=34",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +2188",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00035_receipt",
+          "occurred_at": "1965-12-28",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 2188,
+            "assessment_offset_days": 1908,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00035",
+          "source_record_locator": "file-set-1!F1.csv:line=35",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +2188",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00036_receipt",
+          "occurred_at": "1965-12-28",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 2188,
+            "assessment_offset_days": 2178,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00036",
+          "source_record_locator": "file-set-1!F1.csv:line=36",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +2188",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-014",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 71,
+        "sex": "female"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00017_1_scan",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00017",
+          "source_record_locator": "file-set-1!IM.csv:line=17",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00017_2_read",
+          "occurred_at": "1960-01-01",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": 0,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 16.7
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00017",
+          "source_record_locator": "file-set-1!IM.csv:line=17",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00010_register",
+          "occurred_at": "1960-01-02",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 1,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00010",
+          "source_record_locator": "file-set-1!A0.csv:line=10",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +1",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00010_first",
+          "occurred_at": "1960-01-03",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 2,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00010",
+          "source_record_locator": "file-set-1!T1.csv:line=10",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +2",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00010_last",
+          "occurred_at": "1960-02-27",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 57,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00010",
+          "source_record_locator": "file-set-1!T1.csv:line=10",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +57",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00018_1_scan",
+          "occurred_at": "1960-06-17",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 168,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00018",
+          "source_record_locator": "file-set-1!IM.csv:line=18",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +168",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00037_receipt",
+          "occurred_at": "1960-11-06",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 310,
+            "assessment_offset_days": 304,
+            "progression_assessment": "首次报告进展"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00037",
+          "source_record_locator": "file-set-1!F1.csv:line=37",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +310",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00018_2_read",
+          "occurred_at": "1961-01-19",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 384,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 1.6
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00018",
+          "source_record_locator": "file-set-1!IM.csv:line=18",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +384",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00038_receipt",
+          "occurred_at": "1961-03-20",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 444,
+            "assessment_offset_days": 427,
+            "progression_assessment": "既往已报告进展，本次无新部位"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00038",
+          "source_record_locator": "file-set-1!F1.csv:line=38",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +444",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00039_receipt",
+          "occurred_at": "1961-07-10",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 556,
+            "assessment_offset_days": 555,
+            "progression_assessment": "既往已报告进展，本次无新部位"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00039",
+          "source_record_locator": "file-set-1!F1.csv:line=39",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +556",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-015",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 58,
+        "sex": "female"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "A0_00011_register",
+          "occurred_at": "1959-12-25",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": -7,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00011",
+          "source_record_locator": "file-set-1!A0.csv:line=11",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day -7",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00011_first",
+          "occurred_at": "1959-12-27",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": -5,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00011",
+          "source_record_locator": "file-set-1!T1.csv:line=11",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day -5",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00019_receipt",
+          "occurred_at": "1960-01-08",
+          "event_type": "observation",
+          "title": "收到 PET 未完成记录",
+          "facts": {
+            "offset_days": 7,
+            "pet_completed": false
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00019",
+          "source_record_locator": "file-set-1!IM.csv:line=19",
+          "source_fields": {
+            "offset_days": "rec",
+            "pet_completed": "ime1"
+          },
+          "original_timestamp": "day +7",
+          "time_note": "IM.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00011_last",
+          "occurred_at": "1960-01-16",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 15,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00011",
+          "source_record_locator": "file-set-1!T1.csv:line=11",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +15",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00020_1_scan",
+          "occurred_at": "1960-07-17",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 198,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00020",
+          "source_record_locator": "file-set-1!IM.csv:line=20",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +198",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00020_2_read",
+          "occurred_at": "1960-07-17",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 198,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00020",
+          "source_record_locator": "file-set-1!IM.csv:line=20",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12"
+          },
+          "original_timestamp": "day +198",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00040_receipt",
+          "occurred_at": "1960-07-31",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 212,
+            "assessment_offset_days": 205,
+            "progression_assessment": "首次报告进展"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00040",
+          "source_record_locator": "file-set-1!F1.csv:line=40",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +212",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-018",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 69,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00021_1_scan",
+          "occurred_at": "1959-12-31",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": -1,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00021",
+          "source_record_locator": "file-set-1!IM.csv:line=21",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day -1",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00021_2_read",
+          "occurred_at": "1959-12-31",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": -1,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 8.7
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00021",
+          "source_record_locator": "file-set-1!IM.csv:line=21",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day -1",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00012_register",
+          "occurred_at": "1960-01-01",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 0,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00012",
+          "source_record_locator": "file-set-1!A0.csv:line=12",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00012_first",
+          "occurred_at": "1960-01-02",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 1,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00012",
+          "source_record_locator": "file-set-1!T1.csv:line=12",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +1",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00012_last",
+          "occurred_at": "1960-02-25",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 55,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00012",
+          "source_record_locator": "file-set-1!T1.csv:line=12",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +55",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00022_1_scan",
+          "occurred_at": "1960-06-03",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 154,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00022",
+          "source_record_locator": "file-set-1!IM.csv:line=22",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +154",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00022_2_read",
+          "occurred_at": "1960-06-03",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 154,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 3.0
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00022",
+          "source_record_locator": "file-set-1!IM.csv:line=22",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +154",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00041_receipt",
+          "occurred_at": "1960-08-20",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 232,
+            "assessment_offset_days": 212
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00041",
+          "source_record_locator": "file-set-1!F1.csv:line=41",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d"
+          },
+          "original_timestamp": "day +232",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    },
+    {
+      "case_id": "ACRIN-6668-019",
+      "case_kind": "public_research",
+      "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+      "disease": "非小细胞肺癌",
+      "patient": {
+        "age": 78,
+        "sex": "male"
+      },
+      "current_question": "截至所选截点，影像判读、放疗和随访有哪些可引用记录，哪些资料仍缺失？",
+      "timeline": [
+        {
+          "event_id": "IM_00023_1_scan",
+          "occurred_at": "1959-12-03",
+          "event_type": "imaging",
+          "title": "治疗前 FDG-PET 检查",
+          "facts": {
+            "offset_days": -29,
+            "pet_completed": true,
+            "pet_phase": "治疗前"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00023",
+          "source_record_locator": "file-set-1!IM.csv:line=23",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day -29",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00023_2_read",
+          "occurred_at": "1959-12-03",
+          "event_type": "imaging",
+          "title": "治疗前 PET 本地判读",
+          "facts": {
+            "offset_days": -29,
+            "pet_completed": true,
+            "pet_phase": "治疗前",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_1": 9.0
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00023",
+          "source_record_locator": "file-set-1!IM.csv:line=23",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_1": "ime18"
+          },
+          "original_timestamp": "day -29",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "A0_00013_register",
+          "occurred_at": "1960-01-01",
+          "event_type": "observation",
+          "title": "试验入组登记",
+          "facts": {
+            "offset_days": 0,
+            "pathologically_proven_nsclc": true,
+            "clinical_stage_iib_or_iii": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "A0_00013",
+          "source_record_locator": "file-set-1!A0.csv:line=13",
+          "source_fields": {
+            "offset_days": "A0e17d",
+            "pathologically_proven_nsclc": "a0e34",
+            "clinical_stage_iib_or_iii": "a0e36"
+          },
+          "original_timestamp": "day +0",
+          "time_note": "A0.A0e17d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00013_first",
+          "occurred_at": "1960-01-15",
+          "event_type": "treatment",
+          "title": "首次放疗",
+          "facts": {
+            "offset_days": 14,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00013",
+          "source_record_locator": "file-set-1!T1.csv:line=13",
+          "source_fields": {
+            "offset_days": "T1e2d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +14",
+          "time_note": "T1.T1e2d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "T1_00013_last",
+          "occurred_at": "1960-03-09",
+          "event_type": "treatment",
+          "title": "末次放疗",
+          "facts": {
+            "offset_days": 68,
+            "radiotherapy_started": true
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "T1_00013",
+          "source_record_locator": "file-set-1!T1.csv:line=13",
+          "source_fields": {
+            "offset_days": "T1e3d",
+            "radiotherapy_started": "t1e1"
+          },
+          "original_timestamp": "day +68",
+          "time_note": "T1.T1e3d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00024_1_scan",
+          "occurred_at": "1960-05-26",
+          "event_type": "imaging",
+          "title": "治疗后 FDG-PET 检查",
+          "facts": {
+            "offset_days": 146,
+            "pet_completed": true,
+            "pet_phase": "治疗后"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00024",
+          "source_record_locator": "file-set-1!IM.csv:line=24",
+          "source_fields": {
+            "offset_days": "IMe10d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5"
+          },
+          "original_timestamp": "day +146",
+          "time_note": "IM.IMe10d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "IM_00024_2_read",
+          "occurred_at": "1960-05-26",
+          "event_type": "imaging",
+          "title": "治疗后 PET 本地判读",
+          "facts": {
+            "offset_days": 146,
+            "pet_completed": true,
+            "pet_phase": "治疗后",
+            "image_quality": "充分",
+            "lung_suv_peak_assessment_2": 0.75
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "IM_00024",
+          "source_record_locator": "file-set-1!IM.csv:line=24",
+          "source_fields": {
+            "offset_days": "IMe11d",
+            "pet_completed": "ime1",
+            "pet_phase": "ime5",
+            "image_quality": "ime12",
+            "lung_suv_peak_assessment_2": "ime43"
+          },
+          "original_timestamp": "day +146",
+          "time_note": "IM.IMe11d 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00042_receipt",
+          "occurred_at": "1960-11-20",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 324,
+            "assessment_offset_days": 154,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00042",
+          "source_record_locator": "file-set-1!F1.csv:line=42",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +324",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00043_receipt",
+          "occurred_at": "1960-11-20",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 324,
+            "assessment_offset_days": 232,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00043",
+          "source_record_locator": "file-set-1!F1.csv:line=43",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +324",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        },
+        {
+          "event_id": "F1_00044_receipt",
+          "occurred_at": "1960-11-20",
+          "event_type": "follow_up",
+          "title": "收到临床随访表",
+          "facts": {
+            "offset_days": 324,
+            "assessment_offset_days": 317,
+            "progression_assessment": "无疾病证据或无进展证据"
+          },
+          "source": "tcia_acrin_6668",
+          "source_record_id": "F1_00044",
+          "source_record_locator": "file-set-1!F1.csv:line=44",
+          "source_fields": {
+            "offset_days": "rec",
+            "assessment_offset_days": "F1e1d",
+            "progression_assessment": "f1e8"
+          },
+          "original_timestamp": "day +324",
+          "time_note": "F1.rec 相对 TCIA 去标识基准日的天数，仅精确到日。",
+          "synthetic_extension": false,
+          "confidence": "source_record"
+        }
+      ],
+      "provenance": [
+        {
+          "source_name": "tcia_acrin_6668",
+          "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+          "synthetic": false,
+          "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+          "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+          "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl"
+        }
+      ],
+      "data_notes": [
+        "来源日期以 1960-01-01 表示共同基准日，允许负偏移。年龄为登记年龄。",
+        "PET 检查、判读和放疗按来源发生日重放，随访状态仅自研究中心收到该表之日引入。同日按事件编号确定可复现顺序。",
+        "映射 acrin-6668-v1；原始临床 ZIP SHA-256 f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee。"
+      ]
+    }
+  ]
+}

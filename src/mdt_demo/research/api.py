@@ -85,8 +85,13 @@ def append_event(case_id: str, body: AppendEvent, request: Request):
 
 @router.get("/cases/{case_id}/routing")
 def routing(case_id: str, request: Request, trigger_event_id: str = Query(min_length=1),
-            version: int | None = Query(None, ge=1), routing_mode: Literal["event", "fixed"] = "event"):
+            version: int | None = Query(None, ge=1), routing_mode: Literal["event", "fixed", "adaptive"] = "event"):
     return {"data": request.app.state.research.routing(case_id, trigger_event_id, version, routing_mode)}
+
+
+@router.get("/cases/{case_id}/longitudinal-dynamics")
+def longitudinal_dynamics(case_id: str, request: Request, version: int | None = Query(None, ge=1)):
+    return {"data": request.app.state.research.longitudinal_dynamics(case_id, version)}
 
 
 @router.get("/cases/{case_id}/workflow-plan")
@@ -280,6 +285,11 @@ def report(run_id: str, request: Request):
 @router.get("/runs/{run_id}/temporal-audit")
 def temporal_audit(run_id: str, request: Request):
     return {"data": request.app.state.research.temporal_audit_run(run_id)}
+
+
+@router.get("/runs/{run_id}/consensus-metrics")
+def consensus_metrics(run_id: str, request: Request):
+    return {"data": request.app.state.research.consensus_metrics_run(run_id)}
 
 
 @router.get("/runs/{run_id}/report/download")

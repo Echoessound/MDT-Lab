@@ -3,8 +3,10 @@ and consensus adjudication store (Plan §4 G03, §5 S3, §6.1, §6.4)."""
 
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from itertools import combinations
+from itertools import chain, combinations
 import json
 import os
 from pathlib import Path
@@ -71,25 +73,37 @@ def _jaccard(left: set[str], right: set[str]) -> float:
     return len(left & right) / len(union) if union else 1.0
 
 
-def _cohens_kappa_from_pairs(pairs: list[tuple[str, str]], labels: tuple[str, ...]) -> dict:
-    n = len(pairs)
-    if n == 0:
-        return {"pair_count": 0, "raw_agreement": None, "expected_agreement": None, "cohens_kappa": None}
-    # Symmetrize unordered pairs so Cohen's kappa is invariant to annotator ordering.
-    sym_pairs = [*pairs, *((b, a) for a, b in pairs)]
-    total = len(sym_pairs)
-    po = sum(1 for a, b in sym_pairs if a == b) / total
-    pe = 0.0
-    for label in labels:
-        p_left = sum(1 for a, _ in sym_pairs if a == label) / total
-        p_right = sum(1 for _, b in sym_pairs if b == label) / total
-        pe += p_left * p_right
-    kappa = None if abs(1.0 - pe) < 1e-12 else round((po - pe) / (1.0 - pe), 4)
+def _agreement_from_matrix(matrix: dict, *, fixed_raters: bool) -> dict:
+    n = sum(sum(row.values()) for row in matrix.values())
+    matched = sum(matrix[label][label] for label in matrix)
+    # Cohen's chance model uses the two annotators' separate marginals.
+    expected = sum(
+        sum(matrix[label].values()) * sum(row[label] for row in matrix.values())
+        for label in matrix
+    )
     return {
         "pair_count": n,
-        "raw_agreement": round(po, 4),
-        "expected_agreement": round(pe, 4),
-        "cohens_kappa": kappa,
+        "raw_agreement": round(matched / n, 4) if n else None,
+        "expected_agreement": round(expected / (n * n), 4) if fixed_raters and n else None,
+        "cohens_kappa": (
+            round((matched * n - expected) / (n * n - expected), 4)
+            if fixed_raters and n * n != expected else None
+        ),
+    }
+
+
+def _paired_agreement(comparisons: Iterable[tuple[dict, dict]], *, fixed_raters: bool) -> dict:
+    decisions = {a: {b: 0 for b in DECISIONS} for a in DECISIONS}
+    roles = {role: {a: {b: 0 for b in (False, True)} for a in (False, True)} for role in ROLES}
+    for left, right in comparisons:
+        decisions[left["expected_decision"]][right["expected_decision"]] += 1
+        for role, matrix in roles.items():
+            matrix[role in left["required_agents"]][role in right["required_agents"]] += 1
+    return {
+        "decision_agreement": {**_agreement_from_matrix(decisions, fixed_raters=fixed_raters),
+                               "confusion_matrix": decisions},
+        "per_role": {role: _agreement_from_matrix(matrix, fixed_raters=fixed_raters)
+                     for role, matrix in roles.items()},
     }
 
 
@@ -112,11 +126,7 @@ def compute_agreement_report(
     adjudications: dict[str, dict],
 ) -> dict:
     """Compute inter-rater agreement (Cohen's kappa, Jaccard overlap) and disagreement queue."""
-    decision_pairs: list[tuple[str, str]] = []
-    matrix: dict[str, dict[str, int]] = {
-        a: {b: 0 for b in DECISIONS} for a in DECISIONS
-    }
-    role_pairs: dict[str, list[tuple[str, str]]] = {role: [] for role in ROLES}
+    by_pair: dict[tuple[str, str], list[tuple[dict, dict]]] = defaultdict(list)
     specialist_jaccards: list[float] = []
     specialist_exact_hits = 0
     evidence_jaccards: list[float] = []
@@ -151,17 +161,10 @@ def compute_agreement_report(
             })
 
         for left, right in combinations(items, 2):
-            ld, rd = left["expected_decision"], right["expected_decision"]
-            decision_pairs.append((ld, rd))
-            matrix[ld][rd] += 1
-            if ld != rd:
-                matrix[rd][ld] += 1
-
+            by_pair[(left["annotator_id"], right["annotator_id"])].append((left, right))
             l_roles, r_roles = set(left["required_agents"]), set(right["required_agents"])
             specialist_jaccards.append(_jaccard(l_roles, r_roles))
             specialist_exact_hits += int(l_roles == r_roles)
-            for role in ROLES:
-                role_pairs[role].append(("1" if role in l_roles else "0", "1" if role in r_roles else "0"))
 
             l_ev, r_ev = set(left.get("evidence_ids", [])), set(right.get("evidence_ids", []))
             if l_ev or r_ev:
@@ -171,18 +174,22 @@ def compute_agreement_report(
             if l_miss or r_miss:
                 missing_jaccards.append(_jaccard(l_miss, r_miss))
 
-    decision_stats = _cohens_kappa_from_pairs(decision_pairs, DECISIONS)
-    per_role = {
-        role: _cohens_kappa_from_pairs(role_pairs[role], ("0", "1"))
-        for role in ROLES
-    }
-    total_pairs = len(decision_pairs)
+    pair_reports = [
+        {"annotators": list(raters), **_paired_agreement(by_pair[raters], fixed_raters=True)}
+        for raters in sorted(by_pair)
+    ]
+    pooled = (pair_reports[0] if len(pair_reports) == 1
+              else _paired_agreement(chain.from_iterable(by_pair.values()), fixed_raters=False))
+    decision_stats = pooled["decision_agreement"]
+    total_pairs = decision_stats["pair_count"]
     unadjudicated = sum(1 for item in disputed if not item["adjudicated"])
     note = (
         f"共 {len(submissions_by_scenario)} 个截点含独立初标，其中 {multi_rated_count} 个截点有 ≥2 位标注人完成盲标，"
         f"检出 {len(disputed)} 个争议截点（已仲裁 {len(disputed) - unadjudicated} 个，待仲裁 {unadjudicated} 个）。"
     )
-    if multi_rated_count > 0 and decision_stats["cohens_kappa"] is None:
+    if len(pair_reports) > 1:
+        note += f"共有 {len(pair_reports)} 种标注人配对，整体原始一致率按配对次数计算，Cohen's κ 按固定标注人组合分别报告。"
+    elif multi_rated_count > 0 and decision_stats["cohens_kappa"] is None:
         note += "三分类标签全部落入同一类别（p_e = 1.0），Cohen's κ 不可定义，请参考原始一致率。"
     elif multi_rated_count == 0:
         note += "需要至少 2 位独立标注人对同一截点完成盲标后，方可计算 Cohen's κ 与专科集合重合度。"
@@ -195,15 +202,13 @@ def compute_agreement_report(
         "adjudicated_count": len(adjudications),
         "unadjudicated_disputes": unadjudicated,
         "annotator_counts": dict(sorted(annotator_counts.items())),
-        "decision_agreement": {
-            **decision_stats,
-            "confusion_matrix": matrix,
-        },
+        "decision_agreement": decision_stats,
+        "rater_pair_agreement": pair_reports,
         "specialist_agreement": {
             "pair_count": total_pairs,
             "mean_jaccard": round(sum(specialist_jaccards) / total_pairs, 4) if total_pairs else None,
             "exact_set_agreement": round(specialist_exact_hits / total_pairs, 4) if total_pairs else None,
-            "per_role": per_role,
+            "per_role": pooled["per_role"],
         },
         "evidence_mean_jaccard": (
             round(sum(evidence_jaccards) / len(evidence_jaccards), 4) if evidence_jaccards else None

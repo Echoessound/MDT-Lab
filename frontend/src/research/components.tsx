@@ -26,7 +26,7 @@ export function InlineError({ error }: { error: unknown }) { return error ? <div
 export function RoutingPanel({ routing }: { routing: Routing }) {
   return <section className="panel routing-panel"><div className="section-heading"><h2>专科动态调度方案</h2><span className="pill soft">已调度 {routing.selected_agents.length} / {roleOrder.length} 个专科</span></div>
     <div className="routing-grid">{roleOrder.map(role => { const selected = routing.selected_agents.includes(role); return <div className={`routing-role ${selected ? 'selected-role' : ''}`} key={role}><span className="routing-mark"><Icon name={selected ? 'check' : 'stop'} size={17} /></span><div><strong>{roleNames[role]}</strong><small>{selected ? '参与本次协同审阅' : '本次自动跳过（节省调用）'}</small>{routing.reasons.filter(reason => reason.agent_id === role).map(reason => <p key={reason.rule_id}>{reason.description}<code>{ruleIdLabel(reason.rule_id)}</code></p>)}</div></div>; })}</div>
-    <div className="subtle-note">路由策略：事件驱动专科路由 · 触发截点 {routing.trigger_event_id} · 仅被调度的专科计入有效覆盖率分母。</div>
+    <div className="subtle-note">路由策略：{routing.strategy_version.includes('adaptive') ? '纵向风险效用自适应路由' : routing.reasons.some(r => r.rule_id === 'fixed_all') ? '固定全员对照' : '按事件驱动路由'} · 触发截点 {routing.trigger_event_id} · 仅被调度的专科计入有效覆盖率分母。</div>
   </section>;
 }
 

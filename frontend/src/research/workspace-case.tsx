@@ -11,7 +11,11 @@ import { factsSchema, type EventType, type ResearchCase, type RunRequest } from 
 import { TabPanelTransition, WorkspaceViews, currentView, useWorkspaceParams } from './workspace-controls';
 import { WorkspaceEvents } from './workspace-events';
 import { CaseWorkflowAndImagingSection } from './workflow-visualizer';
-import { factKeyLabel } from './zh-dict';
+import { clinicalCaseTitle, factKeyLabel } from './zh-dict';
+
+export function toggleCutoffTrigger(pinnedTriggerId: string | null | undefined, clickedEventId: string): string {
+  return pinnedTriggerId === clickedEventId ? '' : clickedEventId;
+}
 
 const templates: Record<string, { type: EventType; title: string; facts: Record<string, boolean | string> }> = {
   pathology: { type: 'pathology', title: '补充组织病理学确诊记录（合成）', facts: { pathology_confirmed: true, histology: '肺腺癌', pathology_record: '本地人工合成病理确诊补充记录' } },
@@ -171,7 +175,7 @@ function AddEvent({ item, onSaved }: { item: ResearchCase; onSaved: (value: Rese
 
 const caseViews = [
   { key: 'timeline', label: '病程时间线' },
-  { key: 'workflow', label: '智能流程与影像' },
+  { key: 'workflow', label: '流程与影像' },
   { key: 'routing', label: '专科调度依据' },
   { key: 'sources', label: '数据来源与溯源' },
 ] as const;
@@ -192,7 +196,8 @@ function CaseWorkspace({ id }: { id: string }) {
   const requestedVersion = Number(params.get('version'));
   const version = Number.isSafeInteger(requestedVersion) && requestedVersion > 0 ? requestedVersion : undefined;
   const mode = params.get('mode') === 'llm' ? 'llm' : 'mock';
-  const routingMode = params.get('routing') === 'fixed' ? 'fixed' : 'event';
+  const rawRouting = params.get('routing');
+  const routingMode: RunRequest['routing_mode'] = rawRouting === 'fixed' || rawRouting === 'adaptive' ? rawRouting : 'event';
   const requestedScenario = params.get('scenario') ?? '';
   const scenario: RunRequest['mock_scenario'] = mode === 'mock' && Object.hasOwn(scenarioNames, requestedScenario) ? requestedScenario as RunRequest['mock_scenario'] : 'standard';
   const latest = useQuery({ queryKey: researchKeys.caseDetail(id, 'latest'), queryFn: () => researchApi.case(id) });
@@ -200,17 +205,18 @@ function CaseWorkspace({ id }: { id: string }) {
   const models = useQuery({ queryKey: researchKeys.agentModels, queryFn: researchApi.agentModels });
   const item = query.data;
   const requestedTrigger = params.get('trigger');
-  const trigger = requestedTrigger ? item?.timeline.find(event => event.event_id === requestedTrigger) : item?.timeline.at(-1);
+  const pinnedTrigger = requestedTrigger ? item?.timeline.find(event => event.event_id === requestedTrigger) : undefined;
+  const effectiveTrigger = pinnedTrigger ?? item?.timeline.at(-1);
   const routing = useQuery({
-    queryKey: researchKeys.routing(id, item?.version, trigger?.event_id, routingMode),
-    queryFn: () => researchApi.routing(id, item!.version, trigger!.event_id, routingMode),
-    enabled: !!item && !!trigger,
+    queryKey: researchKeys.routing(id, item?.version, effectiveTrigger?.event_id, routingMode),
+    queryFn: () => researchApi.routing(id, item!.version, effectiveTrigger!.event_id, routingMode),
+    enabled: !!item && !!effectiveTrigger,
   });
   const start = useMutation({
     mutationFn: (overrideTrigger?: string) => researchApi.start({
       case_id: id,
       case_version: item!.version,
-      trigger_event_id: overrideTrigger ?? trigger!.event_id,
+      trigger_event_id: overrideTrigger ?? effectiveTrigger!.event_id,
       mode,
       mock_scenario: scenario,
       routing_mode: routingMode,
@@ -221,7 +227,7 @@ function CaseWorkspace({ id }: { id: string }) {
   if (query.isPending) return <Loading />;
   if (query.isError) return <ErrorState error={query.error} retry={() => void query.refetch()} />;
   if (!item) return null;
-  if (!trigger || (params.has('version') && !version)) return <section className="panel workspace-column">
+  if (!effectiveTrigger || (Boolean(requestedTrigger) && !pinnedTrigger) || (params.has('version') && !version)) return <section className="panel workspace-column">
     <h1>病例链接参数无效</h1>
     <p role="alert">{!version && params.has('version') ? '版本号须为正整数。' : `版本 v${item.version} 中找不到触发事件 ${requestedTrigger ?? ''}。`}</p>
     <button type="button" className="button secondary" onClick={() => update({ version: version ? String(version) : '', trigger: '', view: '' })}>重置并查看病程事件</button>
@@ -239,6 +245,7 @@ function CaseWorkspace({ id }: { id: string }) {
     void client.invalidateQueries({ queryKey: ['research-workflow-plan', id] });
     void client.invalidateQueries({ queryKey: ['research-imaging', id] });
     void client.invalidateQueries({ queryKey: ['research-ablation', id] });
+    void client.invalidateQueries({ queryKey: ['research-longitudinal-dynamics', id] });
     const latestEvt = saved.timeline.find(event => event.introduced_in_version === saved.version)?.event_id ?? saved.timeline.at(-1)?.event_id ?? '';
     update({ version: '', trigger: latestEvt });
     setAdding(false);
@@ -247,24 +254,26 @@ function CaseWorkspace({ id }: { id: string }) {
 
   const tabsWithBadges = [
     { key: 'timeline' as const, label: '病程时间线', badge: item.timeline.length },
-    { key: 'workflow' as const, label: '智能流程与影像', badge: '算法增强' },
+    { key: 'workflow' as const, label: '流程与影像' },
     { key: 'routing' as const, label: '专科调度依据', badge: routing.data ? `${routing.data.selected_agents.length} 科` : undefined },
     { key: 'sources' as const, label: '数据来源与溯源', badge: item.unplaced_records.length ? `+${item.unplaced_records.length}` : undefined },
   ];
+
+  const pinnedIdx = pinnedTrigger ? item.timeline.findIndex(e => e.event_id === pinnedTrigger.event_id) : -1;
 
   return <div className="page-enter research-page workspace-page">
     <Link to={`/${librarySearch}`} className="back-link"><Icon name="back" size={14} />返回病例工作台</Link>
     <header className="workspace-heading">
       <div>
-        <h1>{item.title}</h1>
+        <h1><code>{id}</code> · {clinicalCaseTitle(item)}</h1>
         <p>
-          编号 <code>{id}</code> · {sexName(item.patient.sex)} · {item.patient.age} 岁 · {item.disease} · <span className="pill soft">{caseKindName[item.case_kind]}</span>
+          {sexName(item.patient.sex)} · {item.patient.age} 岁 · {item.disease} · <span className="pill soft">{caseKindName[item.case_kind]}</span>
         </p>
       </div>
       <div className="button-group">
         {view !== 'workflow' && (
           <button type="button" className="button secondary" onClick={() => update({ view: 'workflow' })}>
-            <Icon name="route" size={15} />智能流程与影像分析
+            <Icon name="route" size={15} />流程与影像
           </button>
         )}
         <button type="button" className="button secondary" disabled={!current} onClick={() => setAdding(value => !value)}>
@@ -280,11 +289,11 @@ function CaseWorkspace({ id }: { id: string }) {
       <div className="workspace-column">
         <section className="panel workspace-case-brief">
           <div>
-            <h2>本次多学科审阅目标</h2>
+            <h2>审阅问题</h2>
             <p>{item.current_question || '截至所选病程截点，核对临床、影像与病理资料是否完整且内部一致。'}</p>
           </div>
           <label className="workspace-version-select">
-            当前检视版本
+            当前版本
             <select value={item.version} onChange={event => {
               const v = Number(event.target.value);
               update({ version: v === latest.data?.version ? '' : String(v), trigger: '' });
@@ -292,30 +301,48 @@ function CaseWorkspace({ id }: { id: string }) {
               setNotice('');
             }}>
               {Array.from({ length: latest.data?.version ?? item.version }, (_, index) => index + 1).reverse().map(v => (
-                <option key={v} value={v}>v{v}{v === latest.data?.version ? ' · 最新版本' : ' · 历史快照'}</option>
+                <option key={v} value={v}>v{v}{v === latest.data?.version ? ' · 最新' : ' · 历史'}</option>
               ))}
             </select>
           </label>
         </section>
 
         {item.timeline.length <= 24 && (
-          <section className="panel timeline-scrubber-panel" aria-label="纵向病程时间轴与冻结截点速览">
+          <section className="panel timeline-scrubber-panel" aria-label="病程截点滑轨">
             <div className="scrubber-header">
-              <span><strong>纵向病程时间轴滑轨</strong> · 点击任意节点即时移动历史冻结截点</span>
-              <small>已纳入 {item.timeline.findIndex(e => e.event_id === trigger.event_id) + 1} / {item.timeline.length} 条事件</small>
+              <span>
+                <strong>病程截点滑轨</strong>
+                {' · '}
+                {pinnedTrigger
+                  ? `已锁定 ${pinnedTrigger.event_id}（纳入 ${pinnedIdx + 1} / ${item.timeline.length} 条）`
+                  : `全病程模式（共 ${item.timeline.length} 条，点击节点锁定截点）`}
+              </span>
+              {pinnedTrigger ? (
+                <button type="button" className="text-link" onClick={() => update({ trigger: '' })}>
+                  取消截点锁定
+                </button>
+              ) : (
+                <small>再次点击已选节点可取消锁定</small>
+              )}
             </div>
             <div className="timeline-scrubber-rail" role="group" aria-label="选择病程冻结截点">
               {item.timeline.map((ev, idx) => {
-                const triggerIdx = item.timeline.findIndex(e => e.event_id === trigger.event_id);
-                const state = idx === triggerIdx ? 'is-trigger' : idx < triggerIdx ? 'is-included' : 'is-future';
+                const isSelected = pinnedIdx === idx;
+                const state = pinnedIdx === -1
+                  ? ''
+                  : isSelected
+                    ? 'is-trigger'
+                    : idx < pinnedIdx
+                      ? 'is-included'
+                      : 'is-future';
                 return (
                   <button
                     key={ev.event_id}
                     type="button"
-                    className={`scrubber-node ${state}`}
-                    aria-pressed={idx === triggerIdx}
+                    className={`scrubber-node ${state}`.trim()}
+                    aria-pressed={isSelected}
                     title={`${ev.occurred_at} · ${ev.title} (${eventNames[ev.event_type]})`}
-                    onClick={() => update({ trigger: ev.event_id })}
+                    onClick={() => update({ trigger: toggleCutoffTrigger(pinnedTrigger?.event_id, ev.event_id) })}
                   >
                     <span className="scrubber-dot" />
                     <strong>{ev.event_id}</strong>
@@ -340,7 +367,8 @@ function CaseWorkspace({ id }: { id: string }) {
             <WorkspaceEvents
               key={item.version}
               events={item.timeline}
-              trigger={trigger.event_id}
+              trigger={effectiveTrigger.event_id}
+              isPinned={Boolean(pinnedTrigger)}
               onTrigger={eventId => update({ trigger: eventId })}
               onQuickRun={canStart ? eventId => { update({ trigger: eventId }); start.mutate(eventId); } : undefined}
             />
@@ -349,7 +377,7 @@ function CaseWorkspace({ id }: { id: string }) {
             <CaseWorkflowAndImagingSection
               caseId={id}
               version={item.version}
-              triggerEventId={trigger.event_id}
+              triggerEventId={effectiveTrigger.event_id}
               isLatestVersion={current}
               onEnriched={onSaved}
             />
@@ -366,9 +394,14 @@ function CaseWorkspace({ id }: { id: string }) {
         </div>
         <form className="research-form" onSubmit={event => { event.preventDefault(); if (canStart) start.mutate(undefined); }}>
           <div className="workspace-trigger">
-            <span>当前锁定触发截点</span>
-            <strong>{trigger.title}</strong>
-            <small>{trigger.occurred_at} · 事件编号 <code>{trigger.event_id}</code> · {eventNames[trigger.event_type]}</small>
+            <span>{pinnedTrigger ? `已锁定截点 · ${pinnedTrigger.event_id}` : `默认末次事件 · ${effectiveTrigger.event_id}（全病程）`}</span>
+            <strong>{effectiveTrigger.title}</strong>
+            <small>{effectiveTrigger.occurred_at} · {eventNames[effectiveTrigger.event_type]}</small>
+            {pinnedTrigger && (
+              <button type="button" className="text-link" onClick={() => update({ trigger: '' })}>
+                取消锁定（恢复末次事件）
+              </button>
+            )}
             {view !== 'timeline' && (
               <button type="button" className="text-link" onClick={() => update({ view: '' })}>
                 返回时间线更换截点 <Icon name="arrow" size={12} />
@@ -378,8 +411,9 @@ function CaseWorkspace({ id }: { id: string }) {
 
           <label>
             专科调度策略
-            <select value={routingMode} onChange={event => update({ routing: event.target.value === 'fixed' ? 'fixed' : '' })}>
-              <option value="event">按事件智能路由（推荐）</option>
+            <select value={routingMode} onChange={event => update({ routing: event.target.value === 'event' ? '' : event.target.value })}>
+              <option value="event">按事件智能路由（默认）</option>
+              <option value="adaptive">纵向风险效用自适应路由</option>
               <option value="fixed">固定四专科全员对照</option>
             </select>
           </label>
@@ -422,10 +456,10 @@ function CaseWorkspace({ id }: { id: string }) {
             </details>
           )}
 
-          {scenarioBlocked && <p className="inline-error">「跨科保留分歧」场景至少需要 2 个参与专科，请切换为“固定四专科全员对照”或更换触发事件。</p>}
+          {scenarioBlocked && <p className="inline-error">「跨科保留分歧」场景至少需要 2 个参与专科，请切换策略或更换触发事件。</p>}
           <InlineError error={routing.error || models.error || start.error} />
           <p className="workspace-boundary">
-            系统将严格截取 v{item.version} 中截至 <code>{trigger.event_id}</code> 的病程记录，自动屏蔽未来事件。
+            系统将严格截取 v{item.version} 中截至 <code>{effectiveTrigger.event_id}</code> 的病程记录，屏蔽截点后未来事件。
           </p>
           <button type="submit" className="button primary full" disabled={!canStart}>
             <Icon name="play" size={15} />
@@ -433,11 +467,11 @@ function CaseWorkspace({ id }: { id: string }) {
           </button>
           <div className="launch-footer-links">
             <button type="button" className="text-link" onClick={() => update({ view: 'workflow' })}>
-              <Icon name="eye" size={13} />工作流与影像
+              <Icon name="eye" size={13} />流程与影像
             </button>
             <Link
               className="text-link"
-              to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(`${id}:v${item.version}:${trigger.event_id}`)}`}
+              to={`/research/experiments?view=annotate&scenario=${encodeURIComponent(`${id}:v${item.version}:${effectiveTrigger.event_id}`)}`}
             >
               <Icon name="check" size={13} />盲标当前截点
             </Link>

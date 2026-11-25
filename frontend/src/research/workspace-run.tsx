@@ -12,7 +12,7 @@ import { RunProgressStrip, TabPanelTransition, WorkspaceViews, currentView, useW
 import { WorkspaceEvents } from './workspace-events';
 import { AblationExperimentMatrix, MedicalImagingWorkbench } from './workflow-visualizer';
 import type { Evidence, Report } from './schemas';
-import { conflictDimensionLabel, errorCodeLabel, modeNameZh } from './zh-dict';
+import { conflictDimensionLabel, errorCodeLabel, modeNameZh, routingModeNameZh } from './zh-dict';
 
 const runViews = [
   { key: 'collaboration', label: '协作拓扑视图' },
@@ -87,7 +87,7 @@ function RunWorkspace({ id }: { id: string }) {
       <div>
         <div className="workspace-title-line"><h1>协同运行 #{shortId(id)}</h1><Status status={run.status} /></div>
         <p>
-          关联病例 <Link className="text-link" to={`/research/cases/${encodeURIComponent(run.case_id)}?${caseParams}`}>{run.case_id} · 版本 v{run.case_version}</Link> · {modeNameZh(run.mode)}（{run.routing_mode === 'event' ? '按事件智能路由' : '固定四科全员'}） · 创建于 {dateTime(run.created_at)}
+          关联病例 <Link className="text-link" to={`/research/cases/${encodeURIComponent(run.case_id)}?${caseParams}`}>{run.case_id} · v{run.case_version}</Link> · {modeNameZh(run.mode)}（{routingModeNameZh(run.routing_mode)}） · {dateTime(run.created_at)}
         </p>
       </div>
       <div className="button-group">
@@ -206,6 +206,11 @@ export function ResearchReportPage() {
     queryFn: () => researchApi.temporalAudit(runId),
     enabled: !!report && view === 'summary',
   });
+  const consensusQuery = useQuery({
+    queryKey: ['research-consensus-metrics', runId],
+    queryFn: () => researchApi.consensusMetrics(runId),
+    enabled: !!report && view === 'summary',
+  });
   const ablationQuery = useQuery({
     queryKey: ['research-ablation', report?.case_id, report?.case_version, report?.trigger_event_id],
     queryFn: () => researchApi.ablationMatrix(report!.case_id, report!.case_version, report!.trigger_event_id),
@@ -266,6 +271,37 @@ export function ResearchReportPage() {
           </section>
         )}
         <SafetyPanel safety={report.safety} evidence={report.evidence_registry} onEvidence={setEvidence} />
+        {consensusQuery.data && (
+          <section className="panel">
+            <div className="workspace-section-heading">
+              <h2>多智能体共识与分歧收敛指标</h2>
+              <span className={`pill ${consensusQuery.data.safety_veto_applied ? 'status-failed' : 'status-completed'}`}>
+                {consensusQuery.data.safety_veto_applied
+                  ? '安全门控已否决（共识度归零）'
+                  : consensusQuery.data.converged === null ? '有效意见不足两份'
+                    : consensusQuery.data.converged ? '意见已收敛' : '专科意见有分歧'}
+              </span>
+            </div>
+            <dl className="workspace-factbar">
+              <div>
+                <dt>初审 → 终审决策熵</dt>
+                <dd>{consensusQuery.data.initial_entropy.toFixed(3)} → {consensusQuery.data.final_entropy.toFixed(3)}（ΔH {consensusQuery.data.entropy_reduction >= 0 ? `-${consensusQuery.data.entropy_reduction.toFixed(3)}` : `+${Math.abs(consensusQuery.data.entropy_reduction).toFixed(3)}`}）</dd>
+              </div>
+              <div>
+                <dt>证据引用 Jaccard 重合度</dt>
+                <dd>{consensusQuery.data.evidence_jaccard_mean === null ? '无可比专科对' : `${(consensusQuery.data.evidence_jaccard_mean * 100).toFixed(1)}%`}</dd>
+              </div>
+              <div>
+                <dt>结构化断言一致率</dt>
+                <dd>{consensusQuery.data.claim_agreement_rate === null ? '无可比断言对' : `${(consensusQuery.data.claim_agreement_rate * 100).toFixed(1)}%`}</dd>
+              </div>
+              <div>
+                <dt>置信加权门控共识度 C</dt>
+                <dd>{consensusQuery.data.consensus_score.toFixed(3)}（意见修订 {consensusQuery.data.opinions_revised_count} 次）</dd>
+              </div>
+            </dl>
+          </section>
+        )}
         {temporalAuditQuery.data && (
           <section className="panel">
             <div className="workspace-section-heading">
