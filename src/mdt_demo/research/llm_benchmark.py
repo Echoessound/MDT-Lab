@@ -16,9 +16,10 @@ from .engine import (
     _verified_references,
     execute,
     freeze_context,
+    route_case,
     source_conflicts,
 )
-from .provider import PROMPT_VERSION, RunLLM, SYSTEM_PROMPT
+from .provider import RunLLM, SYSTEM_PROMPT, default_response_format, is_deepseek_endpoint, prompt_version
 from .provider_config import LLMConfigInput, ProviderError, resolve_addresses
 from .schemas import AgentOutput, ModelInfo, ResearchCase, RunRequest
 from .seeds import seed_cases
@@ -29,6 +30,27 @@ G01_SMOKE_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("LUNG-SYN-001", "E002", "关键资料缺失路径（肿瘤+影像）"),
     ("LUNG-SYN-003", "E004", "同日来源矛盾暂缓路径（全四科）"),
 )
+
+
+def g01_request_plan() -> dict:
+    """Count the bounded HTTP attempts for the three synthetic smoke scenarios."""
+    cases = {case.case_id: case for case in seed_cases()}
+    scenarios = []
+    for case_id, trigger_id, description in G01_SMOKE_SCENARIOS:
+        case = cases[case_id]
+        agents = route_case(case, trigger_id)["selected_agents"]
+        scenarios.append({
+            "scenario_id": f"{case_id}:v{case.version}:{trigger_id}",
+            "description": description,
+            "selected_agents": agents,
+            # One initial and at most one discussion call per role, each with one retry.
+            "max_http_attempts": len(agents) * 2 * 2,
+        })
+    return {
+        "scenarios": scenarios,
+        "connection_max_http_attempts": 2,
+        "suite_max_http_attempts": 2 + sum(row["max_http_attempts"] for row in scenarios),
+    }
 
 
 class _GeneralReviewOutput(AgentOutput):
@@ -52,7 +74,8 @@ def _sanitized_config(config: LLMConfigInput, response_format_mode: str) -> dict
         "timeout_seconds": config.timeout_seconds,
         "temperature": config.temperature,
         "max_output_tokens": config.max_output_tokens,
-        "prompt_version": PROMPT_VERSION,
+        "prompt_version": prompt_version(response_format_mode),
+        "thinking_mode": "disabled" if is_deepseek_endpoint(config) else "provider_default",
         "response_format_mode": response_format_mode,
     }
 
@@ -224,10 +247,13 @@ def run_g01_smoke_suite(
     *,
     transport=None,
     resolver=resolve_addresses,
-    response_format_mode: str = "json_schema",
+    response_format_mode: str | None = None,
     sleep_seconds: float = 0.0,
 ) -> dict:
     """Execute the Plan G01 / S1 end-to-end LLM compatibility & smoke validation suite."""
+    suite_started = time.monotonic()
+    if response_format_mode is None:
+        response_format_mode = default_response_format(config)
     sanitized = _sanitized_config(config, response_format_mode)
 
     # 1. Connection test (no patient data)
@@ -240,6 +266,7 @@ def run_g01_smoke_suite(
     except ProviderError as exc:
         connection.update(ok=False, error_code=exc.code, message=exc.message,
                           wall_clock_ms=round((time.monotonic() - t0) * 1000, 2))
+    connection["metrics"] = dict(conn_llm.metrics)
 
     cases_by_id = {case.case_id: case for case in seed_cases()}
     runs: list[dict] = []
@@ -307,9 +334,19 @@ def run_g01_smoke_suite(
     all_temporal_ok = all(item["temporal_audit"]["passed"] for item in runs)
     calls = agg_telemetry["first_attempt_calls"]
     cites = agg_telemetry["first_attempt_candidate_citations"]
+    scenario_retries = sum(item["metrics"]["retry_count"] for item in runs)
+    # Compatibility totals retain their original scenario-only denominator.
+    # Accounting for a paid run must also include the initial connectivity probe.
+    meters = [connection["metrics"], *(item["metrics"] for item in runs)]
+    suite_usage = {
+        key: sum(meter[key] for meter in meters) if all(meter[key] is not None for meter in meters) else None
+        for key in ("llm_calls", "retry_count", "prompt_tokens", "completion_tokens")
+    }
 
     return {
         "protocol_version": "g01-llm-smoke-v1",
+        "execution_source": "provider_http" if transport is None else "injected_transport",
+        "suite_metrics": {**suite_usage, "wall_clock_ms": round((time.monotonic() - suite_started) * 1000, 2)},
         "model_config": sanitized,
         "connection_test": connection,
         "compatibility": {
@@ -319,6 +356,8 @@ def run_g01_smoke_suite(
             "usage_reported_complete": usage_complete,
             "total_prompt_tokens": total_prompt if usage_complete else None,
             "total_completion_tokens": total_completion if usage_complete else None,
+            "scenario_retries": scenario_retries,
+            "retry_recovery_rate": round(agg_telemetry["retry_recovered"] / scenario_retries, 4) if scenario_retries else None,
             "first_attempt_valid_rate": round(agg_telemetry["first_attempt_valid"] / calls, 4) if calls else None,
             "first_attempt_citation_valid_rate": round(agg_telemetry["first_attempt_valid_citations"] / cites, 4) if cites else None,
             "validation_totals": agg_telemetry,

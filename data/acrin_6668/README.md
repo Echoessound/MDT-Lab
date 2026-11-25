@@ -43,3 +43,32 @@ Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L (2019). *Data from the ACRIN 6
 - 映射版本 `acrin-6668-v1`
 - 源 ZIP SHA-256 `f788dd16488900a3aab35b2c24699e5c2841aa8031e928a8fced9d8edf0ab8ee`
 - 导入 JSON SHA-256 `996f5bb241aab8e6acd6cb7c3e31bfb61381bf74b3457325d32e5bc7c0fb883c`
+
+## 2026-11-25 冻结的先导研究队列
+
+原 12 个病例已经用于工程回归。本批从同一份源 ZIP 的 189 个登记号中，按数值升序跳过前 12 个，连续纳入第 13–42 个登记号，另 147 个在本次抽样窗口之外。四张源表沿用上文映射，选择病例时只使用登记号。两批的病例编号交集为 0。本批只含 ACRIN 6668 的公开临床表。30 例为先导样本规模，正式研究的来源构成和样本量仍待结合独立标注与实际模型预算确定。
+
+| 划分 | 病例族 | 截点 | 本次用途 |
+| --- | ---: | ---: | --- |
+| 开发集 | 9 | 122 | 准备独立盲标材料，复算八组确定性方法 |
+| 留出集 | 21 | 281 | 归档材料指纹和分组，本次评分只使用开发集 |
+
+划分种子为 2026，开发集比例为 0.30，一个登记号对应一个病例族。403 个截点均通过对可见事件、原始事实、来源和无日期记录隔离的结构化审计。140 个截点当天有多条事件，清单保留 `same_day_ordering_notice` 供人工判断先后。静态登记字段的来源一致性与这些字段在临床现场的可见时刻应分别解释。[队列与纳入摘要](cohort_v1/dataset_manifest.json) · [逐截点清单](cohort_v1/scenario_manifest.jsonl) · [文件指纹](cohort_v1/SHA256SUMS)
+
+在仓库根目录按下列命令复建。源 ZIP 的下载地址和预期指纹见上文。由原包重建的研究 JSON 的 SHA-256 为 `c2118d77c87797808953877aa4b8612e73ca2cab0ba56a2d4fa73674b1cd9539`。
+
+```sh
+archive=data/raw/external/acrin_6668_set1.zip
+input=data/raw/external/acrin_6668_enrollment_13_42.json
+cohort=data/acrin_6668/cohort_v1
+out=outputs/experiments/acrin_cohort_v1
+.venv/bin/python scripts/build_acrin_6668_sample.py "$archive" "$input" --skip-subjects 12 --max-cases 30
+.venv/bin/python scripts/build_repro_pack.py --freeze-only --source "research_json:$input:30" --triggers all --split-seed 2026 --dev-ratio 0.30 --output-dir "$cohort"
+(cd "$cohort" && shasum -a 256 -c SHA256SUMS)
+.venv/bin/python scripts/export_blind_tasks.py --frozen-cohort "$cohort" --cohort-input "$input" --split-filter dev --output "$out/dev_tasks.jsonl"
+.venv/bin/python scripts/build_repro_pack.py --frozen-cohort "$cohort" --cohort-input "$input" --split-filter dev --output-dir "$out/dev_mock"
+```
+
+冻结目录含两份清单及校验文件。重复运行会逐字节核对已有冻结内容。若提供其他来源文件、修改分组或改变输入，复用时会报告不匹配。其他队列如果含多个不同编号的同源变体，冻结时用 `--case-family-map` 提供形如 `{"variant-01":"base-01"}` 的 JSON 文件。
+
+每位独立标注人获得同一份开发集任务和手册。如需使用项目的多人工作台，组织者先在「数据导入 → 研究 JSON」预检上述 30 例输入并导入研究库，设置上限为 30。标注人在多人盲标页载入 `dev_tasks.jsonl`，按文件内的 122 个截点逐条填写。评分结果保存在独立目录。先导开发集 976 行 Mock 分数可从原始 ZIP 复算，尚待录入人工参考。[标注人手册](../../docs/开发集盲标手册.md)

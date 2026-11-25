@@ -95,13 +95,18 @@ def follow_up_events(line, row):
     yield event("F1", line, "receipt", "rec", row, "follow_up", "收到临床随访表", fields)
 
 
-def build(raw):
+def build(raw, *, skip_subjects=0, max_cases=12):
     if hashlib.sha256(raw).hexdigest() != CHECKSUM:
         raise ValueError("Source ZIP differs from the verified TCIA clinical file set 1 release")
+    if skip_subjects < 0 or not 1 <= max_cases <= 50:
+        raise ValueError("Use a non-negative enrollment offset and 1 to 50 cases per research JSON.")
     cases = {}
     with ZipFile(io.BytesIO(raw)) as archive:
         enrollment = sorted(table(archive, "A0"), key=lambda item: int(item[1]["cn"]))
-        for line, row in enrollment[:12]:
+        selected = enrollment[skip_subjects:skip_subjects + max_cases]
+        if len(selected) != max_cases:
+            raise ValueError("Requested enrollment window extends beyond the source file.")
+        for line, row in selected:
             subject = row["cn"]
             fields = {
                 "pathologically_proven_nsclc": ("a0e34", {"1": False, "2": True}.get(row["a0e34"])),
@@ -127,9 +132,9 @@ def build(raw):
     for case in cases.values():
         case["timeline"].sort(key=lambda item: (item["occurred_at"], item["event_id"]))
     data = (json.dumps({"cases": list(cases.values())}, ensure_ascii=False, indent=2) + "\n").encode()
-    prepared = prepare_import("research_json", data, 12)
-    if len(prepared.cases) != 12:
-        raise ValueError("Expected 12 unique cases")
+    prepared = prepare_import("research_json", data, max_cases)
+    if len(prepared.cases) != max_cases:
+        raise ValueError(f"Expected {max_cases} unique cases in this enrollment window")
     return data
 
 
@@ -137,5 +142,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("archive", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--skip-subjects", type=int, default=0, help="按登记号升序跳过的病例数")
+    parser.add_argument("--max-cases", type=int, default=12, help="随后连续选取的病例数，最多 50")
     args = parser.parse_args()
-    args.output.write_bytes(build(args.archive.read_bytes()))
+    data = build(args.archive.read_bytes(), skip_subjects=args.skip_subjects, max_cases=args.max_cases)
+    args.output.write_bytes(data)

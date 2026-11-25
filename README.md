@@ -155,7 +155,19 @@ V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只�
 
 共享默认会应用于所有继承该配置的专科。直接绑定到专科的方案通过该专科单独切换。编辑命名方案会更新所有使用它的范围，参数在新建运行时冻结。运行详情保留当时的方案名称、编号和模型参数。正在使用的方案需先解除绑定或切换后才可删除。也可继续在具体范围填写直接配置。切换范围会保留页面内的未保存草稿。
 
-服务需要支持 Chat Completions、严格 JSON Schema、`temperature` 与 `max_tokens` 参数。连接测试向所选服务发送一条不含病例的短请求，可能产生费用。密钥通过 Fernet 加密写入 `model_settings`，网页、运行、报告和审计只读公开配置。加密主密钥位于 `outputs/.model-settings.key`，权限为 0600，也可由 `MDT_SECRET_KEY` 提供。使用同一密钥重启可恢复方案和绑定。更换服务地址，或从方案切回直接配置时，请填写该连接的密钥。
+服务使用 Chat Completions，常规端点默认发送严格 JSON Schema。DeepSeek 官方端点默认发送 `json_object`，在提示中提供输出契约和格式示例，由本地校验字段、角色及证据。连接测试向所选服务发送一条不含病例的短请求，可能产生费用。密钥通过 Fernet 加密写入 `model_settings`，网页、运行、报告和审计只读公开配置。加密主密钥位于 `outputs/.model-settings.key`，权限为 0600，也可由 `MDT_SECRET_KEY` 提供。使用同一密钥重启可恢复方案和绑定。更换服务地址，或从方案切回直接配置时，请填写该连接的密钥。
+
+### DeepSeek 三场景联调
+
+2026-11-25 核对的 OpenAI 兼容地址为 `https://api.deepseek.com`，Flash 模型名为 `deepseek-flash`。项目在此端点发送 `thinking.type=disabled`，为短结构化回复预留输出预算。以下命令只检查本机配置。密钥可通过 `DEEPSEEK_API_KEY` 进程环境变量提供，也可保存在仓库已忽略的本机 `.env` 中，此时加上 `--env-file .env`。[官方接入参数](https://api-docs.deepseek.com/zh-cn/) · [JSON Output](https://api-docs.deepseek.com/zh-cn/guides/json_mode/) · [思考模式](https://api-docs.deepseek.com/zh-cn/guides/thinking_mode/)
+
+```sh
+.venv/bin/python scripts/run_llm_benchmark.py --mode preflight --base-url https://api.deepseek.com --model deepseek-flash --api-key-env DEEPSEEK_API_KEY --output-dir outputs/experiments/g01_deepseek_flash
+```
+
+预检返回 0 表示本地参数齐备，返回 1 时在 `g01_preflight.json` 列出待补字段。确认预算后用相同参数将 `--mode preflight` 改为 `--mode smoke`，运行无病例连接测试及齐备、缺失、冲突三个合成场景。整轮最多 34 次 HTTP 请求，每次默认限制 800 个输出 token，总输出上限为 27,200 个 token；输入另按实际用量计费。报告的 `suite_metrics` 包含连接探测与重试，服务未返回的 token 用量保留为空。实际传输标记为 `provider_http`，本地注入测试标记为 `injected_transport`。[官方计费](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)
+
+开发集先导消融可使用 `--mode paired --frozen-cohort data/acrin_6668/cohort_v1 --cohort-input data/raw/external/acrin_6668_enrollment_13_42.json --split-filter dev` 加模型参数并指定单独的输出目录。该命令会执行整个所选划分的真实模型配对，规模大于三场景联调。队列冻结、原始 ZIP 复建、仅开发集评分和盲标交接的命令见样本说明。[队列复算说明](data/acrin_6668/README.md#2026-11-25-冻结的先导研究队列)
 
 模型连接只接受公开 HTTPS 目标，拒绝本机/内网地址和重定向。单次请求最多重试一次，验证失败按失败处理；未配置 LLM 时拒绝启动，不自动替换为 Mock。上游未提供 Token 用量时记录为 `null`。
 

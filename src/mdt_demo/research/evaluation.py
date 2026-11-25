@@ -409,6 +409,7 @@ def evaluate_library(
     trigger_scope: str = "all",
     annotations: dict[str, dict] | None = None,
     matrices: dict[str, dict] | None = None,
+    case_family_map: dict[str, str] | None = None,
 ) -> dict:
     """Run paired 8-arm deterministic evaluations across the selected cases and compute thesis aggregates."""
     if trigger_scope not in {"all", "latest"}:
@@ -424,7 +425,8 @@ def evaluate_library(
     families_seen: set[str] = set()
 
     for case in cases:
-        families_seen.add(case.case_id)
+        family_id = (case_family_map or {}).get(case.case_id, case.case_id)
+        families_seen.add(family_id)
         triggers = case.timeline if trigger_scope == "all" else case.timeline[-1:]
         for event in triggers:
             scenario_id = f"{case.case_id}:v{case.version}:{event.event_id}"
@@ -452,7 +454,7 @@ def evaluate_library(
             a3_m = methods_by_id["A3"]
             paired_records.append({
                 "scenario_id": scenario_id,
-                "case_family_id": case.case_id,
+                "case_family_id": family_id,
                 "b3_calls": b3_m["agent_calls"],
                 "a3_calls": a3_m["agent_calls"],
                 "b3_decision": b3_m["final_decision"],
@@ -467,7 +469,7 @@ def evaluate_library(
 
             scenarios_meta.append({
                 "scenario_id": scenario_id,
-                "case_family_id": case.case_id,
+                "case_family_id": family_id,
                 "case_id": case.case_id,
                 "case_version": case.version,
                 "case_title": case.title,
@@ -576,7 +578,7 @@ def evaluate_library(
                     if err_types:
                         error_rows.append({
                             "scenario_id": scenario_id,
-                            "case_family_id": case.case_id,
+                            "case_family_id": family_id,
                             "trigger_event_type": event.event_type,
                             "method_id": mid,
                             "error_types": err_types,
@@ -592,7 +594,7 @@ def evaluate_library(
 
                 scenario_rows.append({
                     "scenario_id": scenario_id,
-                    "case_family_id": case.case_id,
+                    "case_family_id": family_id,
                     "case_id": case.case_id,
                     "case_version": case.version,
                     "trigger_event_id": event.event_id,

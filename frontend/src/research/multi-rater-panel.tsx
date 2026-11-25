@@ -7,6 +7,7 @@ import { researchKeys } from './query-keys';
 import type { AgreementReport, BlindMaterial, MultiRaterSubmission, ReviewPanelTask, Role } from './schemas';
 import { PageLinks, pageSlice } from './workspace-controls';
 import { factKeyLabel } from './zh-dict';
+import { assignedQueue, parseBlindAssignment, rememberAssignment, restoreAssignment, type BlindAssignment } from './blind-assignment';
 
 type Decision = MultiRaterSubmission['expected_decision'];
 
@@ -182,8 +183,9 @@ function MultiRaterForm({ task, reviewer, material, existing, onChanged, onSaved
   );
 }
 
-function MultiRaterTaskPanel({ task, reviewer, onChanged, onSavedAdvance }: {
+function MultiRaterTaskPanel({ task, reviewer, expectedHash, onChanged, onSavedAdvance }: {
   task: ReviewPanelTask;
+  expectedHash?: string;
   reviewer: string;
   onChanged: () => void;
   onSavedAdvance: () => void;
@@ -198,6 +200,9 @@ function MultiRaterTaskPanel({ task, reviewer, onChanged, onSavedAdvance }: {
     return <ErrorState error={material.error || own.error} retry={() => { void material.refetch(); if (reviewer) void own.refetch(); }} />;
   }
   if (!material.data || (reviewer && own.isPending)) return <Loading />;
+  if (material.data.scenario_id !== task.scenario_id || (expectedHash && expectedHash !== material.data.input_sha256)) {
+    return <p className="notice" role="alert">当前材料与分配文件的编号或指纹不匹配，请核对研究库版本后再标注。</p>;
+  }
   return (
     <MultiRaterForm
       key={JSON.stringify([task.scenario_id, material.data.input_sha256, reviewer, own.data?.updated_at])}
@@ -339,6 +344,25 @@ export function MultiRaterPanel({ requestedScenario = '', onChanged }: { request
   const [adjudicatorId, setAdjudicatorId] = useState('adjudicator_1');
   const [selected, setSelected] = useState(requestedScenario);
   const [page, setPage] = useState(1);
+  const [assignment, setAssignment] = useState<BlindAssignment | null>(restoreAssignment);
+  const [fileError, setFileError] = useState('');
+  const [readingFile, setReadingFile] = useState(false);
+
+  async function importAssignment(file: File) {
+    setReadingFile(true);
+    setFileError('');
+    try {
+      const imported = parseBlindAssignment(await file.text(), file.name);
+      setAssignment(imported);
+      rememberAssignment(imported);
+      setSelected(imported.entries[0][0]);
+      setPage(1);
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : '无法读取任务文件。');
+    } finally {
+      setReadingFile(false);
+    }
+  }
 
   const tasksQuery = useQuery({
     queryKey: researchKeys.reviewPanelTasks(reviewer),
@@ -351,18 +375,19 @@ export function MultiRaterPanel({ requestedScenario = '', onChanged }: { request
   });
 
   useEffect(() => {
-    if (!requestedScenario || !tasksQuery.data) return;
+    if (assignment || !requestedScenario || !tasksQuery.data) return;
     const idx = tasksQuery.data.findIndex(t => t.scenario_id === requestedScenario);
     if (idx >= 0) {
       setSelected(requestedScenario);
       setPage(Math.floor(idx / 20) + 1);
     }
-  }, [requestedScenario, tasksQuery.data]);
+  }, [assignment, requestedScenario, tasksQuery.data]);
 
   if (tasksQuery.isError) return <ErrorState error={tasksQuery.error} retry={() => void tasksQuery.refetch()} />;
   if (!tasksQuery.data) return <Loading />;
 
-  const queue = tasksQuery.data;
+  const scope = assignment ? assignedQueue(tasksQuery.data, assignment) : { queue: tasksQuery.data, error: '' };
+  const queue = readingFile || fileError ? [] : scope.queue;
   const active = queue.find(t => t.scenario_id === selected) ?? queue[0];
   const { rows, page: currentPage, pages, first } = pageSlice(queue, page);
   const multiRatedCount = queue.filter(t => t.submission_count >= 2).length;
@@ -384,22 +409,38 @@ export function MultiRaterPanel({ requestedScenario = '', onChanged }: { request
           <div className="scenario-filter-bar" role="tablist" aria-label="多人盲标与仲裁阶段">
             <button type="button" className={`filter-chip ${subView === 'blind' ? 'is-active' : ''}`}
               onClick={() => setSubView('blind')}>1. 独立盲标录入</button>
-            <button type="button" className={`filter-chip ${subView === 'agreement' ? 'is-active' : ''}`}
+            <button type="button" disabled={Boolean(assignment) || readingFile || Boolean(fileError)} className={`filter-chip ${subView === 'agreement' ? 'is-active' : ''}`}
               onClick={() => setSubView('agreement')}>2. 一致性统计 (Cohen&apos;s κ)</button>
-            <button type="button" className={`filter-chip ${subView === 'adjudicate' ? 'is-active' : ''}`}
+            <button type="button" disabled={Boolean(assignment) || readingFile || Boolean(fileError)} className={`filter-chip ${subView === 'adjudicate' ? 'is-active' : ''}`}
               onClick={() => setSubView('adjudicate')}>3. 争议仲裁定稿</button>
           </div>
-          <div className="button-group">
+          {!assignment && !readingFile && !fileError && <div className="button-group">
             <a className="button secondary" href="/api/v2/review-panel/export/annotations.jsonl">
               <Icon name="download" size={14} />导出 annotations.jsonl
             </a>
             <a className="button secondary" href="/api/v2/review-panel/export/adjudication.jsonl">
               <Icon name="download" size={14} />导出 adjudication.jsonl
             </a>
-          </div>
+          </div>}
         </div>
       </div>
 
+      {subView === 'blind' && (
+        <div className="panel panel-compact research-form">
+          <label>载入独立盲标任务（JSONL）
+            <input type="file" accept=".jsonl" disabled={readingFile} onChange={e => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void importAssignment(file);
+            }} />
+          </label>
+          {assignment && <p>{assignment.name} · 已分配 {assignment.entries.length} 个截点</p>}
+          {(fileError || scope.error) && <p role="alert">{fileError || scope.error}</p>}
+          {(assignment || fileError) && <button type="button" className="text-link" disabled={readingFile} onClick={() => {
+            setAssignment(null); rememberAssignment(null); setFileError(''); setSelected(''); setPage(1);
+          }}>退出任务文件，查看全库</button>}
+        </div>
+      )}
       {subView === 'blind' && active && (
         <div className="blind-annotation-layout">
           <aside className="panel blind-scenario-list" aria-label="多人盲标任务队列">
@@ -458,6 +499,7 @@ export function MultiRaterPanel({ requestedScenario = '', onChanged }: { request
           <MultiRaterTaskPanel
             key={active.scenario_id}
             task={active}
+            expectedHash={assignment?.entries.find(([id]) => id === active.scenario_id)?.[1]}
             reviewer={reviewer}
             onChanged={() => { void tasksQuery.refetch(); onChanged(); }}
             onSavedAdvance={advanceNext}

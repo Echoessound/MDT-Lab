@@ -22,6 +22,7 @@ from ..api_schemas import APIError
 from .schemas import ResearchCase
 
 MAPPING_VERSION = "dataset-mapping-v1"
+MAPPING_VERSIONS = {"tcga_cbioportal_tsv": "tcga-clinical-mapping-v2"}
 MAX_UPLOAD_BYTES = 20 * 1024 * 1024
 CATALOG = {
     "synthea_csv": {
@@ -160,7 +161,7 @@ def _provenance(source, digest):
     return {"source_name": item["source_name"], "source_url": item["source_url"],
             "dataset_version": item["dataset_version"], "license": item["license"],
             "synthetic": item["synthetic"], "artifact_sha256": digest,
-            "artifact_name": item["filename"], "mapping_version": MAPPING_VERSION,
+            "artifact_name": item["filename"], "mapping_version": MAPPING_VERSIONS.get(source, MAPPING_VERSION),
             "citation": item["citation"]}
 
 
@@ -418,13 +419,14 @@ TCGA_UNPLACED_GROUPS = {
 
 def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
     try:
-        text = raw.decode("utf-8-sig")
-        lines = [line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]
-        if len(lines) < 2:
-            raise ValueError("缺少有效表头或数据行")
-        delimiter = "\t" if "\t" in lines[0] else ","
-        reader = csv.DictReader(io.StringIO("\n".join(lines), newline=""), delimiter=delimiter)
-        names = reader.fieldnames or []
+        stream = io.StringIO(raw.decode("utf-8-sig"), newline="")
+        for header_number, header_line in enumerate(stream, 1):
+            if header_line.strip() and not header_line.lstrip().startswith("#"):
+                break
+        else:
+            raise ValueError("缺少有效表头")
+        delimiter = "\t" if "\t" in header_line else ","
+        names = next(csv.reader([header_line], delimiter=delimiter))
         normalized = [name.strip() for name in names]
         if len(normalized) != len(set(normalized)) or len(names) > 150:
             raise ValueError("列名重复或列数超出限制")
@@ -443,13 +445,24 @@ def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
             raise ValueError("缺少必要列：需包含 PATIENT_ID、AGE（或 Diagnosis Age）、SEX（或 Gender）")
 
         rows = []
-        for idx, row in enumerate(reader, 2):
-            if len(rows) >= 10_000 or None in row:
+        reader = csv.reader(stream, delimiter=delimiter)
+        while True:
+            # Keep physical line numbers in the original artifact, including
+            # cBioPortal's description rows and quoted multiline values.
+            source_line = header_number + reader.line_num + 1
+            values = next(reader, None)
+            if values is None:
+                break
+            if not values or (len(values) == 1 and not values[0].strip()) or values[0].lstrip().startswith("#"):
+                continue
+            if len(rows) >= 10_000 or len(values) > len(names):
                 raise ValueError("行数超限或存在列数不一致的记录")
-            record = {key.strip(): (value or "").strip() for key, value in row.items()}
+            record = dict(zip(normalized, [value.strip() for value in values] + [""] * (len(names) - len(values))))
             if any(len(v) > 2000 for v in record.values()):
                 raise ValueError("单个字段超过2000字符")
-            rows.append({"row": idx, "data": record, "columns": dict(zip(normalized, names))})
+            rows.append({"row": source_line, "data": record, "columns": dict(zip(normalized, names))})
+        if not rows:
+            raise ValueError("缺少有效数据行")
     except (UnicodeError, csv.Error, ValueError) as exc:
         raise APIError(422, "INVALID_DATASET_CSV", f"TCGA / cBioPortal 表格校验失败：{exc}") from None
 
@@ -497,18 +510,17 @@ def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
             events, unplaced = [], []
             diag_facts = {"source_subject_id": pid}
             diag_fields = {"source_subject_id": pid_col}
-            if hist_col and row.get(hist_col, "").lower() not in MISSING:
-                diag_facts["disease_label"] = row[hist_col]
-                diag_fields["disease_label"] = hist_col
             ev_diag = _event("tcga_cbioportal_tsv", record, "clinical_patient.tsv", base_date, "diagnosis",
                              "TCGA/cBioPortal 初诊基线登记", diag_facts, diag_fields, base_orig_ts)
             ev_diag["time_note"] = base_time_note
             events.append(ev_diag)
 
             # Optional dated pathology record
+            has_dated_histology = False
             if path_date_col and row.get(path_date_col, "").lower() not in MISSING:
                 path_dt = _date(row[path_date_col])
                 if path_dt and hist_col and row.get(hist_col, "").lower() not in MISSING:
+                    has_dated_histology = True
                     events.append(_event("tcga_cbioportal_tsv", record, "clinical_patient.tsv", path_dt, "pathology",
                                          "组织病理学诊断记录",
                                          {"histology": row[hist_col], "source_subject_id": pid},
@@ -535,6 +547,8 @@ def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
             for grp_key, (grp_title, mapping) in TCGA_UNPLACED_GROUPS.items():
                 facts, fields = {}, {}
                 for field_key, aliases in mapping.items():
+                    if field_key == "histology" and has_dated_histology:
+                        continue
                     col = find_col(aliases)
                     if not col or col not in row:
                         continue
@@ -553,7 +567,7 @@ def _tcga_cbioportal(raw, digest, max_cases, warnings, rejected, table_counts):
                         "source_fields": fields,
                     })
 
-            disease_title = row[hist_col] if (hist_col and row.get(hist_col, "").lower() not in MISSING) else "TCGA/cBioPortal 肺癌公开队列"
+            disease_title = "TCGA/cBioPortal 肺癌公开队列"
             sex_zh = {"male": "男性", "female": "女性"}.get(sex, "患者")
             clinical_title = f"{age_val}岁{sex_zh} · {disease_title}"[:120]
             cases.append(_case(case_id, clinical_title, {"age": age_val, "sex": sex}, events, provenance, [
@@ -609,10 +623,11 @@ def prepare_import(source: str, raw: bytes, max_cases: int = 10) -> PreparedImpo
         "research_json": _research_json,
     }[source]
     cases = adapter(raw, digest, max_cases, warnings, rejected, table_counts)
-    batch_id = "imp_" + _hash(f"{source}:{digest}:{max_cases}:{MAPPING_VERSION}".encode())[:24]
+    mapping_version = MAPPING_VERSIONS.get(source, MAPPING_VERSION)
+    batch_id = "imp_" + _hash(f"{source}:{digest}:{max_cases}:{mapping_version}".encode())[:24]
     summary = {"batch_id": batch_id, "source": source, "source_name": CATALOG[source]["name"],
         "artifact_sha256": digest, "artifact_name": CATALOG[source]["filename"], "byte_count": len(raw),
-        "mapping_version": MAPPING_VERSION, "requested_limit": max_cases, "case_count": len(cases),
+        "mapping_version": mapping_version, "requested_limit": max_cases, "case_count": len(cases),
         "event_count": sum(len(case["timeline"]) for case in cases),
         "unplaced_count": sum(len(case["unplaced_records"]) for case in cases),
         "table_counts": table_counts, "warnings": [{"message": message, "count": count} for message, count in warnings.items()],

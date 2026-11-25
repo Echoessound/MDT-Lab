@@ -13,8 +13,8 @@ import re
 
 from .schemas import ClinicalEvent, EvidenceRef, ResearchCase
 
-AUDIT_VERSION = "temporal-boundary-audit-v2"
-ISO_DATE_RE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+AUDIT_VERSION = "temporal-boundary-audit-v3"
+ISO_DATE_RE = re.compile(r"(?<!\d)(\d{4}-\d{2}-\d{2})(?!\d)")
 
 
 def _expected_references(case: ResearchCase, events: dict[str, dict]) -> dict[str, dict]:
@@ -53,6 +53,8 @@ def _same_value(left: object, right: object) -> bool:
         return False
     if isinstance(left, dict):
         return left.keys() == right.keys() and all(_same_value(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(_same_value(a, b) for a, b in zip(left, right))
     return left == right
 
 
@@ -261,6 +263,22 @@ def _audit(original_case: ResearchCase, trigger_event_id: str, snapshot, report:
 
     if report is None:
         checks = [check for check in checks if check["code"] not in {"evidence_registry_boundary", "opinion_citation_boundary"}]
+        # The manifest hashes the entire frozen case, including the source
+        # declarations used to construct citations. Compare its static fields
+        # for identity only; clinical availability is a separate question.
+        static_fields = original_case.model_dump(mode="json", exclude={
+            "timeline", "unplaced_records", "case_id", "version", "current_question",
+        })
+        issues = [
+            _issue("snapshot_metadata_integrity", f"case_snapshot.{key}", key, "冻结快照的静态字段与原病例版本不一致。")
+            for key, value in static_fields.items() if not _same_value(snapshot.get(key), value)
+        ]
+        leaked.extend(issues)
+        checks.append({
+            "code": "snapshot_metadata_integrity",
+            "status": "failed" if issues else "passed",
+            "message": f"有 {len(issues)} 个静态字段与原病例版本不一致。" if issues else "静态字段及来源声明与原病例版本一致。",
+        })
 
     return {
         "audit_version": AUDIT_VERSION,

@@ -1,0 +1,379 @@
+{
+  "dataset": {
+    "sources": [
+      {
+        "artifact_name": "research_cases.json",
+        "artifact_sha256": "c2118d77c87797808953877aa4b8612e73ca2cab0ba56a2d4fa73674b1cd9539",
+        "batch_id": "imp_a991817969553f69dfcd6272",
+        "byte_count": 396655,
+        "case_count": 30,
+        "cases": [
+          {
+            "case_id": "ACRIN-6668-020",
+            "case_kind": "public_research",
+            "event_count": 9,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-021",
+            "case_kind": "public_research",
+            "event_count": 17,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-022",
+            "case_kind": "public_research",
+            "event_count": 22,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-026",
+            "case_kind": "public_research",
+            "event_count": 22,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-027",
+            "case_kind": "public_research",
+            "event_count": 14,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-028",
+            "case_kind": "public_research",
+            "event_count": 22,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-029",
+            "case_kind": "public_research",
+            "event_count": 14,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-030",
+            "case_kind": "public_research",
+            "event_count": 8,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-031",
+            "case_kind": "public_research",
+            "event_count": 12,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-032",
+            "case_kind": "public_research",
+            "event_count": 17,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-034",
+            "case_kind": "public_research",
+            "event_count": 22,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-035",
+            "case_kind": "public_research",
+            "event_count": 22,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-036",
+            "case_kind": "public_research",
+            "event_count": 7,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-037",
+            "case_kind": "public_research",
+            "event_count": 19,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-038",
+            "case_kind": "public_research",
+            "event_count": 19,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-040",
+            "case_kind": "public_research",
+            "event_count": 12,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-042",
+            "case_kind": "public_research",
+            "event_count": 15,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-045",
+            "case_kind": "public_research",
+            "event_count": 4,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-046",
+            "case_kind": "public_research",
+            "event_count": 11,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-047",
+            "case_kind": "public_research",
+            "event_count": 8,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-048",
+            "case_kind": "public_research",
+            "event_count": 6,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-049",
+            "case_kind": "public_research",
+            "event_count": 15,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-050",
+            "case_kind": "public_research",
+            "event_count": 17,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-051",
+            "case_kind": "public_research",
+            "event_count": 12,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-052",
+            "case_kind": "public_research",
+            "event_count": 12,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-055",
+            "case_kind": "public_research",
+            "event_count": 18,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-056",
+            "case_kind": "public_research",
+            "event_count": 11,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-057",
+            "case_kind": "public_research",
+            "event_count": 8,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-059",
+            "case_kind": "public_research",
+            "event_count": 7,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          },
+          {
+            "case_id": "ACRIN-6668-060",
+            "case_kind": "public_research",
+            "event_count": 1,
+            "title": "非小细胞肺癌 · 放化疗前后 PET 研究",
+            "unplaced_count": 0
+          }
+        ],
+        "event_count": 403,
+        "mapping_version": "dataset-mapping-v1",
+        "rejected": [],
+        "rejected_count": 0,
+        "requested_limit": 30,
+        "source": "research_json",
+        "source_name": "研究病例与相关资料",
+        "table_counts": {
+          "cases": 30
+        },
+        "unplaced_count": 0,
+        "warnings": []
+      }
+    ],
+    "total_loaded_cases": 30
+  },
+  "dev_scenario_count": 122,
+  "family_count": 30,
+  "manifest_version": "dataset-manifest-v2",
+  "provenance_catalog": [
+    {
+      "artifact_name": "research_cases.json",
+      "artifact_sha256": "c2118d77c87797808953877aa4b8612e73ca2cab0ba56a2d4fa73674b1cd9539",
+      "citation": "Kinahan P, Muzi M, Bialecki B, Herman B, Coombs L. Data from the ACRIN 6668 Trial NSCLC-FDG-PET (Version 2). TCIA, 2019. https://doi.org/10.7937/tcia.2019.30ilqfcl",
+      "dataset_version": "ACRIN 6668 v2 / clinical file set 1",
+      "license": "CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/)",
+      "mapping_version": "dataset-mapping-v1",
+      "source_name": "tcia_acrin_6668",
+      "source_url": "https://www.cancerimagingarchive.net/collection/acrin-nsclc-fdg-pet/",
+      "synthetic": false
+    }
+  ],
+  "scenario_count": 403,
+  "scenario_manifest_sha256": "f6c0d0b3990ea6577431ea100b10feb4c7cc5634f97798fd0537935aaededce2",
+  "split": {
+    "case_to_family": {
+      "ACRIN-6668-020": "ACRIN-6668-020",
+      "ACRIN-6668-021": "ACRIN-6668-021",
+      "ACRIN-6668-022": "ACRIN-6668-022",
+      "ACRIN-6668-026": "ACRIN-6668-026",
+      "ACRIN-6668-027": "ACRIN-6668-027",
+      "ACRIN-6668-028": "ACRIN-6668-028",
+      "ACRIN-6668-029": "ACRIN-6668-029",
+      "ACRIN-6668-030": "ACRIN-6668-030",
+      "ACRIN-6668-031": "ACRIN-6668-031",
+      "ACRIN-6668-032": "ACRIN-6668-032",
+      "ACRIN-6668-034": "ACRIN-6668-034",
+      "ACRIN-6668-035": "ACRIN-6668-035",
+      "ACRIN-6668-036": "ACRIN-6668-036",
+      "ACRIN-6668-037": "ACRIN-6668-037",
+      "ACRIN-6668-038": "ACRIN-6668-038",
+      "ACRIN-6668-040": "ACRIN-6668-040",
+      "ACRIN-6668-042": "ACRIN-6668-042",
+      "ACRIN-6668-045": "ACRIN-6668-045",
+      "ACRIN-6668-046": "ACRIN-6668-046",
+      "ACRIN-6668-047": "ACRIN-6668-047",
+      "ACRIN-6668-048": "ACRIN-6668-048",
+      "ACRIN-6668-049": "ACRIN-6668-049",
+      "ACRIN-6668-050": "ACRIN-6668-050",
+      "ACRIN-6668-051": "ACRIN-6668-051",
+      "ACRIN-6668-052": "ACRIN-6668-052",
+      "ACRIN-6668-055": "ACRIN-6668-055",
+      "ACRIN-6668-056": "ACRIN-6668-056",
+      "ACRIN-6668-057": "ACRIN-6668-057",
+      "ACRIN-6668-059": "ACRIN-6668-059",
+      "ACRIN-6668-060": "ACRIN-6668-060"
+    },
+    "cross_split_family_overlap": 0,
+    "dev_families": [
+      "ACRIN-6668-022",
+      "ACRIN-6668-028",
+      "ACRIN-6668-029",
+      "ACRIN-6668-031",
+      "ACRIN-6668-036",
+      "ACRIN-6668-049",
+      "ACRIN-6668-051",
+      "ACRIN-6668-056",
+      "ACRIN-6668-059"
+    ],
+    "dev_family_count": 9,
+    "dev_ratio": 0.3,
+    "family_to_split": {
+      "ACRIN-6668-020": "test",
+      "ACRIN-6668-021": "test",
+      "ACRIN-6668-022": "dev",
+      "ACRIN-6668-026": "test",
+      "ACRIN-6668-027": "test",
+      "ACRIN-6668-028": "dev",
+      "ACRIN-6668-029": "dev",
+      "ACRIN-6668-030": "test",
+      "ACRIN-6668-031": "dev",
+      "ACRIN-6668-032": "test",
+      "ACRIN-6668-034": "test",
+      "ACRIN-6668-035": "test",
+      "ACRIN-6668-036": "dev",
+      "ACRIN-6668-037": "test",
+      "ACRIN-6668-038": "test",
+      "ACRIN-6668-040": "test",
+      "ACRIN-6668-042": "test",
+      "ACRIN-6668-045": "test",
+      "ACRIN-6668-046": "test",
+      "ACRIN-6668-047": "test",
+      "ACRIN-6668-048": "test",
+      "ACRIN-6668-049": "dev",
+      "ACRIN-6668-050": "test",
+      "ACRIN-6668-051": "dev",
+      "ACRIN-6668-052": "test",
+      "ACRIN-6668-055": "test",
+      "ACRIN-6668-056": "dev",
+      "ACRIN-6668-057": "test",
+      "ACRIN-6668-059": "dev",
+      "ACRIN-6668-060": "test"
+    },
+    "split_protocol": "family-stratified-v2",
+    "split_seed": 2026,
+    "strata_summary": {
+      "public_research:tcia_acrin_6668": {
+        "dev": 9,
+        "test": 21,
+        "total": 30
+      }
+    },
+    "test_families": [
+      "ACRIN-6668-020",
+      "ACRIN-6668-021",
+      "ACRIN-6668-026",
+      "ACRIN-6668-027",
+      "ACRIN-6668-030",
+      "ACRIN-6668-032",
+      "ACRIN-6668-034",
+      "ACRIN-6668-035",
+      "ACRIN-6668-037",
+      "ACRIN-6668-038",
+      "ACRIN-6668-040",
+      "ACRIN-6668-042",
+      "ACRIN-6668-045",
+      "ACRIN-6668-046",
+      "ACRIN-6668-047",
+      "ACRIN-6668-048",
+      "ACRIN-6668-050",
+      "ACRIN-6668-052",
+      "ACRIN-6668-055",
+      "ACRIN-6668-057",
+      "ACRIN-6668-060"
+    ],
+    "test_family_count": 21,
+    "total_families": 30
+  },
+  "temporal_audit_summary": {
+    "audit_version": "temporal-boundary-audit-v3",
+    "audited_scenarios": 403,
+    "failed_scenarios": 0,
+    "passed_scenarios": 403,
+    "warning_scenarios": 140
+  },
+  "test_scenario_count": 281,
+  "trigger_scope": "all"
+}
