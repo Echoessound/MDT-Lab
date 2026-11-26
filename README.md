@@ -167,7 +167,7 @@ V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只�
 
 预检返回 0 表示本地参数齐备，返回 1 时在 `g01_preflight.json` 列出待补字段。确认预算后用相同参数将 `--mode preflight` 改为 `--mode smoke`，运行无病例连接测试及齐备、缺失、冲突三个合成场景。整轮最多 34 次 HTTP 请求，每次默认限制 800 个输出 token，总输出上限为 27,200 个 token；输入另按实际用量计费。报告的 `suite_metrics`（以及 `connection_test.metrics`、各场景 `metrics`）包含连接测试、三个场景与重试请求：当任意 HTTP 尝试未返回对应字段时，总量 `prompt_tokens` / `completion_tokens` 仍保留为空（`null`），同时通过 `known_prompt_tokens`、`known_completion_tokens` 与 `prompt_usage_requests`、`completion_usage_requests` 分别保留已返回请求的输入/输出 token 小计和覆盖请求数。实际传输标记为 `provider_http`，本地注入测试标记为 `injected_transport`。[官方计费](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)
 
-开发集先导消融可使用 `--mode paired --frozen-cohort data/acrin_6668/cohort_v1 --cohort-input data/raw/external/acrin_6668_enrollment_13_42.json --split-filter dev` 加模型参数并指定单独的输出目录。该命令会执行整个所选划分的真实模型配对，规模大于三场景联调。队列冻结、原始 ZIP 复建、仅开发集评分和盲标交接的命令见样本说明。[队列复算说明](data/acrin_6668/README.md#2026-11-25-冻结的先导研究队列)
+开发集先导消融可使用 `--mode paired --frozen-cohort data/acrin_6668/cohort_v1 --cohort-input data/raw/external/acrin_6668_enrollment_13_42.json --split-filter dev` 加模型参数并指定单独的输出目录。该命令会执行整个所选划分的真实模型配对，规模大于三场景联调；`llm_paired_results.json` 及各截点矩阵的 `suite_metrics` 按实际独立执行轨迹（不重复计入共享轨迹的 B2/B3）汇总输入/输出已知 Token 小计和覆盖请求数，存在缺失时总量仍保留 `null`。队列冻结、原始 ZIP 复建、仅开发集评分和盲标交接的命令见样本说明。[队列复算说明](data/acrin_6668/README.md#2026-11-25-冻结的先导研究队列)
 
 模型连接只接受公开 HTTPS 目标，拒绝本机/内网地址和重定向。单次请求最多重试一次，验证失败按失败处理；未配置 LLM 时拒绝启动，不自动替换为 Mock。上游未提供 Token 用量时记录为 `null`。
 

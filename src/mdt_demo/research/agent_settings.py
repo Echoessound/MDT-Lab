@@ -72,6 +72,13 @@ class RunLLMGroup:
             "completion_tokens": sum(item["completion_tokens"] for item in used) if used and all(item["completion_tokens"] is not None for item in used) else None,
         }
 
+    def usage_summary(self) -> dict:
+        """Aggregate sanitized known token subtotals and covered requests across used specialists."""
+        from .provider import KNOWN_USAGE_KEYS
+
+        used = [generator.usage_summary() for generator in self._generators.values() if generator.metrics["llm_calls"]]
+        return {key: sum(item[key] for item in used) for key in KNOWN_USAGE_KEYS}
+
 
 class SettingsService:
     def __init__(self, *, transport=None, resolver=resolve_addresses,

@@ -19,7 +19,14 @@ from .engine import (
     route_case,
     source_conflicts,
 )
-from .provider import RunLLM, SYSTEM_PROMPT, default_response_format, is_deepseek_endpoint, prompt_version
+from .provider import (
+    KNOWN_USAGE_KEYS,
+    RunLLM,
+    SYSTEM_PROMPT,
+    default_response_format,
+    is_deepseek_endpoint,
+    prompt_version,
+)
 from .provider_config import LLMConfigInput, ProviderError, resolve_addresses
 from .schemas import AgentOutput, ModelInfo, ResearchCase, RunRequest
 from .seeds import seed_cases
@@ -30,6 +37,34 @@ G01_SMOKE_SCENARIOS: tuple[tuple[str, str, str], ...] = (
     ("LUNG-SYN-001", "E002", "关键资料缺失路径（肿瘤+影像）"),
     ("LUNG-SYN-003", "E004", "同日来源矛盾暂缓路径（全四科）"),
 )
+
+
+def aggregate_usage_meters(meters) -> dict:
+    """Aggregate call, retry, strict unknown totals, and known token subtotals across meters."""
+    rows = list(meters)
+    if not rows:
+        return {
+            "llm_calls": 0,
+            "retry_count": 0,
+            "prompt_tokens": None,
+            "completion_tokens": None,
+            **{key: 0 for key in KNOWN_USAGE_KEYS},
+        }
+    return {
+        "llm_calls": sum(row["llm_calls"] for row in rows),
+        "retry_count": sum(row["retry_count"] for row in rows),
+        "prompt_tokens": (
+            sum(row["prompt_tokens"] for row in rows)
+            if all(row["prompt_tokens"] is not None for row in rows)
+            else None
+        ),
+        "completion_tokens": (
+            sum(row["completion_tokens"] for row in rows)
+            if all(row["completion_tokens"] is not None for row in rows)
+            else None
+        ),
+        **{key: sum(row[key] for row in rows) for key in KNOWN_USAGE_KEYS},
+    }
 
 
 def g01_request_plan() -> dict:
@@ -286,10 +321,6 @@ def run_g01_smoke_suite(
         "final_valid_calls": 0,
         "final_failed_calls": 0,
     }
-    total_prompt = 0
-    total_completion = 0
-    usage_complete = True
-
     for case_id, trigger_id, description in G01_SMOKE_SCENARIOS:
         if sleep_seconds > 0 and runs:
             time.sleep(sleep_seconds)
@@ -305,11 +336,6 @@ def run_g01_smoke_suite(
         for k in agg_telemetry:
             agg_telemetry[k] += telemetry[k]
         m = report["metrics"]
-        if m["prompt_tokens"] is None or m["completion_tokens"] is None:
-            usage_complete = False
-        else:
-            total_prompt += m["prompt_tokens"]
-            total_completion += m["completion_tokens"]
 
         runs.append({
             "scenario_id": f"{case_id}:v1:{trigger_id}",
@@ -336,28 +362,21 @@ def run_g01_smoke_suite(
     all_temporal_ok = all(item["temporal_audit"]["passed"] for item in runs)
     calls = agg_telemetry["first_attempt_calls"]
     cites = agg_telemetry["first_attempt_candidate_citations"]
-    scenario_retries = sum(item["metrics"]["retry_count"] for item in runs)
+    scenario_meters = [item["metrics"] for item in runs]
+    prompt_complete = bool(scenario_meters) and all(m["prompt_tokens"] is not None for m in scenario_meters)
+    completion_complete = bool(scenario_meters) and all(m["completion_tokens"] is not None for m in scenario_meters)
+    usage_complete = prompt_complete and completion_complete
+    total_prompt = sum(m["prompt_tokens"] for m in scenario_meters) if prompt_complete else None
+    total_completion = sum(m["completion_tokens"] for m in scenario_meters) if completion_complete else None
+    scenario_retries = sum(m["retry_count"] for m in scenario_meters)
     # Compatibility totals retain their original scenario-only denominator.
     # Accounting for a paid run must also include the initial connectivity probe.
-    meters = [connection["metrics"], *(item["metrics"] for item in runs)]
-    suite_usage = {
-        key: sum(meter[key] for meter in meters) if all(meter[key] is not None for meter in meters) else None
-        for key in ("llm_calls", "retry_count", "prompt_tokens", "completion_tokens")
-    }
-    suite_known_usage = {
-        key: sum(meter[key] for meter in meters)
-        for key in (
-            "known_prompt_tokens",
-            "known_completion_tokens",
-            "prompt_usage_requests",
-            "completion_usage_requests",
-        )
-    }
+    suite_usage = aggregate_usage_meters([connection["metrics"], *scenario_meters])
 
     return {
         "protocol_version": "g01-llm-smoke-v1",
         "execution_source": "provider_http" if transport is None else "injected_transport",
-        "suite_metrics": {**suite_usage, **suite_known_usage, "wall_clock_ms": round((time.monotonic() - suite_started) * 1000, 2)},
+        "suite_metrics": {**suite_usage, "wall_clock_ms": round((time.monotonic() - suite_started) * 1000, 2)},
         "model_config": sanitized,
         "connection_test": connection,
         "compatibility": {
@@ -365,8 +384,8 @@ def run_g01_smoke_suite(
             "all_scenarios_completed": all_completed,
             "all_temporal_audits_passed": all_temporal_ok,
             "usage_reported_complete": usage_complete,
-            "total_prompt_tokens": total_prompt if usage_complete else None,
-            "total_completion_tokens": total_completion if usage_complete else None,
+            "total_prompt_tokens": total_prompt,
+            "total_completion_tokens": total_completion,
             "scenario_retries": scenario_retries,
             "retry_recovery_rate": round(agg_telemetry["retry_recovered"] / scenario_retries, 4) if scenario_retries else None,
             "first_attempt_valid_rate": round(agg_telemetry["first_attempt_valid"] / calls, 4) if calls else None,
@@ -385,6 +404,7 @@ def evaluate_llm_ablation_matrix(
     sleep_seconds: float = 0.0,
 ) -> dict:
     """Run paired B0–B3 and A1/A3/A4 ablations over a frozen cutoff using real/injected LLM calls."""
+    matrix_started = time.monotonic()
     frozen = freeze_context(case, trigger_event_id)
 
     def pause():
@@ -427,6 +447,7 @@ def evaluate_llm_ablation_matrix(
     ]
     fixed_calls = a3["agent_calls"]
     routed_calls = shared["agent_calls"]
+    unique_trajectories = (b0, b1, shared, a1, a3, a4)
     return {
         "protocol_version": "llm-matrix-v1",
         "execution_mode": "llm",
@@ -434,6 +455,10 @@ def evaluate_llm_ablation_matrix(
         "case_version": case.version,
         "trigger_event_id": trigger_event_id,
         "visible_events": len(frozen.timeline),
+        "suite_metrics": {
+            **aggregate_usage_meters(unique_trajectories),
+            "wall_clock_ms": round((time.monotonic() - matrix_started) * 1000, 2),
+        },
         "methods": methods,
         "fixed_total_calls": fixed_calls,
         "routed_total_calls": routed_calls,

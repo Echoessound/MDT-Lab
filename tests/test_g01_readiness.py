@@ -6,9 +6,15 @@ import sys
 import httpx
 import pytest
 
-from mdt_demo.research.llm_benchmark import g01_request_plan, run_g01_smoke_suite
+from mdt_demo.research.llm_benchmark import (
+    aggregate_usage_meters,
+    evaluate_llm_ablation_matrix,
+    g01_request_plan,
+    run_g01_smoke_suite,
+)
 from mdt_demo.research.cohort_freeze import manifest_files, prepare_cohort, publish_cohort
 from mdt_demo.research.cohort_split import scenario_manifest_lines
+from mdt_demo.research.provider import RunLLM
 from mdt_demo.research.seeds import seed_cases
 from mdt_demo.research.provider_config import LLMConfigInput
 from scripts import run_llm_benchmark
@@ -248,6 +254,155 @@ def test_cli_smoke_writes_known_usage_subtotals_without_secrets(monkeypatch, tmp
     assert suite["prompt_usage_requests"] == suite["llm_calls"] - 1
     assert suite["completion_usage_requests"] == suite["llm_calls"] - 1
     assert f"已知Token(输入/输出)={suite['known_prompt_tokens']}({suite['prompt_usage_requests']}/{suite['llm_calls']})/{suite['known_completion_tokens']}({suite['completion_usage_requests']}/{suite['llm_calls']})" in stdout
+
+
+def test_smoke_one_sided_missing_usage_keeps_complete_side_in_compatibility_and_suite():
+    upstream = _smart_llm_transport()
+    sent = []
+
+    def handle(request):
+        sent.append(request)
+        result = upstream.handle_request(request)
+        if len(sent) == 2:
+            body = result.json()
+            del body["usage"]["completion_tokens"]
+            return httpx.Response(200, json=body)
+        return result
+
+    report = run_g01_smoke_suite(
+        _make_llm_config(), transport=httpx.MockTransport(handle), resolver=_public_resolver
+    )
+    compat = report["compatibility"]
+    suite = report["suite_metrics"]
+    assert compat["usage_reported_complete"] is False
+    assert compat["total_prompt_tokens"] is not None
+    assert compat["total_completion_tokens"] is None
+    assert suite["prompt_tokens"] == compat["total_prompt_tokens"] + 12 == suite["known_prompt_tokens"]
+    assert suite["completion_tokens"] is None
+    assert suite["prompt_usage_requests"] == suite["llm_calls"]
+    assert suite["completion_usage_requests"] == suite["llm_calls"] - 1
+
+
+def test_smoke_retains_known_usage_when_connection_test_and_scenario_fail():
+    upstream = _smart_llm_transport()
+    sent = []
+
+    def handle(request):
+        sent.append(request)
+        idx = len(sent)
+        if idx == 1:
+            return httpx.Response(200, json={
+                "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({"ok": False})}}],
+                "usage": {"prompt_tokens": 9, "completion_tokens": 3},
+            })
+        if idx == 2:
+            return httpx.Response(503, text="probe-503-secret")
+        if idx == 4:
+            body = upstream.handle_request(request).json()
+            msg = json.loads(body["choices"][0]["message"]["content"])
+            msg["agent_id"] = "surgery"
+            body["choices"][0]["message"]["content"] = json.dumps(msg, ensure_ascii=False)
+            body["usage"] = {"prompt_tokens": 80, "completion_tokens": 25}
+            return httpx.Response(200, json=body)
+        if idx == 5:
+            raise httpx.ReadTimeout("scenario-timeout-secret", request=request)
+        return upstream.handle_request(request)
+
+    report = run_g01_smoke_suite(
+        _make_llm_config(), transport=httpx.MockTransport(handle), resolver=_public_resolver
+    )
+    probe = report["connection_test"]
+    assert probe["ok"] is False
+    assert probe["error_code"] == "LLM_PROVIDER_ERROR"
+    assert probe["metrics"] == {
+        "llm_calls": 2,
+        "retry_count": 1,
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "known_prompt_tokens": 9,
+        "known_completion_tokens": 3,
+        "prompt_usage_requests": 1,
+        "completion_usage_requests": 1,
+    }
+    assert report["scenarios"][0]["status"] == "incomplete"
+    suite = report["suite_metrics"]
+    meters = [probe["metrics"], *(row["metrics"] for row in report["scenarios"])]
+    assert suite["prompt_tokens"] is None and suite["completion_tokens"] is None
+    assert suite["llm_calls"] == len(sent)
+    for key in ("known_prompt_tokens", "known_completion_tokens", "prompt_usage_requests", "completion_usage_requests"):
+        assert suite[key] == sum(meter[key] for meter in meters)
+    serialized = json.dumps(report, ensure_ascii=False)
+    assert "probe-503-secret" not in serialized and "scenario-timeout-secret" not in serialized
+
+
+def test_paired_matrix_and_cli_aggregate_known_usage_without_double_counting_b2_b3(monkeypatch, tmp_path, capsys):
+    upstream = _smart_llm_transport()
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        result = upstream.handle_request(request)
+        if len(calls) == 2:
+            body = result.json()
+            del body["usage"]
+            return httpx.Response(200, json=body)
+        return result
+
+    config = _make_llm_config()
+    matrix = evaluate_llm_ablation_matrix(
+        seed_cases()[0],
+        "E002",
+        lambda: RunLLM(config, transport=httpx.MockTransport(handle), resolver=_public_resolver),
+    )
+    suite = matrix["suite_metrics"]
+    methods = {row["method_id"]: row for row in matrix["methods"]}
+    unique_rows = [methods[mid] for mid in ("B0", "B1", "B3", "A1", "A3", "A4")]
+    expected = aggregate_usage_meters(unique_rows)
+    for key, value in expected.items():
+        assert suite[key] == value
+    assert suite["llm_calls"] == len(calls)
+    assert suite["prompt_tokens"] is None and suite["completion_tokens"] is None
+    assert suite["prompt_usage_requests"] == len(calls) - 1
+    assert suite["completion_usage_requests"] == len(calls) - 1
+
+    cli_calls = []
+
+    def cli_handle(request):
+        cli_calls.append(request)
+        result = upstream.handle_request(request)
+        if len(cli_calls) == 1:
+            body = result.json()
+            del body["usage"]
+            return httpx.Response(200, json=body)
+        return result
+
+    monkeypatch.setattr(
+        run_llm_benchmark,
+        "RunLLM",
+        lambda cfg, **kwargs: RunLLM(
+            cfg,
+            transport=httpx.MockTransport(cli_handle),
+            resolver=_public_resolver,
+            response_format_mode=kwargs.get("response_format_mode"),
+        ),
+    )
+    monkeypatch.setenv("MDT_LLM_API_KEY", "paired-fixture-secret")
+    monkeypatch.setattr(sys, "argv", [
+        "benchmark", "--mode", "paired", "--source", "seed", "--max-cases", "1", "--triggers", "latest",
+        "--base-url", "https://example.com/v1", "--model", "example",
+        "--sleep-seconds", "0", "--output-dir", str(tmp_path),
+    ])
+    assert main() == 0
+    stdout = capsys.readouterr().out
+    report_text = (tmp_path / "llm_paired_results.json").read_text(encoding="utf-8")
+    assert "paired-fixture-secret" not in stdout and "paired-fixture-secret" not in report_text
+    paired_report = json.loads(report_text)
+    cli_suite = paired_report["suite_metrics"]
+    assert cli_suite["llm_calls"] == len(cli_calls)
+    assert cli_suite["prompt_tokens"] is None and cli_suite["completion_tokens"] is None
+    assert cli_suite["prompt_usage_requests"] == len(cli_calls) - 1
+    assert cli_suite["completion_usage_requests"] == len(cli_calls) - 1
+    assert f"已知Token(输入/输出)={cli_suite['known_prompt_tokens']}({cli_suite['prompt_usage_requests']}/{cli_suite['llm_calls']})/{cli_suite['known_completion_tokens']}({cli_suite['completion_usage_requests']}/{cli_suite['llm_calls']})" in stdout
 
 
 @pytest.mark.parametrize("extra", [

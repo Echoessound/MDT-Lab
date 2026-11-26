@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 from pydantic import SecretStr, ValidationError
 from dotenv import dotenv_values
@@ -20,9 +21,21 @@ from mdt_demo.api_schemas import APIError
 from mdt_demo.research.cohort_freeze import inside_frozen_cohort, replay_frozen_split
 from mdt_demo.research.cohort_split import scenario_manifest_lines
 from mdt_demo.research.experiments import load_cases
-from mdt_demo.research.llm_benchmark import evaluate_llm_ablation_matrix, g01_request_plan, run_g01_smoke_suite
+from mdt_demo.research.llm_benchmark import (
+    aggregate_usage_meters,
+    evaluate_llm_ablation_matrix,
+    g01_request_plan,
+    run_g01_smoke_suite,
+)
 from mdt_demo.research.provider import RunLLM, default_response_format, is_deepseek_endpoint, prompt_version
 from mdt_demo.research.provider_config import LLMConfigInput, ProviderError
+
+
+def _format_known_usage(suite: dict) -> str:
+    return (
+        f"已知Token(输入/输出)={suite['known_prompt_tokens']}({suite['prompt_usage_requests']}/{suite['llm_calls']})/"
+        f"{suite['known_completion_tokens']}({suite['completion_usage_requests']}/{suite['llm_calls']})"
+    )
 
 
 def _paired_inputs(args):
@@ -167,8 +180,7 @@ def main() -> int:
                 f"三场景全部完成={'是' if compat['all_scenarios_completed'] else '否'} · "
                 f"首轮合法引用率={compat['first_attempt_citation_valid_rate']} · "
                 f"时序防泄漏={'全部通过' if compat['all_temporal_audits_passed'] else '异常'} · "
-                f"已知Token(输入/输出)={suite['known_prompt_tokens']}({suite['prompt_usage_requests']}/{suite['llm_calls']})/"
-                f"{suite['known_completion_tokens']}({suite['completion_usage_requests']}/{suite['llm_calls']})"
+                f"{_format_known_usage(suite)}"
             )
             return 0 if (compat["connection_passed"] and compat["all_scenarios_completed"] and compat["all_temporal_audits_passed"]) else 1
 
@@ -178,6 +190,7 @@ def main() -> int:
             parser.error(f"{exc.code}: {exc.message}")
         except (ValueError, OSError) as exc:
             parser.error(str(exc))
+        paired_started = time.monotonic()
         matrices = {}
         for row, case in planned:
             matrix = evaluate_llm_ablation_matrix(
@@ -188,6 +201,14 @@ def main() -> int:
             if args.frozen_cohort is not None:
                 matrix.update(case_family_id=row["case_family_id"], frozen_input_sha256=row["frozen_input_sha256"])
             matrices[row["scenario_id"]] = matrix
+        paired_suite = {
+            **aggregate_usage_meters(
+                matrix["suite_metrics"]
+                for matrix in matrices.values()
+                if isinstance(matrix, dict) and "suite_metrics" in matrix
+            ),
+            "wall_clock_ms": round((time.monotonic() - paired_started) * 1000, 2),
+        }
         out_path = args.output_dir / "llm_paired_results.json"
         payload = {
             "protocol_version": "llm-paired-batch-v1",
@@ -201,10 +222,14 @@ def main() -> int:
             "temperature": args.temperature,
             "dataset": dataset,
             "scenario_count": len(matrices),
+            "suite_metrics": paired_suite,
             "matrices": matrices,
         }
         out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"{out_path} · 已完成 {len(matrices)} 个截点的真实模型配对消融。")
+        summary = f"{out_path} · 已完成 {len(matrices)} 个截点的真实模型配对消融"
+        if paired_suite["llm_calls"]:
+            summary += f" · {_format_known_usage(paired_suite)}"
+        print(summary + "。")
         return 0
     except ProviderError as exc:
         parser.exit(2, f"{exc.code}: {exc.message}\n")

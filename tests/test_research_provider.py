@@ -261,3 +261,44 @@ def test_one_sided_and_invalid_usage_fields_are_counted_independently_and_saniti
     }
     dumped = json.dumps({"results": [r1, r2, r3], "summary": generator.usage_summary()})
     assert "raw-token-leak" not in dumped and "leak-extra-field" not in dumped
+
+
+def test_malformed_http_200_choices_trigger_bounded_retry_and_preserve_usage():
+    recovered_calls = []
+
+    def recover_after_null_message(_request):
+        recovered_calls.append(1)
+        if len(recovered_calls) == 1:
+            return httpx.Response(200, json={
+                "choices": [{"message": None}],
+                "usage": {"prompt_tokens": 11, "completion_tokens": 3},
+            })
+        return response()
+
+    generator = settings(recover_after_null_message).make_generator()
+    result = generator(context())
+    assert result["model_info"]["attempts"] == 2
+    assert result["model_info"]["prompt_tokens"] == 32
+    assert result["model_info"]["completion_tokens"] == 16
+    assert generator.usage_summary() == {
+        "known_prompt_tokens": 32,
+        "known_completion_tokens": 16,
+        "prompt_usage_requests": 2,
+        "completion_usage_requests": 2,
+    }
+
+    bad_payloads = [
+        {"choices": [], "usage": {"prompt_tokens": 10, "completion_tokens": 2}},
+        {"choices": [{"message": {"content": None}}], "usage": {"prompt_tokens": 14}},
+    ]
+    failing = settings(lambda _req: httpx.Response(200, json=bad_payloads.pop(0))).make_generator()
+    with pytest.raises(ProviderError, match="LLM_INVALID_OUTPUT"):
+        failing(context())
+    assert failing.validation_telemetry["first_attempt_schema_failures"] == 1
+    assert failing.metrics == {"llm_calls": 2, "retry_count": 1, "prompt_tokens": 24, "completion_tokens": None}
+    assert failing.usage_summary() == {
+        "known_prompt_tokens": 24,
+        "known_completion_tokens": 2,
+        "prompt_usage_requests": 2,
+        "completion_usage_requests": 1,
+    }

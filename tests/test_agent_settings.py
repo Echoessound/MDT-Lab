@@ -131,3 +131,29 @@ def test_only_selected_agents_need_configuration_and_report_freezes_provenance(t
         rejected = client.post("/api/v2/runs", json={"case_id": "LUNG-SYN-001", "case_version": 1, "trigger_event_id": "E002", "mode": "llm", "routing_mode": "fixed"})
         assert rejected.status_code == 409
         assert len(client.get("/api/v2/runs").json()["data"]) == 1
+
+
+def test_heterogeneous_group_retains_known_usage_subtotals_when_specialist_omits_usage():
+    def upstream(request):
+        data = json.loads(request.content)
+        role = json.loads(data["messages"][1]["content"])["agent_id"]
+        return response(output(agent_id=role), usage=(role == "oncology"))
+
+    service = SettingsService(transport=httpx.MockTransport(upstream), resolver=lambda _: ["93.184.216.34"])
+    service.configure(config())
+    service.configure_agent("radiology", config(base_url="https://radiology.example.test/v1", api_key="rad-secret", model="rad-model"))
+    frozen = service.make_generator(["oncology", "radiology", "surgery"])
+    frozen(context())
+    frozen({**context(), "agent_id": "radiology"})
+    assert frozen.metrics == {
+        "llm_calls": 2,
+        "retry_count": 0,
+        "prompt_tokens": None,
+        "completion_tokens": None,
+    }
+    assert frozen.usage_summary() == {
+        "known_prompt_tokens": 21,
+        "known_completion_tokens": 13,
+        "prompt_usage_requests": 1,
+        "completion_usage_requests": 1,
+    }
