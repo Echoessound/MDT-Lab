@@ -83,8 +83,19 @@ class RunLLM:
             "final_valid_calls": 0,
             "final_failed_calls": 0,
         }
-        self._tokens = [0, 0]
-        self._usage_complete = True
+        self._known_prompt_tokens = 0
+        self._known_completion_tokens = 0
+        self._prompt_usage_requests = 0
+        self._completion_usage_requests = 0
+
+    def usage_summary(self) -> dict:
+        """Sanitized known token subtotals and covered HTTP request counts."""
+        return {
+            "known_prompt_tokens": self._known_prompt_tokens,
+            "known_completion_tokens": self._known_completion_tokens,
+            "prompt_usage_requests": self._prompt_usage_requests,
+            "completion_usage_requests": self._completion_usage_requests,
+        }
 
     def validation_summary(self) -> dict:
         """Sanitized first-attempt validation and citation integrity rates (Plan §6.3)."""
@@ -125,15 +136,21 @@ class RunLLM:
 
     def _usage(self, usage: dict | None) -> tuple[int | None, int | None]:
         usage = usage if isinstance(usage, dict) else {}
-        counts = (_count(usage.get("prompt_tokens")), _count(usage.get("completion_tokens")))
-        if None in counts:
-            self._usage_complete = False
-        else:
-            self._tokens[0] += counts[0]
-            self._tokens[1] += counts[1]
-        self.metrics["prompt_tokens"] = self._tokens[0] if self._usage_complete else None
-        self.metrics["completion_tokens"] = self._tokens[1] if self._usage_complete else None
-        return counts
+        prompt, completion = _count(usage.get("prompt_tokens")), _count(usage.get("completion_tokens"))
+        if prompt is not None:
+            self._known_prompt_tokens += prompt
+            self._prompt_usage_requests += 1
+        if completion is not None:
+            self._known_completion_tokens += completion
+            self._completion_usage_requests += 1
+        calls = self.metrics["llm_calls"]
+        self.metrics["prompt_tokens"] = (
+            self._known_prompt_tokens if calls > 0 and self._prompt_usage_requests == calls else None
+        )
+        self.metrics["completion_tokens"] = (
+            self._known_completion_tokens if calls > 0 and self._completion_usage_requests == calls else None
+        )
+        return prompt, completion
 
     def _request(self, messages: list[dict], schema: dict, name: str, validate: Callable,
                  *, track_telemetry: bool = False, registry: dict[str, dict] | None = None) -> tuple[dict, dict]:
@@ -141,8 +158,10 @@ class RunLLM:
         validate_destination(config.base_url, self._resolver)
         if not config.api_key or not config.api_key.get_secret_value():
             raise ProviderError("LLM_NOT_CONFIGURED", "请先在模型设置中配置服务端密钥。", 409)
-        local_tokens = [0, 0]
-        local_complete = True
+        local_prompt_tokens = 0
+        local_completion_tokens = 0
+        local_prompt_requests = 0
+        local_completion_requests = 0
         final_error = ProviderError("LLM_PROVIDER_ERROR", "模型服务未返回可用结果。")
         initial_messages = deepcopy(messages)
         if self._response_format_mode == "json_object":
@@ -169,6 +188,8 @@ class RunLLM:
         try:
             for attempt in range(2):
                 self.metrics["llm_calls"] += 1
+                self.metrics["prompt_tokens"] = None
+                self.metrics["completion_tokens"] = None
                 if attempt:
                     self.metrics["retry_count"] += 1
                     time.sleep(0.1)
@@ -188,7 +209,6 @@ class RunLLM:
                         )
                     if response.status_code != 200:
                         self._usage(None)
-                        local_complete = False
                         if track_telemetry and attempt == 0:
                             self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
                         if response.status_code in {401, 403}:
@@ -206,17 +226,17 @@ class RunLLM:
                             raise ValueError("invalid envelope")
                     except ValueError:
                         self._usage(None)
-                        local_complete = False
                         if track_telemetry and attempt == 0:
                             self.validation_telemetry["first_attempt_schema_failures"] += 1
                         final_error = ProviderError("LLM_INVALID_OUTPUT", "模型服务响应不是有效 JSON。", attempts=attempt + 1)
                         continue
-                    usage = self._usage(outer.get("usage"))
-                    if None in usage:
-                        local_complete = False
-                    else:
-                        local_tokens[0] += usage[0]
-                        local_tokens[1] += usage[1]
+                    prompt_tokens, completion_tokens = self._usage(outer.get("usage"))
+                    if prompt_tokens is not None:
+                        local_prompt_tokens += prompt_tokens
+                        local_prompt_requests += 1
+                    if completion_tokens is not None:
+                        local_completion_tokens += completion_tokens
+                        local_completion_requests += 1
                     try:
                         choice = outer["choices"][0]
                         message = choice["message"]
@@ -252,18 +272,16 @@ class RunLLM:
                         "provider": config.provider, "model": config.model,
                         "prompt_version": prompt_version(self._response_format_mode),
                         "attempts": attempt + 1,
-                        "prompt_tokens": local_tokens[0] if local_complete else None,
-                        "completion_tokens": local_tokens[1] if local_complete else None,
+                        "prompt_tokens": local_prompt_tokens if local_prompt_requests == attempt + 1 else None,
+                        "completion_tokens": local_completion_tokens if local_completion_requests == attempt + 1 else None,
                     }
                 except httpx.TimeoutException:
                     self._usage(None)
-                    local_complete = False
                     if track_telemetry and attempt == 0:
                         self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
                     final_error = ProviderError("LLM_TIMEOUT", "模型请求超时，有限重试后仍未完成。", attempts=attempt + 1)
                 except httpx.HTTPError:
                     self._usage(None)
-                    local_complete = False
                     if track_telemetry and attempt == 0:
                         self.validation_telemetry["first_attempt_http_or_refusal_failures"] += 1
                     final_error = ProviderError("LLM_NETWORK_ERROR", "无法连接模型服务，请检查网络与服务地址。", attempts=attempt + 1)

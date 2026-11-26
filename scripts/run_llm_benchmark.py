@@ -161,11 +161,14 @@ def main() -> int:
             out_path = args.output_dir / "g01_smoke_report.json"
             out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             compat = result["compatibility"]
+            suite = result["suite_metrics"]
             print(
                 f"{out_path} · 连接={'通过' if compat['connection_passed'] else '失败'} · "
                 f"三场景全部完成={'是' if compat['all_scenarios_completed'] else '否'} · "
                 f"首轮合法引用率={compat['first_attempt_citation_valid_rate']} · "
-                f"时序防泄漏={'全部通过' if compat['all_temporal_audits_passed'] else '异常'}"
+                f"时序防泄漏={'全部通过' if compat['all_temporal_audits_passed'] else '异常'} · "
+                f"已知Token(输入/输出)={suite['known_prompt_tokens']}({suite['prompt_usage_requests']}/{suite['llm_calls']})/"
+                f"{suite['known_completion_tokens']}({suite['completion_usage_requests']}/{suite['llm_calls']})"
             )
             return 0 if (compat["connection_passed"] and compat["all_scenarios_completed"] and compat["all_temporal_audits_passed"]) else 1
 

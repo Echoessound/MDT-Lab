@@ -165,7 +165,7 @@ V0.3 已实现服务端 OpenAI 兼容 Chat Completions 适配器；**当前只�
 .venv/bin/python scripts/run_llm_benchmark.py --mode preflight --base-url https://api.deepseek.com --model deepseek-flash --api-key-env DEEPSEEK_API_KEY --output-dir outputs/experiments/g01_deepseek_flash
 ```
 
-预检返回 0 表示本地参数齐备，返回 1 时在 `g01_preflight.json` 列出待补字段。确认预算后用相同参数将 `--mode preflight` 改为 `--mode smoke`，运行无病例连接测试及齐备、缺失、冲突三个合成场景。整轮最多 34 次 HTTP 请求，每次默认限制 800 个输出 token，总输出上限为 27,200 个 token；输入另按实际用量计费。报告的 `suite_metrics` 包含连接探测与重试，服务未返回的 token 用量保留为空。实际传输标记为 `provider_http`，本地注入测试标记为 `injected_transport`。[官方计费](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)
+预检返回 0 表示本地参数齐备，返回 1 时在 `g01_preflight.json` 列出待补字段。确认预算后用相同参数将 `--mode preflight` 改为 `--mode smoke`，运行无病例连接测试及齐备、缺失、冲突三个合成场景。整轮最多 34 次 HTTP 请求，每次默认限制 800 个输出 token，总输出上限为 27,200 个 token；输入另按实际用量计费。报告的 `suite_metrics`（以及 `connection_test.metrics`、各场景 `metrics`）包含连接测试、三个场景与重试请求：当任意 HTTP 尝试未返回对应字段时，总量 `prompt_tokens` / `completion_tokens` 仍保留为空（`null`），同时通过 `known_prompt_tokens`、`known_completion_tokens` 与 `prompt_usage_requests`、`completion_usage_requests` 分别保留已返回请求的输入/输出 token 小计和覆盖请求数。实际传输标记为 `provider_http`，本地注入测试标记为 `injected_transport`。[官方计费](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)
 
 开发集先导消融可使用 `--mode paired --frozen-cohort data/acrin_6668/cohort_v1 --cohort-input data/raw/external/acrin_6668_enrollment_13_42.json --split-filter dev` 加模型参数并指定单独的输出目录。该命令会执行整个所选划分的真实模型配对，规模大于三场景联调。队列冻结、原始 ZIP 复建、仅开发集评分和盲标交接的命令见样本说明。[队列复算说明](data/acrin_6668/README.md#2026-11-25-冻结的先导研究队列)
 

@@ -165,6 +165,7 @@ def _single_llm_b0(source: ResearchCase, frozen: ResearchCase, trigger_id: str, 
         "retry_count": llm.metrics["retry_count"],
         "prompt_tokens": llm.metrics["prompt_tokens"],
         "completion_tokens": llm.metrics["completion_tokens"],
+        **llm.usage_summary(),
         "discussion_rounds": 0,
         "valid_opinions": int(opinion is not None),
         "failed_calls": int(opinion is None),
@@ -228,6 +229,7 @@ def _llm_trajectory(
         "retry_count": report["metrics"]["retry_count"],
         "prompt_tokens": report["metrics"]["prompt_tokens"],
         "completion_tokens": report["metrics"]["completion_tokens"],
+        **llm.usage_summary(),
         "discussion_rounds": report["discussion_rounds"],
         "valid_opinions": len(report["final_opinions"]),
         "failed_calls": report["metrics"]["agent_calls"] - successful_calls,
@@ -266,7 +268,7 @@ def run_g01_smoke_suite(
     except ProviderError as exc:
         connection.update(ok=False, error_code=exc.code, message=exc.message,
                           wall_clock_ms=round((time.monotonic() - t0) * 1000, 2))
-    connection["metrics"] = dict(conn_llm.metrics)
+    connection["metrics"] = {**conn_llm.metrics, **conn_llm.usage_summary()}
 
     cases_by_id = {case.case_id: case for case in seed_cases()}
     runs: list[dict] = []
@@ -320,7 +322,7 @@ def run_g01_smoke_suite(
             "conflicts_detected": len(report["conflicts"]),
             "unresolved_conflicts": len(report["unresolved_conflicts"]),
             "missing_information": report["safety"]["missing_information"],
-            "metrics": {**m, "wall_clock_ms": wall_ms},
+            "metrics": {**m, **run_llm.usage_summary(), "wall_clock_ms": wall_ms},
             "validation_telemetry": telemetry,
             "temporal_audit": {
                 "passed": audit["passed"],
@@ -342,11 +344,20 @@ def run_g01_smoke_suite(
         key: sum(meter[key] for meter in meters) if all(meter[key] is not None for meter in meters) else None
         for key in ("llm_calls", "retry_count", "prompt_tokens", "completion_tokens")
     }
+    suite_known_usage = {
+        key: sum(meter[key] for meter in meters)
+        for key in (
+            "known_prompt_tokens",
+            "known_completion_tokens",
+            "prompt_usage_requests",
+            "completion_usage_requests",
+        )
+    }
 
     return {
         "protocol_version": "g01-llm-smoke-v1",
         "execution_source": "provider_http" if transport is None else "injected_transport",
-        "suite_metrics": {**suite_usage, "wall_clock_ms": round((time.monotonic() - suite_started) * 1000, 2)},
+        "suite_metrics": {**suite_usage, **suite_known_usage, "wall_clock_ms": round((time.monotonic() - suite_started) * 1000, 2)},
         "model_config": sanitized,
         "connection_test": connection,
         "compatibility": {

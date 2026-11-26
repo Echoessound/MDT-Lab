@@ -184,3 +184,80 @@ def test_connection_test_contains_no_case_data():
     assert result["ok"] is True
     assert "evidence_registry" not in json.dumps(captured)
     assert "case_id" not in json.dumps(captured)
+
+
+def test_partial_usage_preserves_unknown_totals_while_keeping_known_subtotals():
+    calls = []
+
+    def recover_after_503(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(503, text="private-503-body-fixture-secret")
+        return response()
+
+    generator = settings(recover_after_503).make_generator()
+    result = generator(context())
+    assert result["model_info"]["attempts"] == 2
+    assert result["model_info"]["prompt_tokens"] is None
+    assert result["model_info"]["completion_tokens"] is None
+    assert generator.metrics == {"llm_calls": 2, "retry_count": 1, "prompt_tokens": None, "completion_tokens": None}
+    assert generator.usage_summary() == {
+        "known_prompt_tokens": 21,
+        "known_completion_tokens": 13,
+        "prompt_usage_requests": 1,
+        "completion_usage_requests": 1,
+    }
+
+    timeout_calls = []
+
+    def timeout_after_invalid(request):
+        timeout_calls.append(request)
+        if len(timeout_calls) == 1:
+            return httpx.Response(200, json={
+                "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(output(agent_id="surgery"))}}],
+                "usage": {"prompt_tokens": 19, "completion_tokens": 7},
+            })
+        raise httpx.ReadTimeout("timeout-debug-fixture-secret", request=request)
+
+    failing = settings(timeout_after_invalid).make_generator()
+    with pytest.raises(ProviderError, match="LLM_TIMEOUT"):
+        failing(context())
+    assert failing.metrics == {"llm_calls": 2, "retry_count": 1, "prompt_tokens": None, "completion_tokens": None}
+    assert failing.usage_summary() == {
+        "known_prompt_tokens": 19,
+        "known_completion_tokens": 7,
+        "prompt_usage_requests": 1,
+        "completion_usage_requests": 1,
+    }
+
+
+def test_one_sided_and_invalid_usage_fields_are_counted_independently_and_sanitized():
+    payloads = [
+        {"prompt_tokens": 30, "completion_tokens": True, "debug_secret": "raw-token-leak"},
+        {"prompt_tokens": -1, "completion_tokens": 15, "extra": "leak-extra-field"},
+        {"prompt_tokens": "40", "completion_tokens": 12.5},
+    ]
+
+    def handler(_request):
+        usage = payloads.pop(0)
+        return httpx.Response(200, json={
+            "choices": [{"finish_reason": "stop", "message": {"content": json.dumps(output())}}],
+            "usage": usage,
+        })
+
+    generator = settings(handler).make_generator()
+    r1 = generator(context())
+    r2 = generator(context())
+    r3 = generator(context())
+    assert r1["model_info"]["prompt_tokens"] == 30 and r1["model_info"]["completion_tokens"] is None
+    assert r2["model_info"]["prompt_tokens"] is None and r2["model_info"]["completion_tokens"] == 15
+    assert r3["model_info"]["prompt_tokens"] is None and r3["model_info"]["completion_tokens"] is None
+    assert generator.metrics == {"llm_calls": 3, "retry_count": 0, "prompt_tokens": None, "completion_tokens": None}
+    assert generator.usage_summary() == {
+        "known_prompt_tokens": 30,
+        "known_completion_tokens": 15,
+        "prompt_usage_requests": 1,
+        "completion_usage_requests": 1,
+    }
+    dumped = json.dumps({"results": [r1, r2, r3], "summary": generator.usage_summary()})
+    assert "raw-token-leak" not in dumped and "leak-extra-field" not in dumped
