@@ -1,0 +1,120 @@
+{
+  "source_report": "outputs/experiments/g01_deepseek_flash/public_dns/complete_case_recheck/run_report.json",
+  "source_report_sha256": "d922e80e72a85c739ea7fd631e11ab280c176004b1e7a433678bb74e55c42b96",
+  "archived_decision": "DEFER_DECISION",
+  "case_id": "LUNG-SYN-001",
+  "case_version": 1,
+  "trigger_event_id": "E003",
+  "initial_opinions": [
+    {
+      "agent_id": "oncology",
+      "decision": "READY_FOR_REVIEW",
+      "summary": "合成病例 LUNG-SYN-001（版本1）截至病理归档事件 E003 的资料完整且内部一致：初始登记时影像与病理均未完成（E001），影像资料于 E002 归档完成，病理于 E003 确认归档。必需字段 pathology_confirmed 与必需证据 E003:pathology_confirmed 均已提供，missing_information 与 conflicts 均为空。READY_FOR_REVIEW 仅表示资料可进入人工资料复核，不代表任何临床有效性或诊断结论。",
+      "evidence_ids": [
+        "E001:disease_label",
+        "E001:imaging_complete",
+        "E001:pathology_confirmed",
+        "E002:imaging_complete",
+        "E002:imaging_record",
+        "E003:pathology_confirmed",
+        "E003:histology"
+      ],
+      "claims": [
+        {
+          "fact_key": "disease_label",
+          "value": "肺部异常待核验",
+          "evidence_id": "E001:disease_label"
+        },
+        {
+          "fact_key": "imaging_complete",
+          "value": false,
+          "evidence_id": "E001:imaging_complete"
+        },
+        {
+          "fact_key": "pathology_confirmed",
+          "value": false,
+          "evidence_id": "E001:pathology_confirmed"
+        },
+        {
+          "fact_key": "imaging_complete",
+          "value": true,
+          "evidence_id": "E002:imaging_complete"
+        },
+        {
+          "fact_key": "imaging_record",
+          "value": "合成影像资料已归档，未进行影像模型推理",
+          "evidence_id": "E002:imaging_record"
+        },
+        {
+          "fact_key": "pathology_confirmed",
+          "value": true,
+          "evidence_id": "E003:pathology_confirmed"
+        },
+        {
+          "fact_key": "histology",
+          "value": "非小细胞肺癌标签，仅供资料流转模拟",
+          "evidence_id": "E003:histology"
+        }
+      ],
+      "missing_information": [],
+      "confidence": "high",
+      "model_info": {
+        "provider": "openai-compatible",
+        "model": "deepseek-flash",
+        "prompt_version": "research-process-review-json-object-v2",
+        "attempts": 1,
+        "prompt_tokens": 2257,
+        "completion_tokens": 370
+      }
+    },
+    {
+      "agent_id": "pathology",
+      "decision": "READY_FOR_REVIEW",
+      "summary": "截至病理记录归档事件（E003），所需字段 pathology_confirmed 已由证据 E003:pathology_confirmed 支持，且与当前事实一致。E001 中 pathology_confirmed=false 与 E003 中 true 的差异属于病程内随时间推进的正常状态变化，不构成矛盾。影像资料归档（E002）与病理归档（E003）记录齐全，无缺失必填信息。本结论仅表示合成资料可进入人工资料复核，不代表任何临床有效性判断。",
+      "evidence_ids": [
+        "E001:pathology_confirmed",
+        "E002:imaging_complete",
+        "E002:imaging_record",
+        "E003:pathology_confirmed",
+        "E003:histology"
+      ],
+      "claims": [
+        {
+          "fact_key": "pathology_confirmed",
+          "value": true,
+          "evidence_id": "E003:pathology_confirmed"
+        },
+        {
+          "fact_key": "histology",
+          "value": "非小细胞肺癌标签，仅供资料流转模拟",
+          "evidence_id": "E003:histology"
+        },
+        {
+          "fact_key": "imaging_complete",
+          "value": true,
+          "evidence_id": "E002:imaging_complete"
+        },
+        {
+          "fact_key": "imaging_record",
+          "value": "合成影像资料已归档，未进行影像模型推理",
+          "evidence_id": "E002:imaging_record"
+        },
+        {
+          "fact_key": "pathology_confirmed",
+          "value": false,
+          "evidence_id": "E001:pathology_confirmed"
+        }
+      ],
+      "missing_information": [],
+      "confidence": "high",
+      "model_info": {
+        "provider": "openai-compatible",
+        "model": "deepseek-flash",
+        "prompt_version": "research-process-review-json-object-v2",
+        "attempts": 1,
+        "prompt_tokens": 2257,
+        "completion_tokens": 305
+      }
+    }
+  ]
+}

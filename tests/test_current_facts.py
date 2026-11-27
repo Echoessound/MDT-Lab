@@ -58,6 +58,45 @@ def test_correction_chain_and_unresolved_cycle():
     assert review(case, "B")["final_decision"] == "DEFER_DECISION"
 
 
+@pytest.mark.parametrize("corrected", [False, True])
+def test_conflicting_agent_claims_require_two_effective_records(corrected):
+    # This field is outside the source-conflict allowlist. Only the two
+    # specialists' validated citations can trigger a structured disagreement.
+    replacement = {"review_flag": 1, "pathology_confirmed": True}
+    if corrected:
+        replacement["supersedes_event_id"] = "A"
+    case = case_with_events(
+        ("A", "pathology", {"review_flag": True}),
+        ("B", "pathology", replacement),
+    )
+    request = RunRequest(case_id=case.case_id, case_version=case.version, trigger_event_id="B", mode="llm")
+
+    def reviewer(context):
+        role = context["agent_id"]
+        source_event = "A" if role == "oncology" else "B"
+        ref = next(ref for ref in context["evidence_registry"] if ref["evidence_id"] == f"{source_event}:review_flag")
+        return {
+            "agent_id": role, "decision": "READY_FOR_REVIEW", "summary": "核对引用记录。",
+            "evidence_ids": [ref["evidence_id"]],
+            "claims": [{key: ref[key] for key in ("evidence_id", "fact_key", "value")}],
+            "missing_information": [], "confidence": "high",
+            "model_info": {"provider": "fixture", "model": "offline", "prompt_version": "test", "attempts": 1},
+        }
+
+    report = execute(case, request, "run_same_day", lambda *args: None, lambda: False, llm=reviewer)
+    assert report["status"] == "completed"
+    assert report["initial_opinions"][0]["evidence_ids"] == ["A:review_flag"]
+    if corrected:
+        assert report["final_decision"] == "READY_FOR_REVIEW"
+        assert report["discussion_rounds"] == 0 and not report["unresolved_conflicts"]
+    else:
+        assert report["final_decision"] == "DEFER_DECISION"
+        assert report["discussion_rounds"] == 1
+        conflict, = report["unresolved_conflicts"]
+        assert conflict["dimension"] == "structured_fact_difference"
+        assert conflict["evidence_ids"] == ["A:review_flag", "B:review_flag"]
+
+
 def test_cross_specialty_comparisons_require_measured_pairs():
     case = case_with_events(("A", "observation", {"observation_reviewed": True}))
     report = review(case, "A")

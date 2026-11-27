@@ -191,23 +191,30 @@ def source_conflicts(case: ResearchCase, selected: list[str]) -> list[dict]:
     return result
 
 
-def detect_conflicts(opinions: list[dict], source: list[dict]) -> list[dict]:
+def detect_conflicts(opinions: list[dict], source: list[dict], *,
+                     current_evidence_ids: set[str] | None = None) -> list[dict]:
+    """Compare decisions and claims about the same currently effective field."""
     result = deepcopy(source)
     if len({item["decision"] for item in opinions}) > 1:
         result.append({"conflict_id": "decision_difference", "dimension": "information_sufficiency",
                        "agent_ids": [item["agent_id"] for item in opinions],
                        "description": "相关角色对资料是否充分的流程标签不一致。", "evidence_ids": []})
+    claims_by_agent = [
+        (op["agent_id"], [claim for claim in op["claims"]
+                          if current_evidence_ids is None or claim["evidence_id"] in current_evidence_ids])
+        for op in opinions
+    ]
     seen = set()
-    for left, right in combinations(opinions, 2):
-        for a in left["claims"]:
-            for b in right["claims"]:
+    for (left, left_claims), (right, right_claims) in combinations(claims_by_agent, 2):
+        for a in left_claims:
+            for b in right_claims:
                 if a["fact_key"] == b["fact_key"] and (type(a["value"]) is not type(b["value"]) or a["value"] != b["value"]):
-                    key = (a["fact_key"], left["agent_id"], right["agent_id"])
+                    key = (a["fact_key"], left, right)
                     if key in seen:
                         continue
                     seen.add(key)
                     result.append({"conflict_id": f"claim_{len(result)}", "dimension": "structured_fact_difference",
-                                   "agent_ids": [left["agent_id"], right["agent_id"]],
+                                   "agent_ids": [left, right],
                                    "description": f"角色引用的 {a['fact_key']} 事实取值不同，需要核对时间与来源。",
                                    "evidence_ids": [a["evidence_id"], b["evidence_id"]]})
     return [Conflict.model_validate(item).model_dump(mode="json") for item in result]
@@ -341,6 +348,11 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
     finish("routing", "ROUTING")
 
     shared_input = _review_input(frozen)
+    # Opinions may cite a whole trajectory. Only records still in effect for
+    # the same field can disagree about its state at the selected cutoff.
+    current_evidence_ids = {
+        f"{event.event_id}:{key}" for key, events in current_fact_records(frozen).items() for event in events
+    }
     registry = shared_input["evidence_registry"]
     missing = shared_input["missing_information"]
     source = source_conflicts(frozen, selected)
@@ -383,7 +395,7 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
             final[role] = opinion
         finish(node, "AGENTS_RUNNING")
     begin("conflict_detection", "CONFLICT_CHECK")
-    conflicts = detect_conflicts(initial, source)
+    conflicts = detect_conflicts(initial, source, current_evidence_ids=current_evidence_ids)
     emit("conflict.detected", "CONFLICT_CHECK", {"conflicts": conflicts})
     finish("conflict_detection", "CONFLICT_CHECK")
     participants = [role for role in selected if allow_discussion and role in final
@@ -405,7 +417,7 @@ def execute(case: ResearchCase, request: RunRequest, run_id: str, emit, cancelle
         emit("discussion.completed", "DISCUSSION", {"round": 1, "participants": participants})
         finish("targeted_discussion", "DISCUSSION")
     final_opinions = [final[role] for role in selected if role in final]
-    unresolved = detect_conflicts(final_opinions, source)
+    unresolved = detect_conflicts(final_opinions, source, current_evidence_ids=current_evidence_ids)
     begin("safety_gate", "SAFETY_CHECK")
     missing = sorted(set(missing) | {item for opinion in final_opinions for item in opinion["missing_information"]})
     complete = len(final_opinions) == len(selected) and not errors
